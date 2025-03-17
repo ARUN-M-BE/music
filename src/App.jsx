@@ -1,31 +1,57 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { auth, db } from "./components/firebaseConfig";
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import UploadMusic from "./components/UploadMusic";
+import MusicPlayer from "./components/MusicPlayer";
+import Auth from "./components/Auth";
 import "./App.css";
-import { motion } from "motion/react";
-import Motion from "./component/motion";
-import Stack from "@mui/material/Stack";
-import Button from "@mui/material/Button";
 
 const App = () => {
-  const [isOpen, setOpen] = React.useState(false);
+  const [user, setUser] = useState(null);
+  const [tracks, setTracks] = useState([]);
 
-  const handleToggle = () => {
-    setOpen(!isOpen);
-  };
+  useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      setUser(user);
+
+      if (user) {
+        // Fetch only user's uploaded music
+        const q = query(
+          collection(db, "music"),
+          where("userId", "==", user.uid),
+          orderBy("createdAt", "desc")
+        );
+        const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
+          setTracks(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        });
+
+        return unsubscribeFirestore;
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
   return (
-    <>
-      <h1>welcome</h1>
-      <div>
-        <button onClick={handleToggle}>Toggle</button>
-        {isOpen && <div>Content</div>}
-      </div>
-      <h1 className="text-7xl font-bold underline">welcome</h1>
-      <Motion />
-      <Stack spacing={2} direction="row">
-        <Button variant="text">Text</Button>
-        <Button variant="contained">Contained</Button>
-        <Button variant="outlined">Outlined</Button>
-      </Stack>
-    </>
+    <div className="max-w-xl mx-auto mt-10 p-6 bg-gray-100 rounded-lg shadow-md">
+      <Auth user={user} setUser={setUser} />
+      {user ? (
+        <>
+          <h1 className="text-2xl font-bold text-center mb-4">Music Upload & Play</h1>
+          <UploadMusic />
+          {tracks.length > 0 && (
+            <div className="mt-4">
+              <h2 className="text-lg font-semibold">Your Playlist</h2>
+              {tracks.map((track) => (
+                <MusicPlayer key={track.id} track={track} />
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-center">Please login to upload and listen to music.</p>
+      )}
+    </div>
   );
 };
 
