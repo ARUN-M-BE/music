@@ -8,37 +8,42 @@ const UploadMusic = ({ onUpload }) => {
   const [uploading, setUploading] = useState(false);
 
   const onDrop = async (acceptedFiles) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-
-    // Ensure user is authenticated before writing to Firestore
-    const user = auth.currentUser;
+    const user = auth.currentUser; // Ensure user is logged in
     if (!user) {
-      alert("You must be logged in to upload music.");
+      alert("Please log in to upload music.");
       return;
     }
 
-    const storageRef = ref(storage, `music/${file.name}`);
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    const storageRef = ref(storage, `music/${user.uid}/${file.name}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     setUploading(true);
     uploadTask.on(
       "state_changed",
       null,
-      (error) => console.error(error),
+      (error) => console.error("Upload Error:", error),
       async () => {
         const url = await getDownloadURL(uploadTask.snapshot.ref);
 
-        // Save file details in Firestore under authenticated user
-        await addDoc(collection(db, "music"), {
-          userId: user.uid,  // Store the user ID
-          name: file.name,
-          url: url,
-          createdAt: serverTimestamp(),
-        });
+        try {
+          // Store metadata in Firestore
+          await addDoc(collection(db, "music"), {
+            userId: user.uid,
+            name: file.name,
+            url: url,
+            createdAt: serverTimestamp(),
+          });
 
-        onUpload(url, file.name);
-        setUploading(false);
+          onUpload(url, file.name);
+          setUploading(false);
+        } catch (err) {
+          console.error("Firestore Error:", err);
+          alert("Failed to save data in Firestore.");
+          setUploading(false);
+        }
       }
     );
   };
