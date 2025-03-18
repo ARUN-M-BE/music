@@ -20,19 +20,3 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
-
-// rules_version = '2';
-// service cloud.firestore {
-//   match /databases/{database}/documents {
-    
-//     // Allow only authenticated users to read & write
-//     match /music/{docId} {
-//       allow read, write: if request.auth != null;
-//     }
-    
-//     // Allow user profile storage
-//     match /users/{userId} {
-//       allow read, write: if request.auth != null && request.auth.uid == userId;
-//     }
-//   }
-// }

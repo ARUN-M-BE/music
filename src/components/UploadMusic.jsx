@@ -8,28 +8,37 @@ const UploadMusic = ({ onUpload }) => {
   const [uploading, setUploading] = useState(false);
 
   const onDrop = async (acceptedFiles) => {
-    const user = auth.currentUser; // Ensure user is logged in
+    const user = auth.currentUser;
     if (!user) {
       alert("Please log in to upload music.");
       return;
     }
 
     const file = acceptedFiles[0];
-    if (!file) return;
 
-    const storageRef = ref(storage, `music/${user.uid}/${file.name}`);
+    if (!file || !file.type.startsWith("audio/")) {
+      alert("Invalid file type. Please upload a valid audio file.");
+      return;
+    }
+
+    const filePath = `music/${user.uid}/${file.name}`; // Correct file path format
+    const storageRef = ref(storage, filePath);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     setUploading(true);
     uploadTask.on(
       "state_changed",
       null,
-      (error) => console.error("Upload Error:", error),
+      (error) => {
+        console.error("Upload Error:", error);
+        alert("File upload failed.");
+        setUploading(false);
+      },
       async () => {
         const url = await getDownloadURL(uploadTask.snapshot.ref);
+        console.log("✅ File Uploaded Successfully: ", url);
 
         try {
-          // Store metadata in Firestore
           await addDoc(collection(db, "music"), {
             userId: user.uid,
             name: file.name,
@@ -48,7 +57,14 @@ const UploadMusic = ({ onUpload }) => {
     );
   };
 
-  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: "audio/*" });
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: {
+      "audio/mpeg": [".mp3"],
+      "audio/wav": [".wav"],
+      "audio/ogg": [".ogg"],
+    },
+    onDrop,
+  });
 
   return (
     <div {...getRootProps()} className="border p-4 text-center cursor-pointer">

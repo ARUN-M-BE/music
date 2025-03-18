@@ -1,0 +1,21 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Personal Music App",
+  "homepage": "https://github.com/ARUN-M-BE/music#readme",
+  "bugs": {
+    "url": "https://github.com/ARUN-M-BE/music/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ARUN-M-BE/music.git"
+  },
+  "license": "ISC",
+  "author": "Arun M",
+  "type": "commonjs",
+  "main": "app.js",
+  "scripts": {
+    "dev": "nodemon app.js",
+    "start": "node app.js",
+  }
+}
