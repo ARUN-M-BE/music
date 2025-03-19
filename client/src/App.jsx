@@ -1,10 +1,18 @@
 import React from "react";
 import "./App.css";
+import {Route, Routes} from "react-router-dom";
+import {Home, Login} from "./components";
 
-function App() {
+const App = () => { 
   return (
     <>
-      <h1>App</h1>
+    <div className="bg-primary w-screen h-screen justify-center flex items-center">
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    </div>
+    
       <h1 class="text-3xl font-bold underline">Hello world!</h1>
     </>
   );

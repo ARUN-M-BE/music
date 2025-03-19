@@ -1,20 +1,20 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-// import { BrowserRouter } from 'react-router-dom';
+import ReactDOM from "react-dom";
+import { BrowserRouter as Router } from "react-router-dom";
 import App from "./App";
-import ErrorBoundary from './ErrorBoundary';
+// import ErrorBoundary from "./ErrorBoundary";
 import "./index.css";
 
 const container = document.getElementById("root");
 const root = createRoot(container);
 
 root.render(
-  <>
-    
-    {/* <BrowserRouter> */}
-      <ErrorBoundary>
+  <React.StrictMode>
+    {/* <ErrorBoundary> */}
+      <Router>
         <App />
-      </ErrorBoundary>
-    {/* </BrowserRouter> */}
-  </>
+      </Router>
+    {/* </ErrorBoundary> */}
+  </React.StrictMode>
 );

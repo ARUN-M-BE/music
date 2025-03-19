@@ -13,9 +13,9 @@ module.exports = {
         350: "350px",
         375: "375px",
         460: "460px",
+        508: "508px",
         656: "656px",
         880: "880px",
-        508: "508px",
       },
       height: {
         80: "80px",
@@ -61,8 +61,10 @@ module.exports = {
       },
     },
   },
+  variants: {
+    extend: {},
+  },
   plugins: [
     // require("tailwind-scrollbar")
   ],
 };
-  
