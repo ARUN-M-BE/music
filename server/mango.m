@@ -24,3 +24,6 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
+
+mongodb+srv://arunm:<db_password>@cluster0.lmxpr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
