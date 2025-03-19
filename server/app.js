@@ -12,6 +12,10 @@ app.get('/', (req, res) => {
     }
 );
 
+// user authentication
+const userRouter = require("./routes/auth");
+app.use("/api/users", userRouter);
+
 mongoose.connect(process.env.DATABASE_STRING, {
   useNewUrlParser: true,
 });
