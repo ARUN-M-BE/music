@@ -3,27 +3,40 @@ import { FcGoogle } from "react-icons/fc";
 import { app } from "../config/firebase.config";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import { useStateValue } from "../context/stateProvider";
+import { actionType } from "../context/reducer";
+import { loginBg } from "../assets/others"
 
 const Login = ({ setAuth }) => {
   const firebaseAuth = getAuth(app);
   const provider = new GoogleAuthProvider();
   const navigate = useNavigate();
+  const [{user}, dispatch] = useStateValue();
 
   const loginWithGoogle = async () => {
     await signInWithPopup(firebaseAuth, provider).then((userCred) => {
       if (userCred) {
         setAuth(true);
-        window.localStorage.setItem("auth", true);
+        window.localStorage.setItem("auth", "true");
 
         firebaseAuth.onAuthStateChanged((userCerd) => {
           if (userCerd) {
             userCerd.getIdToken().then((token) => {
-              window.localStorage.setItem("token", token);
+              // window.localStorage.setItem("token", token);
+              validateUser(token).then((data) => {
+                dispatch({
+                  type: actionType.SET_USER,
+                  user: data,
+                });
+              });
             });
             navigate("/", { replace: true });
           } else {
             setAuth(false);
-            window.localStorage.setItem("auth", false);
+            dispatch({
+              type: actionType.SET_USER,
+              user: null,
+            });
             navigate("/login");
           }
         });
@@ -33,6 +46,13 @@ const Login = ({ setAuth }) => {
 
   return (
     <div className="relative w-screen h-screen flex items-center justify-center">
+      <video src={loginBg}
+      type="video/mp4"
+      autoPlay
+      muted
+      loop
+      className="w-full h-full object-cover"
+      />
       <div className="absolute inset-0 bg-darkOverlay flex items-center justify-center p-4">
         <div className="w-full md:w-[375px] p-6 bg-lightOverlay shadow-2xl rounded-md backdrop-blur-md flex flex-col items-center justify-center">
           <button
@@ -44,7 +64,6 @@ const Login = ({ setAuth }) => {
               Login with Google
             </span>
           </button>
-          <p className="text-dark text-center mt-3">or</p>
         </div>
       </div>
     </div>

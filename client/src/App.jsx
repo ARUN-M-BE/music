@@ -7,11 +7,14 @@ import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { validateUser } from "../api";
+import { useStateValue } from "./context/stateProvider";
+import { actionType } from "./context/reducer";
 
 const App = () => {
   const firebaseAuth = getAuth(app);
   const provider = new GoogleAuthProvider();
   const navigate = useNavigate();
+  const [{ user }, dispatch] = useStateValue();
 
   const { auth, setAuth } = useState(
     false || window.localStorage.getItem("auth") === true
@@ -23,13 +26,20 @@ const App = () => {
           // console.log(token);
           // window.localStorage.setItem("token", token);
           validateUser(token).then((data) => {
-            console.log(data);
+            dispatch({
+              type: actionType.SET_USER,
+              user: data,
+            });
           });
         });
         navigate("/", { replace: true });
       } else {
         setAuth(false);
         window.localStorage.setItem("auth", "false");
+        dispatch({
+          type: actionType.SET_USER,
+          user: null,
+        });
         navigate("/login");
       }
     });
@@ -43,8 +53,6 @@ const App = () => {
             <Route path="/login" element={<Login setAuth={setAuth} />} />
           </Routes>
         </div>
-
-        <h1 class="text-3xl font-bold underline">Hello world!</h1>
       </AnimatePresence>
     </>
   );
