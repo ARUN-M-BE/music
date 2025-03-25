@@ -15,13 +15,12 @@ const Login = ({ setAuth }) => {
         setAuth(true);
         window.localStorage.setItem("auth", true);
 
-        navigate("/", { replace: true });
-
-        firebaseAuth.onAuthStateChanged((user) => {
-          if (user) {
-            user.getIdToken().then((token) => {
+        firebaseAuth.onAuthStateChanged((userCerd) => {
+          if (userCerd) {
+            userCerd.getIdToken().then((token) => {
               window.localStorage.setItem("token", token);
             });
+            navigate("/", { replace: true });
           } else {
             setAuth(false);
             window.localStorage.setItem("auth", false);

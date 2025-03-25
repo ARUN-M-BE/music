@@ -6,6 +6,7 @@ import { app } from "./config/firebase.config";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
+import { validateUser } from "../api";
 
 const App = () => {
   const firebaseAuth = getAuth(app);
@@ -19,9 +20,13 @@ const App = () => {
     firebaseAuth.onAuthStateChanged((userCerd) => {
       if (userCerd) {
         userCerd.getIdToken().then((token) => {
-          window.localStorage.setItem("token", token);
+          // console.log(token);
+          // window.localStorage.setItem("token", token);
+          validateUser(token).then((data) => {
+            console.log(data);
+          });
         });
-        navigate("/*", { replace: true });
+        navigate("/", { replace: true });
       } else {
         setAuth(false);
         window.localStorage.setItem("auth", "false");

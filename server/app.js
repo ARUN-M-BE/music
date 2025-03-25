@@ -4,7 +4,7 @@ const cors = require('cors');
 const {default :mongoose } = require("mongoose");
 require("dotenv/config");
 
-// app.use(cors(origin: true));
+app.use(cors( {origin: true, credentials: true} ));
 
 const port = 3000;
 app.get('/', (req, res) => {    

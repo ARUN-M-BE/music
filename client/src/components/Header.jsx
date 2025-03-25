@@ -2,6 +2,7 @@ import React from "react";
 import { Logo } from "../assets/image";
 import { NavLink } from "react-router-dom";
 import { isNotActiveStyle, isActiveStyle } from "../utils/style";
+import { FaCrown } from "react-icons/fa";
 
 const Header = () => {
   return (
@@ -52,6 +53,15 @@ const Header = () => {
             </NavLink>
           </li>
         </ul>
+
+        <div className="flex items-center ml-auto cursor-pointer gap-2 relative">
+              <img src="" className="w-12 min-w-[44px] object-cover rounded-full shadow-lg " alt="" />
+              <div className="flex flex-col">
+                    <p className="text-textColor text-lg hover:text-headingColor font-semibold">Username</p>
+                    <p className="flex items-center gap-2 text-xa text-gray-400 font-normal">Premium. <FaCrown className="text-sm -ml-1 text-black" /></p>
+                    <p></p>
+              </div>
+        </div>
       </header>
     </>
   );
