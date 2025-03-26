@@ -3,5 +3,3 @@ export const isNotActiveStyle = "text-gray-700 hover:text-amber-500 transition-a
 export const headerStyle = " ";
 export const headerLogoStyle = "";
 export const headerNavStyle = "flex items-center justify-center ml-7 "; 
-
-export {default as Musics} from "../components/Musics";

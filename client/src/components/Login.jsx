@@ -5,7 +5,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { useStateValue } from "../context/stateProvider";
 import { actionType } from "../context/reducer";
-import { loginBg } from "../assets/others"
+import { Bg } from "../assets/others";
 
 const Login = ({ setAuth }) => {
   const firebaseAuth = getAuth(app);
@@ -46,7 +46,7 @@ const Login = ({ setAuth }) => {
 
   return (
     <div className="relative w-screen h-screen flex items-center justify-center">
-      <video src={loginBg}
+      <video src={Bg}
       type="video/mp4"
       autoPlay
       muted

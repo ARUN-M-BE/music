@@ -82,7 +82,7 @@ const Header = () => {
           />
           <div 
           onMouseEnter={() => setisMenu(true)}
-          onMouseLeave={() => setisMenu(false)}
+          onMouseLeave={() => setisMenu(true)}
           className="flex flex-col">
             <p className="text-textColor text-lg hover:text-headingColor font-semibold">
               {user?.user?.name}
@@ -103,20 +103,29 @@ const Header = () => {
                   Profile
                 </p>
               </NavLink>
-              <NavLink to={"/Myfav"}>
+              {/* <NavLink to={"/Myfav"}> */}
                 <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
                   My Favourites
                 </p>
-              </NavLink>
-              <NavLink to={"/Signout"}>
+              {/* </NavLink> */}
+              {/* <NavLink to={"/Signout"}> */}
                 <hr />
+                {
+                  user?.user?.role === "admin" && (
+                    <NavLink to={"/dashboard/home"}>
+                      <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
+                        Dashboard
+                      </p>
+                    </NavLink>
+                  )
+                }
                 <p
                   className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out"
                   onClick={logOut}
                 >
                   Sign Out
                 </p>
-              </NavLink>
+              {/* </NavLink> */}
             </motion.div>
           )}
         </div>

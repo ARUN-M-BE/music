@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 import { Route, Routes } from "react-router-dom";
-import { Home, Login } from "./components";
+import { Dashboard ,Home, Login } from "./components";
 import { app } from "./config/firebase.config";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -50,6 +50,7 @@ const App = () => {
         <div className="bg-primary h-auto min-w-[680px] justify-center flex items-center">
           <Routes>
             <Route path="/*" element={<Home />} />
+            <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/login" element={<Login setAuth={setAuth} />} />
           </Routes>
         </div>
