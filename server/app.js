@@ -25,7 +25,7 @@ const albumRouter = require("./routes/album");
 app.use("/api/albums", albumRouter);
 
 // Songs Routes
-const songsRouter = require("./routes/songs");
+const songsRouter = require("./routes/song");
 app.use("/api/songs", songsRouter);
 
 mongoose.connect(process.env.DATABASE_STRING, {

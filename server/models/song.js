@@ -12,18 +12,18 @@ const songSchema = mongoose.Schema({
         required: true,
     },
     songURL: {
-        type: Number,
+        type: String,
         required: true,
     },
     album: {
-        type: Number,
+        type: String,
     },
     artist: {
-        type: Number,
+        type: String,
         required: true,
     },
     language: {
-        type: Number,
+        type: String,
         required: true,
     },
     category: {

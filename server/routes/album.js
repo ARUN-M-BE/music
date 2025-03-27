@@ -14,30 +14,28 @@ router.post("/save", async (req, res) => {
 });
 
 router.get("/getOne/:id", async (req, res) => {
-  // return res.json(req.params.id);
 
   const filter = { _id: req.params.id };
   const dataOne = await album.findOne(filter);
   if (dataOne) {
     return res.status(200).send({ success: true, album: dataOne });
   } else {
-    return res
-      .status(400)
-      .send({ success: false, message: "album not found" });
+    return res.status(400).send({ success: false, message: "album not found" });
   }
 });
 
 router.get("/getAll", async (req, res) => {
-  const options = {
-    sort: { createdAt: 1 },
-  };
-  const dataOne = await album.find(options);
-  if (dataOne) {
-    return res.status(200).send({ success: true, album: dataOne });
-  } else {
-    return res
-      .status(400)
-      .send({ success: false, message: "album not found" });
+  try {
+    const dataOne = await album.find({}).sort({ createdAt: -1 });
+
+    if (dataOne.length > 0) {
+      return res.status(200).json({ success: true, album: dataOne });
+    } else {
+      return res.status(404).json({ success: false, message: "No albums found" });
+    }
+  } catch (error) {
+    console.error("Error fetching albums:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -72,11 +70,8 @@ router.delete("/delete/:id", async (req, res) => {
       .status(200)
       .send({ success: true, message: "album deleted", dataOne: result });
   } else {
-    return res
-      .status(400)
-      .send({ success: false, message: "album not found" });
+    return res.status(400).send({ success: false, message: "album not found" });
   }
 });
-
 
 module.exports = router;

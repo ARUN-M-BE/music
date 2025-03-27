@@ -1,17 +1,20 @@
 const router = require("express").Router();
 
-const artist = require("../models/artist");
+const song = require("../models/song");
 
 router.post("/save", async (req, res) => {
-  const newArtist = artist({
+  const newSong = song({
     name: req.body.name,
     imageURL: req.body.imageURL,
-    twetter: req.body.twetter,
-    instagram: req.body.instagram,
+    songURL: req.body.songURL,
+    album: req.body.album,
+    artist: req.body.artist,
+    language: req.body.language,
+    category: req.body.category,
   });
   try {
-    const saveedArtist = await newArtist.save();
-    return res.status(200).send({ success: true, artist: saveedArtist });
+    const saveedSong = await newSong.save();
+    return res.status(200).send({ success: true, song: saveedSong });
   } catch (error) {
     return res.status(400).send({ success: false, message: error });
   }
@@ -21,26 +24,26 @@ router.get("/getOne/:id", async (req, res) => {
   // return res.json(req.params.id);
 
   const filter = { _id: req.params.id };
-  const dataOne = await artist.findOne(filter);
+  const dataOne = await song.findOne(filter);
   if (dataOne) {
-    return res.status(200).send({ success: true, artist: dataOne });
+    return res.status(200).send({ success: true, song: dataOne });
   } else {
     return res
       .status(400)
-      .send({ success: false, message: "Artist not found" });
+      .send({ success: false, message: "song not found" });
   }
 });
 router.get("/getAll", async (req, res) => {
   try {
-    const dataOne = await artist.find({}).sort({ createdAt: -1 });
+    const dataOne = await song.find({}).sort({ createdAt: -1 });
 
     if (dataOne.length > 0) {
-      return res.status(200).json({ success: true, artist: dataOne });
+      return res.status(200).json({ success: true, song: dataOne });
     } else {
-      return res.status(404).json({ success: false, message: "No artist found" });
+      return res.status(404).json({ success: false, message: "No song found" });
     }
   } catch (error) {
-    console.error("Error fetching artist:", error);
+    console.error("Error fetching song:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
@@ -52,19 +55,22 @@ router.put("/update/:id", async (req, res) => {
     new: true,
   };
   try {
-    const result = await artist.findOneAndUpdate(
+    const result = await song.findOneAndUpdate(
       filter,
       {
         name: req.body.name,
         imageURL: req.body.imageURL,
-        twetter: req.body.twetter,
-        instagram: req.body.instagram,
+        songURL: req.body.songURL,
+        album: req.body.album,
+        artist: req.body.artist,
+        language: req.body.language,
+        category: req.body.category,
       },
       options
     );
     return res
       .status(200)
-      .send({ success: true, message: "Artist updated", dataOne: result });
+      .send({ success: true, message: "song updated", dataOne: result });
   } catch (error) {
     return res.status(400).send({ success: false, message: error });
   }
@@ -72,16 +78,17 @@ router.put("/update/:id", async (req, res) => {
 
 router.delete("/delete/:id", async (req, res) => {
   const filter = { _id: req.params.id };
-  const result = await artist.deleteOne(filter);
+  const result = await song.deleteOne(filter);
   if (result) {
     return res
       .status(200)
-      .send({ success: true, message: "Artist deleted", dataOne: result });
+      .send({ success: true, message: "song deleted", dataOne: result });
   } else {
     return res
       .status(400)
-      .send({ success: false, message: "Artist not found" });
+      .send({ success: false, message: "song not found" });
   }
 });
 
 module.exports = router;
+
