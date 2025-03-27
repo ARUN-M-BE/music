@@ -12,7 +12,6 @@ const artistSchema = mongoose.Schema(
     },
     twetter: {
       type: String,
-      required: true,
     },
     instagram: {
       type: String,
