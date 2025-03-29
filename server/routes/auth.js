@@ -60,4 +60,21 @@ const updateNewUser = async (decodeValue, req, res) => {
    
 };
 
+router.get("/getAll", async (req, res) => {
+
+  const options ={
+    sort: {
+      createdAt:1
+    },
+  };
+
+  const cursor = await user.find({}).sort({ createdAt: -1 });
+  if (cursor) {
+    res.status(200).send({ success:true, data: cursor });
+  } else{
+    res.status(400).send({ sucess: false, msg: "no data found" });
+  }
+
+});
+
 module.exports = router;

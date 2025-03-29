@@ -15,3 +15,12 @@ export const validateUser = async (token) => {
     return error;
   }
 };
+
+export const getAllUsers = async (token) => {
+  try {
+    const res = await axios.get(`${baseUrl}api/users/getAll`);
+    return res.data;
+  } catch (error) {
+    return null;
+  }
+}
