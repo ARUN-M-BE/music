@@ -30,19 +30,36 @@ router.get("/getOne/:id", async (req, res) => {
       .send({ success: false, message: "Artist not found" });
   }
 });
-router.get("/getAll", async (req, res) => {
-  try {
-    const dataOne = await artist.find({}).sort({ createdAt: -1 });
+// router.get("/getAll", async (req, res) => {
+//   try {
+//     const dataOne = await artist.find({}).sort({ createdAt: -1 });
 
-    if (dataOne.length > 0) {
-      return res.status(200).json({ success: true, artist: dataOne });
-    } else {
-      return res.status(404).json({ success: false, message: "No artist found" });
-    }
-  } catch (error) {
-    console.error("Error fetching artist:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+//     if (dataOne.length > 0) {
+//       return res.status(200).json({ success: true, artist: dataOne });
+//     } else {
+//       return res.status(404).json({ success: false, message: "No artist found" });
+//     }
+//   } catch (error) {
+//     console.error("Error fetching artist:", error);
+//     return res.status(500).json({ success: false, message: "Internal server error" });
+//   }
+// });
+
+router.get("/getAll", async (req, res) => {
+
+  const options ={
+    sort: {
+      createdAt:1
+    },
+  };
+
+  const cursor = await artist.find({}).sort({ createdAt: -1 });
+  if (cursor) {
+    res.status(200).send({ success:true, data: cursor });
+  } else{
+    res.status(400).send({ sucess: false, msg: "no data found" });
   }
+
 });
 
 router.put("/update/:id", async (req, res) => {

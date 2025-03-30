@@ -1,20 +1,45 @@
 import React, { useEffect } from "react";
-import { useStateValue } from '../context/StateProvider';
-import { getAllUsers } from '../../api';
+import { useStateValue } from "../context/StateProvider";
+import {
+  getAllUsers,
+  getAllAlbums,
+  getAllArtists,
+  getAllSongs,
+} from "../../api";
 import { actionType } from "../context/reducer";
+import { FaUsers } from "react-icons/fa";
+import { RiUserStarFill } from "react-icons/ri";
+import { GiLoveSong, GiMusicalNotes } from "react-icons/gi";
 
 export const DashboardCard = ({ icon, name, count }) => {
   return (
-    <div className="w-40 h-auto bg-dark text-block p-4 rounded-lg shadow-md flex items-center justify-evenly flex-col gap-4">
-      <div className="text-4xl">{icon}</div>
-      <div className="text-2xl">{name}</div>
-      <div className="text-lg">{count}</div>
-    </div>
+    <>
+      {/* <div className="w-40 h-auto bg-dark text-block p-4 rounded-lg shadow-md flex items-center justify-evenly flex-col gap-4">
+        <div className="text-4xl">{icon}</div>
+        <div className="text-2xl">{name}</div>
+        <div className="text-lg">{count}</div>
+      </div> */}
+
+      <div class="flex flex-col justify-center items-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm md:flex-row md:max-w-xl hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">
+        <div class=" w-full h-40 md:h-auto md:w-auto text-4xl">
+          {icon}
+        </div>
+        <div class="flex flex-col justify-center items-center p-4 leading-normal">
+          <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {name}
+          </h5>
+          <h4 class="mb-3 text-3xl font-bold text-gray-700 dark:text-gray-400">
+            {count}
+          </h4>
+        </div>
+      </div>
+    </>
   );
 };
 
 const DashboardHome = () => {
-  const [{ allUsers, allAlbums, allArtists, allSongs }, dispatch] = useStateValue();
+  const [{ allUsers, allAlbums, allArtists, allSongs }, dispatch] =
+    useStateValue();
 
   useEffect(() => {
     if (!allUsers) {
@@ -25,15 +50,55 @@ const DashboardHome = () => {
         });
       });
     }
+    if (!allAlbums) {
+      getAllAlbums().then((data) => {
+        dispatch({
+          type: actionType.SET_ALL_ALBUMS,
+          allAlbums: data.data,
+        });
+      });
+    }
+    if (!allArtists) {
+      getAllArtists().then((data) => {
+        dispatch({
+          type: actionType.SET_ALL_ARTISTS,
+          allArtists: data.data,
+        });
+      });
+    }
+    if (!allSongs) {
+      getAllSongs().then((data) => {
+        dispatch({
+          type: actionType.SET_ALL_SONGS,
+          allSongs: data.data,
+        });
+      });
+    }
   }, []);
 
   return (
     <>
       <div className="w-full p-6 flex items-center justify-center flex-wrap gap-5">
-        <DashboardCard icon="👤" name="Users" count={allUsers ? allUsers.length : 0} />
-        <DashboardCard icon="🎵" name="Songs" count={allSongs ? allSongs.length : 0} />
-        <DashboardCard icon="👨‍🎤" name="Artists" count={allArtists ? allArtists.length : 0} />
-        <DashboardCard icon="💽" name="Albums" count={allAlbums ? allAlbums.length : 0} />
+        <DashboardCard
+          icon={<FaUsers className="text-4xl text-textColor" />}
+          name="Users"
+          count={allUsers ? allUsers.length : 0}
+        />
+        <DashboardCard
+          icon={<GiLoveSong className="text-4xl text-textColor" />}
+          name="Songs"
+          count={allSongs ? allSongs.length : 0}
+        />
+        <DashboardCard
+          icon={<RiUserStarFill className="text-4xl text-textColor" />}
+          name="Artists"
+          count={allArtists ? allArtists.length : 0}
+        />
+        <DashboardCard
+          icon={<GiMusicalNotes className="text-4xl text-textColor" />}
+          name="Albums"
+          count={allAlbums ? allAlbums.length : 0}
+        />
       </div>
     </>
   );

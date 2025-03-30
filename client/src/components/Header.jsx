@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Logo } from "../assets/image";
 import { useNavigate, NavLink } from "react-router-dom";
 import { isNotActiveStyle, isActiveStyle } from "../utils/style";
@@ -7,7 +7,6 @@ import { useStateValue } from "../context/stateProvider";
 import { app } from "../config/firebase.config";
 import { getAuth } from "firebase/auth";
 import { motion } from "framer-motion";
-import { useState } from "react";
 
 const Header = () => {
   const [{ user }, dispatch] = useStateValue();
