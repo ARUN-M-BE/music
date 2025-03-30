@@ -77,4 +77,18 @@ router.get("/getAll", async (req, res) => {
 
 });
 
+router.delete("/delete/:id", async (req, res) => {
+  const filter = { _id: req.params.id };
+  const result = await user.deleteOne(filter);
+  if (result) {
+    return res
+      .status(200)
+      .send({ success: true, message: "User deleted", dataOne: result });
+  } else {
+    return res
+      .status(400)
+      .send({ success: false, message: "User not found" });
+  }
+});
+
 module.exports = router;

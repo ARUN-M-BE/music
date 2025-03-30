@@ -51,3 +51,4 @@ export const getAllAlbums = async (token) => {
     return null;
   }
 }
+

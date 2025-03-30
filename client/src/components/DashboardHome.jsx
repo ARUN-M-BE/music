@@ -10,6 +10,7 @@ import { actionType } from "../context/reducer";
 import { FaUsers } from "react-icons/fa";
 import { RiUserStarFill } from "react-icons/ri";
 import { GiLoveSong, GiMusicalNotes } from "react-icons/gi";
+import { motion } from "framer-motion";
 
 export const DashboardCard = ({ icon, name, count }) => {
   return (
@@ -20,10 +21,13 @@ export const DashboardCard = ({ icon, name, count }) => {
         <div className="text-lg">{count}</div>
       </div> */}
 
-      <div class="flex flex-col justify-center items-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm md:flex-row md:max-w-xl hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">
-        <div class=" w-full h-40 md:h-auto md:w-auto text-4xl">
-          {icon}
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 , delay: 0.2, type: "spring", stiffness: 150 }}
+        class="flex flex-col justify-center items-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm md:flex-row md:max-w-xl hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+      >
+        <div class=" w-full h-40 md:h-auto md:w-auto text-4xl">{icon}</div>
         <div class="flex flex-col justify-center items-center p-4 leading-normal">
           <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
             {name}
@@ -32,7 +36,7 @@ export const DashboardCard = ({ icon, name, count }) => {
             {count}
           </h4>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 };
