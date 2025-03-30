@@ -54,7 +54,7 @@ export const DashboardUserCard = ({ data, index }) => {
       </div>
       <p className="w-275 min-w-[160px] text-center">{data.name}</p>
       <p className="w-275 min-w-[160px] text-center">{data.email}</p>
-      <p className="w-275 min-w-[160px] text-center">{data.verified ? "Yes" : "No"}</p>
+      <p className="w-275 min-w-[160px] text-center">{data.email_verified ? "Yes" : "No"}</p>
       <p className="w-275 min-w-[160px] text-center">{data.createdAt ? data.createdAt.split('T')[0] : "-"}</p>
       <p className="w-275 min-w-[160px] text-center">{data.role}</p>
       <p className="w-275 min-w-[160px] text-center">
