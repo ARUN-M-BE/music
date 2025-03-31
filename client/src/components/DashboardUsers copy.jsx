@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useStateValue } from "../context/stateProvider";
 import { motion } from "framer-motion";
 import { ImBin } from "react-icons/im";
+import { changingUserRole, getAllUsers } from "../../api";
+import { actionType } from "../context/reducer";
 // import { FiEdit } from "react-icons/fi";
 
 const DashboardUsers = () => {
@@ -48,9 +50,22 @@ const DashboardUsers = () => {
 };
 
 const DashboardUserRow = ({ data, index }) => {
-  const [{ user }] = useStateValue();
-  
-  const [isUserRoal, setisUserRoal] = useState(false);
+  const [{ user, allUsers }, dispatch ] = useStateValue();
+
+  const [isUserRole, setisUserRole] = useState(false);
+  const updateRole = (userId, role) => {
+    setisUserRole(false);
+    changingUserRole(userId, role).then((res) => {
+      if (res) {
+        getAllUsers().then((data) => {
+          dispatch({
+            type: actionType.SET_ALL_USERS,
+            allUsers: data.data
+          });
+        });
+      }
+    });
+  };
   return (
     <motion.tr
       initial={{ opacity: 0 }}
@@ -84,40 +99,55 @@ const DashboardUserRow = ({ data, index }) => {
         {data._id !== user?.user._id && (
           <motion.p
             whileTap={{ scale: 0.75 }}
-            onClick={() => setisUserRoal(true)}
+            onClick={() => setisUserRole(true)}
             className="text-[10px] font-semibold px-3 text-textColor text-center rounded-sm bg-purple-200 hover:shadow-md cursor-pointer ease-in-out transition-all"
           >
-            {data.role === "admin" ? "Member" : "Admin"}
+            {data.role === "admin" ? "member" : "admin"}
           </motion.p>
+        )}
+
+        {isUserRole && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 0.5, delay: index * 0.1 }}
+            className="absolute top-6 right-4 bottom-0 left-0 z-10 flex flex-col gap-2 items-start rounded-md shadow-xl"
+          >
+            <div className=" bg-white p-4 rounded-lg shadow-lg">
+              <p className="text-[12px] font-semibold text-center text-gray-900 dark:text-white py-3">
+                Are you sure{" "}
+                <span>{data.role === "admin" ? "member" : "admin"}</span> ?
+              </p>
+              <div className="flex items-center gap-3 px-4">
+                <motion.button
+                  whileTap={{ scale: 0.75 }}
+                  className="outline-none border-none text-[12px] px-4 py-1 rounded-md bg-blue-200 text-black hover:shadow-md"
+                  onClick={() =>
+                    updateRole(
+                      data._id,
+                      data.role === "admin" ? "member" : "admin"
+                    )
+                  }
+                >
+                  Yes
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.75 }}
+                  className="outline-none border-none text-[10px] px-4 py-1 rounded-md bg-gray-200 text-black hover:shadow-md"
+                  onClick={() => setisUserRole(false)}
+                >
+                  No
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </td>
       <td className="px-6 py-4">
         {/* <FiEdit className="p-2 text-block hover:bg-blue-600 cursor-pointer ease-in-out  text-4xl" /> */}
         <ImBin className="p-2 text-block hover:bg-red-600 cursor-pointer ease-in-out text-4xl space-x-1" />
       </td>
-      {isUserRoal && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: index * 0.2 }}
-          className="absolute top-30 right-10 bottom-0 left-0 z-10 flex flex-col gap-2 items-start rounded-md shadow-xl"
-        >
-          <div className=" bg-white p-4 rounded-lg shadow-lg">
-            <p className="text-2xl font-semibold text-center text-gray-900 dark:text-white">
-              Are you sure{" "}
-              <span>{data.role === "admin" ? "Member" : "Admin"}</span> ?
-            </p>
-            <div className="flex justify-between items-center gap-4 mt-4">
-              <button className="w-1/2 p-2 bg-red-500 text-white rounded-lg">
-                Yes
-              </button>
-              <button className="w-1/2 p-2 bg-green-500 text-white rounded-lg">
-                No
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      )}
     </motion.tr>
   );
 };

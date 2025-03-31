@@ -23,7 +23,7 @@ export const getAllUsers = async (token) => {
   } catch (error) {
     return null;
   }
-}
+};
 
 export const getAllSongs = async (token) => {
   try {
@@ -32,7 +32,7 @@ export const getAllSongs = async (token) => {
   } catch (error) {
     return null;
   }
-}
+};
 
 export const getAllArtists = async (token) => {
   try {
@@ -41,7 +41,7 @@ export const getAllArtists = async (token) => {
   } catch (error) {
     return null;
   }
-}
+};
 
 export const getAllAlbums = async (token) => {
   try {
@@ -50,5 +50,15 @@ export const getAllAlbums = async (token) => {
   } catch (error) {
     return null;
   }
-}
+};
 
+export const changingUserRole = async (userId, role) => {
+  try {
+    const res = await axios.put(`${baseUrl}api/users/updateRole/${userId}`, {
+      data: { role: role },
+    });
+    return res;
+  } catch (error) {
+    return null;
+  }
+};

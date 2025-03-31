@@ -79,22 +79,27 @@ const Header = () => {
             alt="profile"
             referrerPolicy="no-referrer"
           />
-          <div 
-          onMouseEnter={() => setisMenu(true)}
-          onMouseLeave={() => setisMenu(true)}
-          className="flex flex-col">
+          <div
+            onMouseEnter={() => setisMenu(true)}
+            onMouseLeave={() => setisMenu(false)}
+            className="flex flex-col"
+          >
             <p className="text-textColor text-lg hover:text-headingColor font-semibold">
               {user?.user?.name}
             </p>
             <p className="flex items-center gap-2 text-xa text-textColor font-normal">
-              Premium Member. <FaCrown className="text-sm -ml-1 text-yellow-500" />
+              Premium Member.{" "}
+              <FaCrown className="text-sm -ml-1 text-yellow-500" />
             </p>
           </div>
           {isMenu && (
             <motion.div
+              onMouseEnter={() => setisMenu(true)}
+              onMouseLeave={() => setisMenu(false)}
               initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
+              animate={{ opacity: 1, y: 0}}
               exit={{ opacity: 0, y: 50 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
               className="absolute z-10 top-14 p-3 right-0 w-50 gap-2 bg-card shadow-lg rounded-lg backdrop-blur-sm flex flex-col"
             >
               <NavLink to={"/Profile"}>
@@ -103,27 +108,25 @@ const Header = () => {
                 </p>
               </NavLink>
               {/* <NavLink to={"/Myfav"}> */}
-                <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
-                  My Favourites
-                </p>
+              <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
+                My Favourites
+              </p>
               {/* </NavLink> */}
               {/* <NavLink to={"/Signout"}> */}
-                <hr />
-                {
-                  user?.user?.role === "admin" && (
-                    <NavLink to={"/dashboard/home"}>
-                      <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
-                        Dashboard
-                      </p>
-                    </NavLink>
-                  )
-                }
-                <p
-                  className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out"
-                  onClick={logOut}
-                >
-                  Sign Out
-                </p>
+              <hr />
+              {user?.user?.role === "admin" && (
+                <NavLink to={"/dashboard/home"}>
+                  <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
+                    Dashboard
+                  </p>
+                </NavLink>
+              )}
+              <p
+                className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out"
+                onClick={logOut}
+              >
+                Sign Out
+              </p>
               {/* </NavLink> */}
             </motion.div>
           )}
