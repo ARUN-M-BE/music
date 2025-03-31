@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useStateValue } from "../context/stateProvider";
 import { motion } from "framer-motion";
 import { ImBin } from "react-icons/im";
-import { changingUserRole, getAllUsers } from "../../api";
+import { changingUserRole, getAllUsers, removeUser } from "../../api";
 import { actionType } from "../context/reducer";
 // import { FiEdit } from "react-icons/fi";
 
@@ -13,7 +13,7 @@ const DashboardUsers = () => {
     <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
       <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
         <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 items-center justify-center">
-          <tr>
+          <tr className="justify-center items-center text-center ">
             {/* <th scope="col" className="px-6 py-3">
               S.No
             </th> */}
@@ -50,7 +50,7 @@ const DashboardUsers = () => {
 };
 
 const DashboardUserRow = ({ data, index }) => {
-  const [{ user, allUsers }, dispatch ] = useStateValue();
+  const [{ user, allUsers }, dispatch] = useStateValue();
 
   const [isUserRole, setisUserRole] = useState(false);
   const updateRole = (userId, role) => {
@@ -60,7 +60,20 @@ const DashboardUserRow = ({ data, index }) => {
         getAllUsers().then((data) => {
           dispatch({
             type: actionType.SET_ALL_USERS,
-            allUsers: data.data
+            allUsers: data.data,
+          });
+        });
+      }
+    });
+  };
+
+  const deleteUser = (userId) => {
+    removeUser(userId).then((res) => {
+      if (res) {
+        getAllUsers().then((data) => {
+          dispatch({
+            type: actionType.SET_ALL_USERS,
+            allUsers: data.data,
           });
         });
       }
@@ -74,7 +87,7 @@ const DashboardUserRow = ({ data, index }) => {
       className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 items-center justify-center"
     >
       {/* <td className="px-6 py-4">{index + 1}</td> */}
-      <td className="px-6 py-4 flex-row flex items-center space-x-1">
+      <td className="px-6 py-4 flex-row flex justify-center items-center space-x-1">
         <img
           className="w-10 h-10 rounded-full object-cover gap-2"
           referrerPolicy="no-referrer"
@@ -88,11 +101,13 @@ const DashboardUserRow = ({ data, index }) => {
           <p className="text-sm text-gray-500">{data.email}</p>
         </div>
       </td>
-      <td className="px-6 py-4">{data.email_verified ? "Yes" : "No"}</td>
-      <td className="px-6 py-4">
+      <td className="px-6 py-4 justify-center items-center text-center">
+        {data.email_verified ? "Yes" : "No"}
+      </td>
+      <td className="px-6 py-4 justify-center items-center text-center">
         {data.createdAt ? data.createdAt.split("T")[0] : "-"}
       </td>
-      <td className=" relative px-6 py-4 flex-row flex items-center gap-4">
+      <td className=" relative px-6 py-4 flex-row flex items-center gap-4 justify-center">
         <p className="text-base font-semibold text-gray-900 dark:text-white">
           {data.role}
         </p>
@@ -146,7 +161,15 @@ const DashboardUserRow = ({ data, index }) => {
       </td>
       <td className="px-6 py-4">
         {/* <FiEdit className="p-2 text-block hover:bg-blue-600 cursor-pointer ease-in-out  text-4xl" /> */}
-        <ImBin className="p-2 text-block hover:bg-red-600 cursor-pointer ease-in-out text-4xl space-x-1" />
+        {data._id !== user?.user._id && (
+          <motion.div
+            whileTap={{ scale: 0.75 }}
+            className=" justify-center items-center flex "
+            onClick={() => deleteUser(data._id)}
+          >
+            <ImBin className="text-red-400 hover:text-red-50 p-2 cursor-pointer ease-in-out space-x-1 text-4xl hover:shadow-lg" />
+          </motion.div>
+        )}
       </td>
     </motion.tr>
   );
