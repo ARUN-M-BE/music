@@ -17,5 +17,9 @@
   "bugs": {
     "url": "https://github.com/ARUN-M-BE/music/issues"
   },
-  "homepage": "https://github.com/ARUN-M-BE/music#readme"
+  "homepage": "https://github.com/ARUN-M-BE/music#readme",
+  "dependencies": {
+    "docx": "^9.3.0",
+    "pptxgenjs": "^3.12.0"
+  }
 }
