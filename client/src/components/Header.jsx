@@ -25,7 +25,7 @@ const Header = () => {
   };
   return (
     <>
-      <header className="flex items-center w-full p-4 md:py-2 md:px-6 bg-dark shadow-md  top-0 z-50 backdrop-blur-md transition-all duration-200 ease-in-out">
+      <header className="flex items-center w-full p-4 md:py-2 md:px-6 bg-dark shadow-md  top-0 z-50 backdrop-blur-md transition-all duration-200 ease-in-out dark:bg-gray-900 dark:text-white">
         <NavLink to="/">
           <img src={Logo} alt="Logo" className=" w-16" />
         </NavLink>
@@ -100,7 +100,7 @@ const Header = () => {
               animate={{ opacity: 1, y: 0}}
               exit={{ opacity: 0, y: 50 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="absolute z-10 top-14 p-3 right-0 w-50 gap-2 bg-card shadow-lg rounded-lg backdrop-blur-sm flex flex-col"
+              className="absolute z-10 top-14 p-3 right-0 w-50 gap-2 bg-card shadow-lg rounded-lg backdrop-blur-sm flex flex-col dark:bg-gray-700 dark:text-white"
             >
               <NavLink to={"/Profile"}>
                 <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">

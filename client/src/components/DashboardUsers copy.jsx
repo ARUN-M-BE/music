@@ -10,8 +10,8 @@ const DashboardUsers = () => {
   const [{ allUsers }] = useStateValue();
 
   return (
-    <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
-      <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+    <div className="relative overflow-x-auto shadow-md sm:rounded-lg dark:bg-gray-700 h-[480px]">
+      <table className=" w-full text-sm text-left text-gray-500 dark:text-gray-400">
         <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 items-center justify-center">
           <tr className="justify-center items-center text-center ">
             {/* <th scope="col" className="px-6 py-3">
@@ -115,7 +115,7 @@ const DashboardUserRow = ({ data, index }) => {
           <motion.p
             whileTap={{ scale: 0.75 }}
             onClick={() => setisUserRole(true)}
-            className="text-[10px] font-semibold px-3 text-textColor text-center rounded-sm bg-purple-200 hover:shadow-md cursor-pointer ease-in-out transition-all"
+            className="text-[10px] font-semibold px-3 text-textColor text-center rounded-sm bg-purple-200 dark:text-black hover:text-red-500 cursor-pointer ease-in-out transition-all"
           >
             {data.role === "admin" ? "member" : "admin"}
           </motion.p>
@@ -129,7 +129,7 @@ const DashboardUserRow = ({ data, index }) => {
             transition={{ duration: 0.5, delay: index * 0.1 }}
             className="absolute top-6 right-4 bottom-0 left-0 z-10 flex flex-col gap-2 items-start rounded-md shadow-xl"
           >
-            <div className=" bg-white p-4 rounded-lg shadow-lg">
+            <div className=" bg-white p-4 rounded-lg shadow-lg dark:bg-gray-600">
               <p className="text-[12px] font-semibold text-center text-gray-900 dark:text-white py-3">
                 Are you sure{" "}
                 <span>{data.role === "admin" ? "member" : "admin"}</span> ?
@@ -137,7 +137,7 @@ const DashboardUserRow = ({ data, index }) => {
               <div className="flex items-center gap-3 px-4">
                 <motion.button
                   whileTap={{ scale: 0.75 }}
-                  className="outline-none border-none text-[12px] px-4 py-1 rounded-md bg-blue-200 text-black hover:shadow-md"
+                  className="outline-none border-none text-[12px] px-4 py-1 rounded-md bg-blue-200 text-black dark:text-black"
                   onClick={() =>
                     updateRole(
                       data._id,
@@ -149,7 +149,7 @@ const DashboardUserRow = ({ data, index }) => {
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.75 }}
-                  className="outline-none border-none text-[10px] px-4 py-1 rounded-md bg-gray-200 text-black hover:shadow-md"
+                  className="outline-none border-none text-[12px] px-4 py-1 rounded-md bg-gray-200 text-black dark:text-black "
                   onClick={() => setisUserRole(false)}
                 >
                   No
@@ -167,7 +167,7 @@ const DashboardUserRow = ({ data, index }) => {
             className=" justify-center items-center flex "
             onClick={() => deleteUser(data._id)}
           >
-            <ImBin className="text-red-400 hover:text-red-50 p-2 cursor-pointer ease-in-out space-x-1 text-4xl hover:shadow-lg" />
+            <ImBin className="text-red-400 hover:text-red-800 hover:bg-no-repeat dark:hover:text-red-200 p-2 cursor-pointer ease-in-out space-x-1 text-4xl" />
           </motion.div>
         )}
       </td>

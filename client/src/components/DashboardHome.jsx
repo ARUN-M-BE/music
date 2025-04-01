@@ -25,14 +25,14 @@ export const DashboardCard = ({ icon, name, count }) => {
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 , delay: 0.2, type: "spring", stiffness: 150 }}
-        class="flex flex-col justify-center items-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm md:flex-row md:max-w-xl hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+        class="flex flex-col justify-center items-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm md:flex-row md:max-w-xl hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 "
       >
         <div class=" w-full h-40 md:h-auto md:w-auto text-4xl">{icon}</div>
         <div class="flex flex-col justify-center items-center p-4 leading-normal">
           <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
             {name}
           </h5>
-          <h4 class="mb-3 text-3xl font-bold text-gray-700 dark:text-gray-400">
+          <h4 class="mb-3 text-3xl font-bold text-gray-700 dark:text-white">
             {count}
           </h4>
         </div>
@@ -82,24 +82,24 @@ const DashboardHome = () => {
 
   return (
     <>
-      <div className="w-full p-6 flex items-center justify-center flex-wrap gap-5">
+      <div className="w-full h-[480px] p-6 flex items-center justify-center flex-wrap gap-5 dark:bg-gray-700 dark:text-white rounded-lg">
         <DashboardCard
-          icon={<FaUsers className="text-4xl text-textColor" />}
+          icon={<FaUsers className="text-4xl text-blue-700" />}
           name="Users"
           count={allUsers ? allUsers.length : 0}
         />
         <DashboardCard
-          icon={<GiLoveSong className="text-4xl text-textColor" />}
+          icon={<GiLoveSong className="text-4xl text-pink-500" />}
           name="Songs"
           count={allSongs ? allSongs.length : 0}
         />
         <DashboardCard
-          icon={<RiUserStarFill className="text-4xl text-textColor" />}
+          icon={<RiUserStarFill className="text-4xl text-yellow-500" />}
           name="Artists"
           count={allArtists ? allArtists.length : 0}
         />
         <DashboardCard
-          icon={<GiMusicalNotes className="text-4xl text-textColor" />}
+          icon={<GiMusicalNotes className="text-4xl text-zinc-500" />}
           name="Albums"
           count={allAlbums ? allAlbums.length : 0}
         />

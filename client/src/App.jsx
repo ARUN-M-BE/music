@@ -33,6 +33,7 @@ const App = () => {
           });
         });
         navigate("/", { replace: true });
+        navigate("/dashboard/home", { replace: true });
       } else {
         setAuth(false);
         window.localStorage.setItem("auth", "false");
@@ -47,7 +48,7 @@ const App = () => {
   return (
     <>
       <AnimatePresence exitBeforeEnter>
-        <div className="bg-primary h-auto min-w-[680px] justify-center flex items-center">
+        <div className="bg-primary h-auto min-w-[680px] justify-center flex items-center dark:bg-gray-900 dark:text-white">
           <Routes>
             <Route path="/*" element={<Home />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
