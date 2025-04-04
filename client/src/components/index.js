@@ -7,4 +7,6 @@ export {default as DashboardUsers} from "./DashboardUsers";
 export {default as DashboardSongs} from "./DashboardSongs";
 export {default as DashboardArtist} from "./DashboardArtist";
 export {default as DashboardAlbum} from "./DashboardAlbum";
-// export {default as NewSong} from "./NewSong";
+export {default as SongsCard} from "./SongsCard";
+export {default as DashboardNewsong} from "./DashboardNewsong";
+export {default as FillterButton} from "./FillterButton";

@@ -33,7 +33,7 @@ const App = () => {
           });
         });
         navigate("/", { replace: true });
-        navigate("/dashboard/home", { replace: true });
+        navigate("/dashboard/", { replace: true });
       } else {
         setAuth(false);
         window.localStorage.setItem("auth", "false");
