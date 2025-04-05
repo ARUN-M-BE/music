@@ -22,6 +22,7 @@ import {
   //   saveNewSong,
 } from "../../api";
 import { filterByLanguage, filter } from "../utils/FillterButton";
+import Upload from "./upload";
 // import AlertSuccess from "./AlertSuccess";
 // import AlertError from "./AlertError";
 
@@ -163,7 +164,7 @@ export const FileUpLoading = ({
           </p>
         </div>
       </div>
-        <input
+        {/* <input
             type="file"
             name="uploadFile"
             accept={isImage ? "image/*" : "audio/*"}
@@ -174,7 +175,8 @@ export const FileUpLoading = ({
             
             }}
             className="w-0 h-0"
-        />
+        /> */}
+        <Upload/>
     </label>
   );
 };
