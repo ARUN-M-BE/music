@@ -1,52 +1,67 @@
-const PORT = process.env.IMAGEKIT_PORT || 3001; // for imagekitServer.js// Load environment variables
 require("dotenv").config();
-
 const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
 const ImageKit = require("imagekit");
+const multer = require("multer");
 
 const app = express();
+const upload = multer();
 
-// Middleware
-app.use(cors({ origin: true, credentials: true }));
+const PORT = process.env.IMAGEKIT_PORT || 3001;
+
 app.use(express.json());
 
-// Connect MongoDB
-mongoose.connect(process.env.DATABASE_STRING);
-mongoose.connection
-  .once("open", () => console.log("Connected to database"))
-  .on("error", (error) => console.log("MongoDB Error:", error));
-
-// 🔐 ImageKit Config
 const imagekit = new ImageKit({
   urlEndpoint: process.env.VITE_IMAGEKIT_URL_ENDPOINT,
   publicKey: process.env.VITE_IMAGEKIT_PUBLIC_KEY,
   privateKey: process.env.VITE_IMAGEKIT_PRIVATE_KEY,
 });
 
-// Allow CORS for ImageKit
-app.use(function (req, res, next) {
+// CORS
+app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
-  );
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
 
-// ⛅ ImageKit Auth Route
+// 🧾 Auth route
 app.get("/auth", (req, res) => {
   const result = imagekit.getAuthenticationParameters();
   res.send(result);
 });
 
-// 🧑‍🎤 Routes
-app.get("/", (req, res) => res.send("Hello World!"));
-app.use("/api/users", require("./routes/auth"));
-app.use("/api/artists", require("./routes/artist"));
-app.use("/api/albums", require("./routes/album"));
-app.use("/api/songs", require("./routes/song"));
+app.post("/upload", upload.single("file"), async (req, res) => {
+  try {
+    const response = await imagekit.upload({
+      file: req.file.buffer,             
+      fileName: req.file.originalname,   
+    });
 
-// Start Server
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    // Return essential data
+    res.status(200).json({
+      success: true,
+      fileId: response.fileId,
+      url: response.url,
+      name: response.name,
+      response,
+    });
+  } catch (error) {
+    console.error("Upload Error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+app.post("/delete", async (req, res) => {
+  try {
+    const response = await imagekit.deleteFile(req.body.fileId);
+    res.status(200).json({ success: true, response });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get("/", (req, res) => res.send("Hello World!"));
+// app.use("/imagekit", require("./routes/imagekit"));
+
+// ✅ Start server
+app.listen(PORT, () => console.log(`ImageKit Server running on port ${PORT}`));

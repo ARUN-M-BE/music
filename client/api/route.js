@@ -7,5 +7,9 @@ const imagekit = new ImageKit({
 });
 
 export async function GET(request){
-        return NextResponce.json(imagekit.getAuthenticationParameters() );
+        return ReactResponse.json(imagekit.getAuthenticationParameters() );
 }
+
+
+
+
