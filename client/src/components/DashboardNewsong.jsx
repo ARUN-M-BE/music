@@ -1,17 +1,17 @@
 import React, { useRef, useEffect, useState } from "react";
-// import {
-//   getStorage,
-//   ref,
-//   uploadBytes,
-//   getDownloadURL,
-//   uploadBytesResumable,
-// } from "firebase/storage";
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  uploadBytesResumable,
+} from "firebase/storage";
 import { useStateValue } from "../context/stateProvider";
 import { actionType } from "../context/reducer";
-// import { motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { BiCloudUpload } from "react-icons/bi";
-// import { MdDelete } from "react-icons/md";
-// import { storage } from "../config/firebase.config";
+import { MdDelete } from "react-icons/md";
+import { storage } from "../config/firebase.config";
 import FillterButton from "./FillterButton";
 import {
   getAllSongs,
@@ -89,7 +89,13 @@ const DashboardNewsong = () => {
                   isImage={true}
                 />
               ) : (
-                <div></div>
+                <div className="w-full h-full overflow-hidden flex rounded-md items-center justify-center">
+                  <img
+                    src={songImageCover}
+                    alt="song"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               )}
             </>
           )}
@@ -123,33 +129,27 @@ export const FileUpLoading = ({
     const uploadFile = (e) => {
         isLoading(true);
         const uploadFile = e.target.files[0];
-        console.log(uploadFile);
-        // if (!file) {
-        //     alert("Please upload a file");
-        //     return;
-        // }
-        isLoading(false);
-        // const storage = getStorage();
-        // const storageRef = ref(storage, `images/${file.name}`);
-        // const uploadTask = uploadBytesResumable(storageRef, file);
-        // uploadTask.on(
-        //     "state_changed",
-        //     (snapshot) => {
-        //         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        //         setImageProgress(progress);
-        //         console.log("Upload is " + progress + "% done");
-        //     },
-        //     (error) => {
-        //         alert("Error uploading file");
-        //     },
-        //     () => {
-        //         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-        //             setSongImageCover(downloadURL);
-        //             isImageLoad(false);
-        //             console.log("File available at", downloadURL);
-        //         });
-        //     }
-        // );
+        const storageRef = ref(storage, `${isImage ? "image" : "audio"}/${Date.now()}-${uploadFile.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, uploadFile);
+        uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+            const progress = Math.round(
+                (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+            );
+            setProgress(progress);
+            },
+            (error) => {
+            console.log(error);
+            },
+            () => {
+            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                updateState(downloadURL);
+                isLoading(false);
+            });
+            }
+        );
+
     }
   return (
     <label>
@@ -172,7 +172,6 @@ export const FileUpLoading = ({
             isLoading(true);
             const uploadFile = e.target.files[0];
             
-            // uploadFile(file);
             }}
             className="w-0 h-0"
         />
