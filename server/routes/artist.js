@@ -53,9 +53,9 @@ router.get("/getAll", async (req, res) => {
     },
   };
 
-  const cursor = await artist.find({}).sort({ createdAt: -1 });
-  if (cursor) {
-    res.status(200).send({ success:true, data: cursor });
+  const dataOne = await artist.find({}).sort({ createdAt: -1 });
+  if (dataOne) {
+    res.status(200).send({ success:true, data: dataOne });
   } else{
     res.status(400).send({ sucess: false, msg: "no data found" });
   }
