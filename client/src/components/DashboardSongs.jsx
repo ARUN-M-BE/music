@@ -28,7 +28,7 @@ const DashboardSongs = () => {
       getAllSongs().then((data) => {
         dispatch({
           type: actionType.SET_ALL_SONGS,
-          allSongs: data.songs,
+          allSongs: data.data,
         });
       });
     }

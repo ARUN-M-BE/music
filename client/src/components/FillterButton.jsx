@@ -9,7 +9,7 @@ const FillterButton = ({ flag, filterData }) => {
   const [filterName, setFilterName] = React.useState(null);
   const [filterMenu, setFilterMenu] = React.useState(null);
 
-  const [{ artistFilter, albumFilter, languageFilter, filterTerm }, dispatch] =
+  const [{ filterArtist, filterAlbum, filterLanguage, filterTerm }, dispatch] =
     useStateValue();
 
   const updateFilterButton = (name) => {

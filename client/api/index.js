@@ -71,3 +71,13 @@ export const removeUser = async (userId) => {
     return null;
   }
 }
+
+export const saveNewSong = async (data) => {
+  try {
+    const res = await axios.post(`${baseUrl}api/songs/save`, { ...data});
+    return res.data.saveedSong;
+  } catch (error) {
+    console.error("saveNewSong error:", error.response?.data || error.message);
+    return null;
+  }
+};

@@ -14,7 +14,7 @@ router.post("/save", async (req, res) => {
   });
   try {
     const saveedSong = await newSong.save();
-    return res.status(200).send({ success: true, song: saveedSong });
+    return res.status(200).send({ success: true, Song: saveedSong });
   } catch (error) {
     return res.status(400).send({ success: false, message: error });
   }
@@ -57,9 +57,9 @@ router.get("/getAll", async (req, res) => {
     },
   };
 
-  const cursor = await song.find({}).sort({ createdAt: -1 });
-  if (cursor) {
-    res.status(200).send({ success:true, data: cursor });
+  const data = await song.find({}).sort({ createdAt: -1 });
+  if (data) {
+    res.status(200).send({ success:true, songs: data });
   } else{
     res.status(400).send({ sucess: false, msg: "no data found" });
   }
