@@ -59,8 +59,13 @@ const DashboardSongs = () => {
           </i>
         </div>
         {/* Main content */}
-        <div className="relative my-4 mx-2 w-full rounded-md border border-gray-300">
-            <SongsContainer data={allSongs} />
+        <div className="relative my-4 mx-2 w-full flex flex-col items-center justify-center rounded-md border border-gray-300">
+            <div className="flex flex-wrap justify-center gap-4 my-4">
+                {allSongs &&
+                    allSongs.map((song, index) => (
+                        <SongsCard key={index} data={song} index={index} />
+                    ))}
+            </div>
         </div>
       </div>
     </>
@@ -70,7 +75,7 @@ const DashboardSongs = () => {
 
 export const SongsContainer = ({data}) => {
   return (
-    <div className="flex flex-col items-center p-4 justify-center w-full h-full bg-primary shadow-lg gap-3 dark:bg-gray-700 dark:text-white rounded-lg">
+    <div className="flex items-center p-4 justify-center w-full h-full bg-primary shadow-lg gap-3 dark:bg-gray-700 dark:text-white rounded-lg">
        {data && data.map((song,index) => (
       <SongsCard key={song._id} data={song} index={index} />
     )
