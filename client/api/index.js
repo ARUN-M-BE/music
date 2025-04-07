@@ -81,3 +81,22 @@ export const saveNewSong = async (data) => {
     return null;
   }
 };
+export const saveNewAlbum = async (data) => {
+  try {
+    const res = await axios.post(`${baseUrl}api/albums/save`, { ...data});
+    return res.data.saveedAlbum;
+  } catch (error) {
+    console.error("saveNewAlbum error:", error.response?.data || error.message);
+    return null;
+  }
+};
+
+export const saveNewArtist = async (data) => {
+  try {
+    const res = await axios.post(`${baseUrl}api/artists/save`, { ...data});
+    return res.data.saveedArtist;
+  } catch (error) {
+    console.error("saveNewArtist error:", error.response?.data || error.message);
+    return null;
+  }
+};

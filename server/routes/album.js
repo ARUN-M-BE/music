@@ -52,9 +52,9 @@ router.get("/getAll", async (req, res) => {
     },
   };
 
-  const cursor = await album.find({}).sort({ createdAt: -1 });
-  if (cursor) {
-    res.status(200).send({ success:true, data: cursor });
+  const data = await album.find({}).sort({ createdAt: -1 });
+  if (data) {
+    res.status(200).send({ success:true, data: data });
   } else{
     res.status(400).send({ sucess: false, msg: "no data found" });
   }
