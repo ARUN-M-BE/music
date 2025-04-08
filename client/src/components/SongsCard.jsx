@@ -43,6 +43,10 @@ const SongsCard = ({ data, index }) => {
             <IoTrash />
           </motion.i>
         </div>
+        <motion.div className="">
+          
+        </motion.div>
+
       </motion.div>
     </>
   );

@@ -8,5 +8,6 @@ export const initialState = {
     filterAlbum: null,
     filterArtist: null,
     filterLanguage: null,
+    AlertType: null,
     
   };

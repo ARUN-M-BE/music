@@ -85,9 +85,33 @@ const DashboardNewsong = () => {
         }),
       });
       const result = await response.json();
-      console.log(response);
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     } catch (error) {
-      console.error("Error deleting file:", error);
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
   };
 
@@ -109,16 +133,62 @@ const DashboardNewsong = () => {
         }),
       });
       const result = await response.json();
-      console.log(response);
+      // console.log(response);
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     } catch (error) {
-      console.error("Error deleting file:", error);
+      // console.error("Error deleting file:", error);
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
   };
 
   const saveSong = () => {
-    if (!songImageCover || !audioImageCover || !SongName || !filterAlbum || !filterArtist || !filterLanguage || !filterTerm) {
-      alert("Please upload both image and audio files or All details.");
-      return;
+    if (
+      !songImageCover ||
+      !audioImageCover ||
+      !SongName ||
+      !filterAlbum ||
+      !filterArtist ||
+      !filterLanguage ||
+      !filterTerm
+    ) {
+      // alert("Please upload both image and audio files or All details.");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
 
     setIsAudioLoad(true);
@@ -134,17 +204,28 @@ const DashboardNewsong = () => {
       category: filterTerm,
     };
 
-    // console.log("Sending data:", data); 
+    // console.log("Sending data:", data);
 
     saveNewSong(data).then((res) => {
-        alert("Song saved successfully!");
-        getAllSongs().then((data) => {
-          dispatch({
-            type: actionType.SET_ALL_SONGS,
-            allSongs: data.songs,
-          });
+      // alert("Song saved successfully!");
+      getAllSongs().then((data) => {
+        dispatch({
+          type: actionType.SET_ALL_SONGS,
+          allSongs: data.songs,
         });
+      });
     });
+    dispatch({
+      type: actionType.SET_ALERT_TYPE,
+      AlertType: "success",
+    });
+
+    const timer = setTimeout(() => {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: null,
+      });
+    }, 3000);
 
     // Reset states
     setSongName("");
@@ -160,11 +241,25 @@ const DashboardNewsong = () => {
     dispatch({ type: actionType.SET_FILTER_ALBUM, filterArtist: null });
     dispatch({ type: actionType.SET_FILTER_LANGUAGE, filterLanguage: null });
     dispatch({ type: actionType.SET_FILTER_TERM, filterTerm: null });
+
+    return () => clearTimeout(timer);
   };
   const saveAlbum = () => {
     if (!albumImageCover || !albumName) {
-      alert("Please upload image files or Enter the Name.");
-      return;
+      // alert("Please upload image files or Enter the Name.");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
 
     setIsAlbumLoad(true);
@@ -174,28 +269,53 @@ const DashboardNewsong = () => {
       imageURL: albumImageCover,
     };
 
-    // console.log("Sending data:", data); 
+    // console.log("Sending data:", data);
 
     saveNewAlbum(data).then((res) => {
-      alert("album saved successfully!");
-        getAllAlbums().then((data) => {
-          dispatch({
-            type: actionType.SET_ALL_ALBUMS,
-            allAlbums: data.album,
-          });
+      // alert("album saved successfully!");
+      getAllAlbums().then((data) => {
+        dispatch({
+          type: actionType.SET_ALL_ALBUMS,
+          allAlbums: data.album,
         });
+      });
     });
+    dispatch({
+      type: actionType.SET_ALERT_TYPE,
+      AlertType: "success",
+    });
+
+    const timer = setTimeout(() => {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: null,
+      });
+    }, 3000);
 
     // Reset states
     setAlbumName("");
     setAlbumImageCover(null);
     setAlbumFileId(null);
     setIsAlbumLoad(null);
+
+    return () => clearTimeout(timer);
   };
   const saveArtist = () => {
     if (!artistImageCover || !artistName || !twetter || !instagram) {
-      alert("Please upload both image files Enter the Details.");
-      return;
+      // alert("Please upload both image files Enter the Details.");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
 
     setIsArtistLoad(true);
@@ -203,21 +323,32 @@ const DashboardNewsong = () => {
     const data = {
       name: artistName,
       imageURL: artistImageCover,
-      twetter:`https://twitter.com/${twetter}`,
-      instagram:`https://www.instagram.com/${instagram}`,
+      twetter: `https://twitter.com/${twetter}`,
+      instagram: `https://www.instagram.com/${instagram}`,
     };
 
-    // console.log("Sending data:", data); 
+    // console.log("Sending data:", data);
 
     saveNewArtist(data).then((res) => {
-      alert("Artist saved successfully!");
-        getAllArtists().then((data) => {
-          dispatch({
-            type: actionType.SET_ALL_ARTISTS,
-            allArtists: data.artist,
-          });
+      // alert("Artist saved successfully!");
+      getAllArtists().then((data) => {
+        dispatch({
+          type: actionType.SET_ALL_ARTISTS,
+          allArtists: data.artist,
         });
+      });
     });
+    dispatch({
+      type: actionType.SET_ALERT_TYPE,
+      AlertType: "success",
+    });
+
+    const timer = setTimeout(() => {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: null,
+      });
+    }, 3000);
 
     // Reset states
     setArtistName("");
@@ -226,6 +357,8 @@ const DashboardNewsong = () => {
     setIsArtistLoad(null);
     setTwetter("");
     setInstagram("");
+
+    return () => clearTimeout(timer);
   };
 
   useEffect(() => {
@@ -431,25 +564,29 @@ const DashboardNewsong = () => {
           className="shadow-sm outline-none border rounded-md bg-transparent duration-150 transition-all ease-in-out text-base text-textColor font-semibold p-3 w-full dark:text-white dark:border-green-50 text-uppercase "
         />
         <div className="w-full bg-gray-300 flex items-center p-3 rounded-md border dark:bg-transparent border-gray-300 dark:border-green-50 ">
-          <p className="text-base text-textColor font-semibold">www.twitter.com/</p>
+          <p className="text-base text-textColor font-semibold">
+            www.twitter.com/
+          </p>
           <input
-          type="text"
-          placeholder="Enter Twetter ID..."
-          value={twetter}
-          onChange={(e) => setTwetter(e.target.value)}
-          className="outline-none rounded-md bg-transparent duration-150 transition-all ease-in-out text-base text-textColor font-semibold  w-full dark:text-white "
-        />
+            type="text"
+            placeholder="Enter Twetter ID..."
+            value={twetter}
+            onChange={(e) => setTwetter(e.target.value)}
+            className="outline-none rounded-md bg-transparent duration-150 transition-all ease-in-out text-base text-textColor font-semibold  w-full dark:text-white "
+          />
         </div>
-        
+
         <div className="w-full  bg-gray-300 flex items-center p-3 rounded-md border dark:bg-transparent border-gray-300 dark:border-green-50 ">
-          <p className="text-base text-textColor font-semibold">www.instagram.com/</p>
+          <p className="text-base text-textColor font-semibold">
+            www.instagram.com/
+          </p>
           <input
-          type="text"
-          placeholder="Enter Instagram URL..."
-          value={instagram}
-          onChange={(e) => setInstagram(e.target.value)}
-          className="outline-none rounded-md bg-transparent duration-150 transition-all ease-in-out text-base text-textColor font-semibold  w-full dark:text-white "
-        />
+            type="text"
+            placeholder="Enter Instagram URL..."
+            value={instagram}
+            onChange={(e) => setInstagram(e.target.value)}
+            className="outline-none rounded-md bg-transparent duration-150 transition-all ease-in-out text-base text-textColor font-semibold  w-full dark:text-white "
+          />
         </div>
       </div>
       <div className="flex items-center justify-center w-80 p-4 ">
@@ -539,8 +676,93 @@ const DashboardNewsong = () => {
           </motion.button>
         )}
       </div>
-
     </div>
+  );
+};
+export const FileUpLoading = ({
+  updateState,
+  updateStateId,
+  isLoading,
+  setProgress,
+  isImage,
+}) => {
+  const [{ AlertType }, dispatch] = useStateValue();
+  return (
+    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+      <div className="flex flex-col items-center justify-center">
+        <BiCloudUpload className="text-3xl text-textColor" />
+        <p className="text-base text-textColor font-semibold">
+          Upload File{isImage ? " Image" : " Audio"}
+        </p>
+      </div>
+
+      <IKContext
+        publicKey={publicKey}
+        urlEndpoint={urlEndpoint}
+        authenticator={authenticator}
+      >
+        <IKUpload
+          fileName={isImage ? "upload.jpg" : "upload.mp3"}
+          folder={isImage ? "/images" : "/audios"}
+          useUniqueFileName={true}
+          tags={["SONG COVER", "AUDIO COVER"]}
+          isPrivateFile={false}
+          responseFields={["tags"]}
+          onChange={() => {
+            setProgress(0);
+            isLoading(true);
+          }}
+          onUploadProgress={(event) => {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setProgress(percent);
+          }}
+          overwriteAITags={true}
+          overwriteTags={true}
+          onSuccess={(res) => {
+            setProgress(100);
+            isLoading(false);
+            updateState(res.url);
+            updateStateId(res.fileId);
+
+            dispatch({
+              type: actionType.SET_ALERT_TYPE,
+              AlertType: "success",
+            });
+
+            const timer = setTimeout(() => {
+              dispatch({
+                type: actionType.SET_ALERT_TYPE,
+                AlertType: null,
+              });
+            }, 3000);
+
+            return () => clearTimeout(timer);
+          }}
+          onError={(err) => {
+            dispatch({
+              type: actionType.SET_ALERT_TYPE,
+              AlertType: "error",
+            });
+
+            const timer = setTimeout(() => {
+              dispatch({
+                type: actionType.SET_ALERT_TYPE,
+                AlertType: null,
+              });
+            }, 3000);
+
+            isLoading(false);
+            setProgress(0);
+            updateState(null);
+            updateStateId(null);
+
+            return () => clearTimeout(timer);
+          }}
+          className="w-0 h-0 opacity-0"
+          multiple={false}
+        />
+      </IKContext>
+    </label>
   );
 };
 export const DisableButton = () => {
@@ -625,69 +847,6 @@ const authenticator = async () => {
   return response.json(); // { signature, token, expire }
 };
 
-export const FileUpLoading = ({
-  updateState,
-  updateStateId,
-  isLoading,
-  setProgress,
-  isImage,
-}) => {
-  return (
-    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-      <div className="flex flex-col items-center justify-center">
-        <BiCloudUpload className="text-3xl text-textColor" />
-        <p className="text-base text-textColor font-semibold">
-          Upload File{isImage ? " Image" : " Audio"}
-        </p>
-      </div>
 
-      <IKContext
-        publicKey={publicKey}
-        urlEndpoint={urlEndpoint}
-        authenticator={authenticator}
-      >
-        <IKUpload
-          fileName={isImage ? "upload.jpg" : "upload.mp3"}
-          folder={isImage ? "/images" : "/audios"}
-          useUniqueFileName={true}
-          tags={["SONG COVER", "AUDIO COVER"]}
-          isPrivateFile={false}
-          responseFields={["tags"]}
-          // transformation={[{ h: 300, w: 400 }]}
-          // lqip={{ active: true, quality: 20 }}
-          // validateFile={(file) => file.size < 1000000}
-          onChange={() => {
-            setProgress(0);
-            isLoading(true);
-          }}
-          onUploadProgress={(event) => {
-            const percent = Math.round((event.loaded / event.total) * 100);
-            setProgress(percent);
-          }}
-          overwriteAITags={true}
-          overwriteTags={true}
-          onSuccess={(res) => {
-            setProgress(100);
-            isLoading(false);
-            updateState(res.url);
-            updateStateId(res.fileId);
-            console.log(res);
-          }}
-          onError={(err) => {
-            console.error("Upload failed:", err);
-            isLoading(false);
-            setProgress(0);
-            updateState(null);
-            updateStateId(null);
-          }}
-          autoStart={false}
-          useUniqueFileNamePerFolder={true}
-          className="w-0 h-0 opacity-0"
-          multiple={false}
-        />
-      </IKContext>
-    </label>
-  );
-};
 
 export default DashboardNewsong;
