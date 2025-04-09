@@ -16,9 +16,9 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
+    "build": "npm install",
     "dev:server": "nodemon app.js",
     "dev:client": "cd ../client && npm start",
-    "build": "cd ../client && npm run build",
     "test": "npm run dev",
     "imagekit": "node imagekit.js",
     "dev": "concurrently \"nodemon app.js\" \"npm run imagekit\""
