@@ -81,6 +81,11 @@ const reducer = (state, action) => {
         ...state,
         songIndex: action.songIndex,
       };
+    case actionType.SET_IS_PLAYLIST:
+      return {
+        ...state,
+        isPlayList: action.isPlayList,
+      };
 
     default:
       return state;

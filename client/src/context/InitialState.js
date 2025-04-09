@@ -11,5 +11,6 @@ export const initialState = {
     AlertType: null,
     songPlaying: null,
     songIndex: null,
+    isPlayList: false,
     
   };

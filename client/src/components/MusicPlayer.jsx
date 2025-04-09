@@ -10,14 +10,15 @@ import { getAllSongs } from "../../api";
 import { FiMaximize } from "react-icons/fi";
 
 const MusicPlayer = () => {
-  const [{ songPlayer, songIndex, allSongs }, dispatch] = useStateValue();
+  const [{ songPlaying, songIndex, allSongs }, dispatch] = useStateValue();
   const [isPlayList, setIsPlayList] = useState(false);
   const [miniPlayer, setMiniPlayer] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(songIndex || 0);
 
+
   if (!allSongs || allSongs.length === 0 || currentIndex === null) return null;
 
-  const currentSong = allSongs[currentIndex];
+  const currentSong = allSongs[songIndex] || allSongs[currentIndex];
 
   const togglePlayer = () => {
     setMiniPlayer((prev) => !prev);
@@ -35,6 +36,7 @@ const MusicPlayer = () => {
   const previousTrack = () => {
     setCurrentIndex((prev) => (prev === 0 ? allSongs.length - 1 : prev - 1));
   };
+  
 
   return (
     <div className="w-full flex items-center gap-3">
@@ -73,7 +75,7 @@ const MusicPlayer = () => {
         <div className="flex-1">
           <AudioPlayer
             src={currentSong?.songURL}
-            autoPlay
+            autoPlay={true}
             showSkipControls
             onClickNext={nextTrack}
             onClickPrevious={previousTrack}
@@ -151,43 +153,41 @@ export const PlayListCard = ({ setCurrentIndex }) => {
   };
 
   return (
-    <div className="absolute z-50 left-4 bottom-24 gap-2 py-2 w-350 max-w-[350px] h-510 max-h-[510px] flex flex-col overflow-y-scroll scrollbar-thin rounded-md shadow-md bg-primary">
-      {allSongs && allSongs.length > 0 ? (
-        allSongs.map((music, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, translateX: -50 }}
-            animate={{ opacity: 1, translateX: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-            className={`group w-full p-4 hover:bg-card flex gap-3 items-center cursor-pointer ${
-              music?._id === allSongs[songIndex]?._id
-                ? "bg-card"
-                : "bg-transparent"
-            }`}
-            onClick={() => setCurrentPlaySong(index)}
-          >
-            <IoMusicalNote className="text-textColor group-hover:text-headingColor text-2xl cursor-pointer" />
+    <div className="absolute left-4 bottom-24 gap-2 py-2 w-350 max-w-[350px] h-510 max-h-[510px] flex flex-col overflow-y-scroll scrollbar-thin rounded-md shadow-md bg-primary">
+    {allSongs && allSongs.length > 0 ? (
+      allSongs.map((music, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, translateX: -50 }}
+          animate={{ opacity: 1, translateX: 0 }}
+          transition={{ duration: 0.3, delay: index * 0.1 }}
+          className={`group w-full p-4 hover:bg-card flex gap-3 items-center cursor-pointer ${
+            music?._id === allSongs[songIndex]?._id ? "bg-card" : "bg-transparent"
+          }`}
+          onClick={() => setCurrentPlaySong(index)}
+        >
+          <IoMusicalNote className="text-textColor group-hover:text-headingColor text-2xl cursor-pointer" />
 
-            <div className="flex items-start flex-col">
-              <p className="text-lg text-headingColor font-semibold">
-                {music?.name.length > 20
-                  ? music?.name.slice(0, 20)
-                  : music?.name}{" "}
-                <span className="text-base">({music?.album})</span>
-              </p>
-              <p className="text-textColor">
-                {music?.artist}{" "}
-                <span className="text-sm text-textColor font-semibold">
-                  ({music?.category})
-                </span>
-              </p>
-            </div>
-          </motion.div>
-        ))
-      ) : (
-        <p className="text-center text-textColor">No songs available</p>
-      )}
-    </div>
+          <div className="flex items-start flex-col">
+            <p className="text-lg text-headingColor font-semibold">
+              {music?.name.length > 20
+                ? music?.name.slice(0, 20)
+                : music?.name}{" "}
+              <span className="text-base">({music?.album})</span>
+            </p>
+            <p className="text-textColor">
+              {music?.artist}{" "}
+              <span className="text-sm text-textColor font-semibold">
+                ({music?.category})
+              </span>
+            </p>
+          </div>
+        </motion.div>
+      ))
+    ) : (
+      <p className="text-center text-textColor">No songs available</p>
+    )}
+  </div>
   );
 };
 
