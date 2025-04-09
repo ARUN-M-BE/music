@@ -59,7 +59,7 @@ const ArtistCard = ({ data, index }) => {
       // Extract the file ID from the URL if not provided
       const fileIdToDelete = fileId || fileURL.split("/").pop().split("?")[0];
 
-      const response = await fetch("http://localhost:3001/delete", {
+      const response = await fetch(`${baseUrl2}delete`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

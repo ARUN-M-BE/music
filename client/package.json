@@ -6,7 +6,7 @@
   "homepage": "https://g-music-a.onrender.com/",
   "scripts": {
     "dev": "vite",
-    "build": "npm install",
+    "build": "npm run build",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",

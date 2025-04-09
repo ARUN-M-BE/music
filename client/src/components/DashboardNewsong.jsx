@@ -74,7 +74,7 @@ const DashboardNewsong = () => {
     audioImageCover
   ) => {
     try {
-      const response = await fetch("http://localhost:3001/delete", {
+      const response = await fetch(`${baseUrl2}delete`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -122,7 +122,7 @@ const DashboardNewsong = () => {
     albumImageCover
   ) => {
     try {
-      const response = await fetch("http://localhost:3001/delete", {
+      const response = await fetch(`${baseUrl2}delete`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -853,7 +853,7 @@ export const Fileload = ({ progress }) => (
 );
 
 const authenticator = async () => {
-  const response = await fetch("http://localhost:3001/auth");
+  const response = await fetch(`${baseUrl}auth`);
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Auth error: ${error}`);
