@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://github.com/ARUN-M-BE/music/tree/node-app/client",
+  "homepage": "https://g-music-a.onrender.com/",
   "scripts": {
     "dev": "vite",
     "build": "npm install",
