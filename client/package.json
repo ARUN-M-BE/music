@@ -6,7 +6,7 @@
   "homepage": "https://github.com/ARUN-M-BE/music/tree/node-app/client",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm install",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
