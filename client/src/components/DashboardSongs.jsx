@@ -5,6 +5,7 @@ import { IoAdd } from "react-icons/io5";
 import { AiOutlineClear } from "react-icons/ai";
 import { useState } from "react";
 import { useEffect } from "react";
+import { getAllSongs } from "../../api";
 import { actionType } from "../context/reducer";
 import { useStateValue } from "../context/stateProvider";
 import SongsCard from "./SongsCard";

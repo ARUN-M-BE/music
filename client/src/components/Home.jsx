@@ -7,7 +7,10 @@ import { actionType } from "../context/reducer";
 import { useStateValue } from "../context/stateProvider";
 import SongsCard from "./SongsCard";
 
+
 const Home = () => {
+  const [SongFilter, setSongFilter] = useState("");
+  const [isFocus, setIsFocus] = useState(false);
   const [{ allSongs }, dispatch] = useStateValue();
 
   useEffect(() => {
@@ -15,11 +18,13 @@ const Home = () => {
       getAllSongs().then((data) => {
         dispatch({
           type: actionType.SET_ALL_SONGS,
-          allSongs: data.data,
+          allSongs: data.songs,
         });
       });
     }
   }, []);
+
+  
   return (
     <>
       <div className="w-full h-auto flex flex-col items-center justify-center bg-primary dark:bg-gray-900 dark:text-white">

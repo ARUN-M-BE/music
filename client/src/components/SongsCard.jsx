@@ -7,7 +7,7 @@ import { deleteSong, getAllSongs } from "../../api";
 
 const SongsCard = ({ data, index, type }) => {
   const [isDelete, setIsDelete] = React.useState(false);
-  const [{ allSongs, AlertType, songPlaying, songIndex }, dispatch] = useStateValue();
+  const [{ songPlaying, songIndex, user }, dispatch] = useStateValue();
   const deleteObject = async (data) => {
     try {
       setIsDelete(true); // Show loading state
@@ -149,13 +149,19 @@ const SongsCard = ({ data, index, type }) => {
           <p className="text-sm text-textColor font-semibold">{data?.album}</p>
         </div>
         <div className="w-full absolute bottom-2 right-2 flex items-center justify-between px-4 ">
-          <motion.i
-            whileTap={{ scale: 0.75 }}
-            className="text-base text-red-400 hover:text-red-600 drop-shadow-md "
-            onClick={() => setIsDelete(true)}
-          >
-            <IoTrash />
-          </motion.i>
+          {user?.user?.role === "admin" && (
+            <motion.button
+              whileTap={{ scale: 0.75 }}
+              type="button"
+              className="text-sm font-bold text-[12px] px-2 py-1 uppercase text-black drop-shadow-md bg-red-100 hover:bg-red-500 rounded-lg "
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDelete(true);
+              }}
+            >
+              <IoTrash />
+            </motion.button>
+          )}
         </div>
         {isDelete && (
           <motion.div
