@@ -1,5 +1,8 @@
 import ImageKit from "imagekit";
 
+
+const baseUrl2 = "http://localhost:3001/";
+
 const imagekit = new ImageKit({
         urlEndpoint: import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT,
         publicKey: import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY,

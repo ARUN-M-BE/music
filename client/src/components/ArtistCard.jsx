@@ -60,7 +60,7 @@ const ArtistCard = ({ data, index }) => {
         return;
       }
   
-      const response = await fetch("http://localhost:3001/delete", {
+      const response = await fetch(`${baseUrl2}delete`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

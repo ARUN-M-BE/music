@@ -77,7 +77,7 @@ const SongsCard = ({ data, index, type }) => {
         throw new Error(`Missing ${fileType} file parameters`);
       }
   
-      const response = await fetch("http://localhost:3001/delete", {
+      const response = await fetch(`${baseUrl2}delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
