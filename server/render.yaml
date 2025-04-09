@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: your-backend
+    name: server
     runtime: node
     buildCommand: npm install
     startCommand: npm start
