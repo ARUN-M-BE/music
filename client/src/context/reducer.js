@@ -11,6 +11,8 @@ export const actionType = {
   SET_FILTER_LANGUAGE: "SET_FILTER_LANGUAGE",
 
   SET_ALERT_TYPE: "SET_ALERT_TYPE",
+  SET_SONG_PLAYING: "SET_SONG_PLAYING",
+  SET_SONG_INDEX: "SET_SONG_INDEX",
 };
 
 const reducer = (state, action) => {
@@ -68,6 +70,16 @@ const reducer = (state, action) => {
       return {
         ...state,
         AlertType: action.AlertType,
+      };
+    case actionType.SET_SONG_PLAYING:
+      return {
+        ...state,
+        songPlaying: action.songPlaying,
+      };
+    case actionType.SET_SONG_INDEX:
+      return {
+        ...state,
+        songIndex: action.songIndex,
       };
 
     default:

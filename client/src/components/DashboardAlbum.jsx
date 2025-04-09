@@ -77,7 +77,7 @@ export const AlbumContainer = ({data}) => {
   return (
     <div className="flex items-center p-4 justify-center w-full h-full bg-primary shadow-lg gap-3 dark:bg-gray-700 dark:text-white rounded-lg">
        {data && data.map((album,index) => (
-      <AlbumCard key={  album._id} data={album} index={index} />
+      <AlbumCard key={  album._id} data={album} index={index} type="album" />
     )
     )}
     </div>

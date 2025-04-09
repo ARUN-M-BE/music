@@ -4,6 +4,7 @@ router.post("/save", async (req, res) => {
   const newAlbum = album({
     name: req.body.name,
     imageURL: req.body.imageURL,
+    fileId: req.body.fileId,
   });
   try {
     const saveedAlbum = await newAlbum.save();

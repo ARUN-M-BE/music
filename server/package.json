@@ -25,6 +25,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "firebase-admin": "^13.2.0",
+    "flowbite": "^3.1.2",
     "imagekit": "^6.0.0",
     "mongodb": "^6.14.2",
     "mongoose": "^8.12.1",

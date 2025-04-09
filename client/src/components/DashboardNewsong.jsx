@@ -165,7 +165,7 @@ const DashboardNewsong = () => {
     }
   };
 
-  const saveSong = () => {
+  const saveSong = async () => {
     if (
       !songImageCover ||
       !audioImageCover ||
@@ -175,20 +175,11 @@ const DashboardNewsong = () => {
       !filterLanguage ||
       !filterTerm
     ) {
-      // alert("Please upload both image and audio files or All details.");
       dispatch({
         type: actionType.SET_ALERT_TYPE,
         AlertType: "error",
       });
-
-      const timer = setTimeout(() => {
-        dispatch({
-          type: actionType.SET_ALERT_TYPE,
-          AlertType: null,
-        });
-      }, 3000);
-
-      return () => clearTimeout(timer);
+      return;
     }
 
     setIsAudioLoad(true);
@@ -202,56 +193,24 @@ const DashboardNewsong = () => {
       artist: filterArtist,
       language: filterLanguage,
       category: filterTerm,
+      songId: audioFileId,
+      fileId: imageFileId,
     };
 
-    // console.log("Sending data:", data);
+    console.log(data);
 
-    saveNewSong(data).then((res) => {
-      // alert("Song saved successfully!");
-      getAllSongs().then((data) => {
-        dispatch({
-          type: actionType.SET_ALL_SONGS,
-          allSongs: data.songs,
-        });
+    try {
+      await saveNewSong(data);
+      const songsData = await getAllSongs();
+      dispatch({
+        type: actionType.SET_ALL_SONGS,
+        allSongs: songsData.songs,
       });
-    });
-    dispatch({
-      type: actionType.SET_ALERT_TYPE,
-      AlertType: "success",
-    });
 
-    const timer = setTimeout(() => {
       dispatch({
         type: actionType.SET_ALERT_TYPE,
-        AlertType: null,
+        AlertType: "success",
       });
-    }, 3000);
-
-    // Reset states
-    setSongName("");
-    setSongImageCover(null);
-    setAudioImageCover(null);
-    setImageFileId(null);
-    setAudioFileId(null);
-    setImageProgress(0);
-    setAudioProgress(0);
-    setIsImageLoad(false);
-    setIsAudioLoad(false);
-    dispatch({ type: actionType.SET_FILTER_ARTIST, filterAlbum: null });
-    dispatch({ type: actionType.SET_FILTER_ALBUM, filterArtist: null });
-    dispatch({ type: actionType.SET_FILTER_LANGUAGE, filterLanguage: null });
-    dispatch({ type: actionType.SET_FILTER_TERM, filterTerm: null });
-
-    return () => clearTimeout(timer);
-  };
-  const saveAlbum = () => {
-    if (!albumImageCover || !albumName) {
-      // alert("Please upload image files or Enter the Name.");
-      dispatch({
-        type: actionType.SET_ALERT_TYPE,
-        AlertType: "error",
-      });
-
       const timer = setTimeout(() => {
         dispatch({
           type: actionType.SET_ALERT_TYPE,
@@ -259,7 +218,45 @@ const DashboardNewsong = () => {
         });
       }, 3000);
 
+      // Reset states
+      setSongName("");
+      setSongImageCover(null);
+      setAudioImageCover(null);
+      setImageFileId(null);
+      setAudioFileId(null);
+      setImageProgress(0);
+      setAudioProgress(0);
+      setIsImageLoad(false);
+      setIsAudioLoad(false);
+      dispatch({ type: actionType.SET_FILTER_ARTIST, filterArtist: null });
+      dispatch({ type: actionType.SET_FILTER_ALBUM, filterAlbum: null });
+      dispatch({ type: actionType.SET_FILTER_LANGUAGE, filterLanguage: null });
+      dispatch({ type: actionType.SET_FILTER_TERM, filterTerm: null });
       return () => clearTimeout(timer);
+    } catch (error) {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+    } finally {
+      setIsImageLoad(false);
+      setIsAudioLoad(false);
+    }
+    return () => clearTimeout(timer);
+  };
+  const saveAlbum = async () => {
+    if (!albumImageCover || !albumName) {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+      return;
     }
 
     setIsAlbumLoad(true);
@@ -267,47 +264,21 @@ const DashboardNewsong = () => {
     const data = {
       name: albumName,
       imageURL: albumImageCover,
+      fileId: albumFileId,
     };
 
-    // console.log("Sending data:", data);
-
-    saveNewAlbum(data).then((res) => {
-      // alert("album saved successfully!");
-      getAllAlbums().then((data) => {
-        dispatch({
-          type: actionType.SET_ALL_ALBUMS,
-          allAlbums: data.album,
-        });
+    try {
+      await saveNewAlbum(data);
+      const albumData = await getAllAlbums();
+      dispatch({
+        type: actionType.SET_ALL_ALBUMS,
+        allAlbums: albumData.albums,
       });
-    });
-    dispatch({
-      type: actionType.SET_ALERT_TYPE,
-      AlertType: "success",
-    });
 
-    const timer = setTimeout(() => {
       dispatch({
         type: actionType.SET_ALERT_TYPE,
-        AlertType: null,
+        AlertType: "success",
       });
-    }, 3000);
-
-    // Reset states
-    setAlbumName("");
-    setAlbumImageCover(null);
-    setAlbumFileId(null);
-    setIsAlbumLoad(null);
-
-    return () => clearTimeout(timer);
-  };
-  const saveArtist = () => {
-    if (!artistImageCover || !artistName || !twetter || !instagram) {
-      // alert("Please upload both image files Enter the Details.");
-      dispatch({
-        type: actionType.SET_ALERT_TYPE,
-        AlertType: "error",
-      });
-
       const timer = setTimeout(() => {
         dispatch({
           type: actionType.SET_ALERT_TYPE,
@@ -315,7 +286,36 @@ const DashboardNewsong = () => {
         });
       }, 3000);
 
+      // Reset states
+      setAlbumName("");
+      setAlbumImageCover(null);
+      setAlbumFileId(null);
+      setIsAlbumLoad(null);
       return () => clearTimeout(timer);
+    } catch (error) {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+    } finally {
+      setIsAlbumLoad(false);
+    }
+    return () => clearTimeout(timer);
+  };
+
+  const saveArtist = async () => {
+    if (!artistImageCover || !artistName || !twetter || !instagram) {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+      return;
     }
 
     setIsArtistLoad(true);
@@ -325,39 +325,50 @@ const DashboardNewsong = () => {
       imageURL: artistImageCover,
       twetter: `https://twitter.com/${twetter}`,
       instagram: `https://www.instagram.com/${instagram}`,
+      fileId: artistFileId,
     };
 
-    // console.log("Sending data:", data);
-
-    saveNewArtist(data).then((res) => {
-      // alert("Artist saved successfully!");
-      getAllArtists().then((data) => {
-        dispatch({
-          type: actionType.SET_ALL_ARTISTS,
-          allArtists: data.artist,
-        });
+    try {
+      await saveNewArtist(data);
+      const artistData = await getAllArtists();
+      dispatch({
+        type: actionType.SET_ALL_ARTISTS,
+        allArtists: artistData.artist,
       });
-    });
-    dispatch({
-      type: actionType.SET_ALERT_TYPE,
-      AlertType: "success",
-    });
 
-    const timer = setTimeout(() => {
       dispatch({
         type: actionType.SET_ALERT_TYPE,
-        AlertType: null,
+        AlertType: "success",
       });
-    }, 3000);
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
 
-    // Reset states
-    setArtistName("");
-    setArtistImageCover(null);
-    setArtistFileId(null);
-    setIsArtistLoad(null);
-    setTwetter("");
-    setInstagram("");
-
+      // Reset states
+      setArtistName("");
+      setArtistImageCover(null);
+      setArtistFileId(null);
+      setIsArtistLoad(null);
+      setTwetter("");
+      setInstagram("");
+      return () => clearTimeout(timer);
+    } catch (error) {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+    } finally {
+      setIsArtistLoad(false);
+    }
     return () => clearTimeout(timer);
   };
 
@@ -371,6 +382,7 @@ const DashboardNewsong = () => {
       });
     }
     if (!allAlbums) {
+      // In your useEffect:
       getAllAlbums().then((data) => {
         dispatch({
           type: actionType.SET_ALL_ALBUMS,
@@ -661,7 +673,7 @@ const DashboardNewsong = () => {
           className="shadow-sm outline-none border rounded-md bg-transparent duration-150 transition-all ease-in-out text-base text-textColor font-semibold p-3 w-full dark:text-white dark:border-green-50"
         />
       </div>
-      <div className="flex items-center justify-center w-80 p-4 ">
+      <div className="flex items-center justify-center w-80 h-50 p-4 ">
         {isAlbumLoad ? (
           <DisableButton />
         ) : (
@@ -686,7 +698,45 @@ export const FileUpLoading = ({
   setProgress,
   isImage,
 }) => {
-  const [{ AlertType }, dispatch] = useStateValue();
+  const [, dispatch] = useStateValue();
+
+  const handleSuccess = (res) => {
+    setProgress(100);
+    isLoading(false);
+    updateState(res.url);
+    updateStateId(res.fileId);
+    dispatch({
+      type: actionType.SET_ALERT_TYPE,
+      AlertType: "success",
+    });
+    console.log(res);
+
+    const timer = setTimeout(() => {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: null,
+      });
+    }, 3000);
+    return () => clearTimeout(timer);
+  };
+
+  const handleError = () => {
+    isLoading(false);
+    setProgress(0);
+    updateState(null);
+    updateStateId(null);
+    dispatch({
+      type: actionType.SET_ALERT_TYPE,
+      AlertType: "error",
+    });
+    const timer = setTimeout(() => {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: null,
+      });
+    }, 3000);
+    return () => clearTimeout(timer);
+  };
   return (
     <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
       <div className="flex flex-col items-center justify-center">
@@ -711,6 +761,7 @@ export const FileUpLoading = ({
           onChange={() => {
             setProgress(0);
             isLoading(true);
+            console.log("onChange");
           }}
           onUploadProgress={(event) => {
             const percent = Math.round((event.loaded / event.total) * 100);
@@ -718,48 +769,11 @@ export const FileUpLoading = ({
           }}
           overwriteAITags={true}
           overwriteTags={true}
-          onSuccess={(res) => {
-            setProgress(100);
-            isLoading(false);
-            updateState(res.url);
-            updateStateId(res.fileId);
-
-            dispatch({
-              type: actionType.SET_ALERT_TYPE,
-              AlertType: "success",
-            });
-
-            const timer = setTimeout(() => {
-              dispatch({
-                type: actionType.SET_ALERT_TYPE,
-                AlertType: null,
-              });
-            }, 3000);
-
-            return () => clearTimeout(timer);
-          }}
-          onError={(err) => {
-            dispatch({
-              type: actionType.SET_ALERT_TYPE,
-              AlertType: "error",
-            });
-
-            const timer = setTimeout(() => {
-              dispatch({
-                type: actionType.SET_ALERT_TYPE,
-                AlertType: null,
-              });
-            }, 3000);
-
-            isLoading(false);
-            setProgress(0);
-            updateState(null);
-            updateStateId(null);
-
-            return () => clearTimeout(timer);
-          }}
+          onSuccess={handleSuccess}
+          onError={handleError}
           className="w-0 h-0 opacity-0"
           multiple={false}
+
         />
       </IKContext>
     </label>
@@ -846,7 +860,5 @@ const authenticator = async () => {
   }
   return response.json(); // { signature, token, expire }
 };
-
-
 
 export default DashboardNewsong;

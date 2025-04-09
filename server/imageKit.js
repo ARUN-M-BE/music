@@ -63,5 +63,6 @@ app.post("/delete", async (req, res) => {
 app.get("/", (req, res) => res.send("Hello World!"));
 // app.use("/imagekit", require("./routes/imagekit"));
 
-// ✅ Start server
+
+
 app.listen(PORT, () => console.log(`ImageKit Server running on port ${PORT}`));

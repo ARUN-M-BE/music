@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 import { Route, Routes } from "react-router-dom";
-import { Dashboard ,Home, Login } from "./components";
+import { Dashboard, Home, Login } from "./components";
 import { app } from "./config/firebase.config";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -9,22 +9,24 @@ import { AnimatePresence } from "framer-motion";
 import { validateUser } from "../api";
 import { useStateValue } from "./context/stateProvider";
 import { actionType } from "./context/reducer";
+import MusicPlayer from "./components/MusicPlayer";
+import { motion } from "framer-motion";
+
 
 const App = () => {
   const firebaseAuth = getAuth(app);
   const provider = new GoogleAuthProvider();
   const navigate = useNavigate();
-  const [{ user }, dispatch] = useStateValue();
+  const [{ user, songPlayer }, dispatch] = useStateValue();
 
-  const { auth, setAuth } = useState(
-    false || window.localStorage.getItem("auth") === true
+  const [auth, setAuth] = useState(
+    window.localStorage.getItem("auth") === "true"
   );
+
   useEffect(() => {
-    firebaseAuth.onAuthStateChanged((userCerd) => {
-      if (userCerd) {
-        userCerd.getIdToken().then((token) => {
-          // console.log(token);
-          // window.localStorage.setItem("token", token);
+    firebaseAuth.onAuthStateChanged((userCred) => {
+      if (userCred) {
+        userCred.getIdToken().then((token) => {
           validateUser(token).then((data) => {
             dispatch({
               type: actionType.SET_USER,
@@ -32,8 +34,7 @@ const App = () => {
             });
           });
         });
-        navigate("/", { replace: true });
-        navigate("/dashboard/", { replace: true });
+        navigate( "/", { replace: true });
       } else {
         setAuth(false);
         window.localStorage.setItem("auth", "false");
@@ -45,19 +46,31 @@ const App = () => {
       }
     });
   }, []);
+
   return (
     <>
-      <AnimatePresence exitBeforeEnter>
+      <AnimatePresence mode="wait">
         <div className="bg-primary h-auto min-w-[680px] justify-center flex items-center dark:bg-gray-900 dark:text-white">
           <Routes>
             <Route path="/*" element={<Home />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/login" element={<Login setAuth={setAuth} />} />
           </Routes>
+
+          {/* {songPlayer && ( */}
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`fixed min-w-[700px] h-26 inset-x-0 bottom-0 z-50 bg-primary dark:bg-gray-800 dark:text-white flex items-center justify-center backdrop-blur-md`}
+            >
+              <MusicPlayer />
+            </motion.div>
+          {/* )} */}
         </div>
       </AnimatePresence>
     </>
   );
 };
+
 
 export default App;

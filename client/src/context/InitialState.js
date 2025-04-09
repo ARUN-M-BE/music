@@ -9,5 +9,7 @@ export const initialState = {
     filterArtist: null,
     filterLanguage: null,
     AlertType: null,
+    songPlaying: null,
+    songIndex: null,
     
   };

@@ -9,6 +9,10 @@ const albumSchema = mongoose.Schema({
         type: String,
         required: true,
     },
+    fileId: {
+        type: String,
+        required: true,
+    },
     // artist: {
     //     type: String,
     //     required: true,

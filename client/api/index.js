@@ -100,3 +100,33 @@ export const saveNewArtist = async (data) => {
     return null;
   }
 };
+
+export const deleteSong = async (songId) => {
+  try {
+    const res = await axios.delete(`${baseUrl}api/songs/delete/${songId}`);
+    return res;
+  } catch (error) {
+    console.error("deleteSong error:", error.response?.data || error.message);
+    return null;
+  }
+};
+
+export const deleteAlbum = async (albumId) => {
+  try {
+    const res = await axios.delete(`${baseUrl}api/albums/delete/${albumId}`);
+    return res;
+  } catch (error) {
+    console.error("deleteAlbum error:", error.response?.data || error.message);
+    return null;
+  }
+};  
+
+export const deleteArtist = async (artistId) => {
+  try {
+    const res = await axios.delete(`${baseUrl}api/artists/delete/${artistId}`);
+    return res;
+  } catch (error) {
+    console.error("deleteArtist error:", error.response?.data || error.message);
+    return null;
+  }
+};  

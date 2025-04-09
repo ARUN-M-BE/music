@@ -1,10 +1,86 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useStateValue } from "../context/stateProvider";
 import { actionType } from "../context/reducer";
 import { IoTrash } from "react-icons/io5";
+import { deleteAlbum, getAllAlbums } from "../../api";
 
 const ArtistCard = ({ data, index }) => {
+  const [isDelete, setIsDelete] = useState(false);
+  const [{ allAlbums, AlertType }, dispatch] = useStateValue();
+  const deleteObject = async (data) => {
+    try {
+      setIsDelete(true); // Show loading state
+
+      // First delete the associated image file
+      if (data.imageURL) {
+        await deleteFileImage(data.fileId, data.imageURL);
+      }
+
+      // Then delete the database record
+      const deleteResponse = await deleteAlbum(data._id);
+      if (!deleteResponse?.data) {
+        throw new Error("Failed to delete album record");
+      }
+
+      // Refresh the albums list
+      const albumsData = await getAllAlbums();
+      dispatch({
+        type: actionType.SET_ALL_ALBUMS,
+        allAlbums: albumsData.data,
+      });
+
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
+      });
+    } catch (error) {
+      console.error("Deletion failed:", error);
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+    } finally {
+      setIsDelete(false);
+      // Clear alert after 3 seconds
+      setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+    }
+  };
+
+  const deleteFileImage = async (fileId, fileURL) => {
+    try {
+      if (!fileURL) return;
+
+      // Extract the file ID from the URL if not provided
+      const fileIdToDelete = fileId || fileURL.split("/").pop().split("?")[0];
+
+      const response = await fetch("http://localhost:3001/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileId: fileIdToDelete,
+          url: fileURL,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete file");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      throw error;
+    }
+  };
+
   return (
     <>
       <motion.div
@@ -32,14 +108,47 @@ const ArtistCard = ({ data, index }) => {
             {data.name.length > 20 ? `${data.name.slice(0, 20)}...` : data.name}
           </p>
           <p className="block text-sm text-gray-400 my-1 font-semibold"></p>
-           
+
           <p className="text-sm text-textColor font-semibold">{data?.album}</p>
         </div>
         <div className="w-full absolute bottom-2 right-2 flex items-center justify-between px-4 ">
-          <motion.i whileTap={{scale:0.75}} className="text-base text-red-400 hover:text-red-600 drop-shadow-md ">
+          <motion.i
+            whileTap={{ scale: 0.75 }}
+            className="text-base text-red-400 hover:text-red-600 drop-shadow-md "
+            onClick={() => setIsDelete(true)}
+          >
             <IoTrash />
           </motion.i>
         </div>
+        {isDelete && (
+          <motion.div
+            className="absolute inset-0 backdrop-blur-md bg-bgCardOverlay flex flex-col items-center justify-center px-4 py-2 "
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { delay: 0.5 } }}
+          >
+            <p className="text-lg text-center text-textColor font-semibold">
+              Are you sure you want to delete this?
+            </p>
+            <div className="flex items-center justify-center gap-4 mt-2">
+              <motion.button
+                whileTap={{ scale: 0.75 }}
+                type="button"
+                className="text-sm font-bold text-[12px] px-2 py-1 uppercase text-black drop-shadow-md bg-red-100 hover:bg-red-500 rounded-lg  "
+                onClick={() => deleteObject(data)}
+              >
+                Yes
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.75 }}
+                type="button"
+                className="text-sm font-bold text-[12px] px-2 py-1 uppercase text-black drop-shadow-md bg-green-100 hover:bg-green-500 rounded-lg "
+                onClick={() => setIsDelete(false)}
+              >
+                No
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
       </motion.div>
     </>
   );

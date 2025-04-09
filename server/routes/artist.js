@@ -8,6 +8,7 @@ router.post("/save", async (req, res) => {
     imageURL: req.body.imageURL,
     twetter: req.body.twetter,
     instagram: req.body.instagram,
+    fileId: req.body.fileId,
   });
   try {
     const saveedArtist = await newArtist.save();

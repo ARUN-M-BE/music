@@ -31,12 +31,12 @@ const DashboardNewsong = () => {
   const [songImageCover, setSongImageCover] = useState(null);
   const [imageProgress, setImageProgress] = useState(0);
   const [isImageLoad, setIsImageLoad] = useState(false);
-  const [{ allArtists, allAlbums, allSongs }, dispath] = useStateValue();
+  const [{ allArtists, allAlbums, allSongs }, dispatch] = useStateValue();
 
   useEffect(() => {
     if (!allArtists) {
       getAllArtists().then((data) => {
-        dispath({
+        dispatch({
           type: actionType.SET_ALL_ARTISTS,
           allArtists: data.artist,
         });
@@ -44,7 +44,7 @@ const DashboardNewsong = () => {
     }
     if (!allAlbums) {
       getAllAlbums().then((data) => {
-        dispath({
+        dispatch({
           type: actionType.SET_ALL_ALBUMS,
           allAlbums: data.album,
         });
@@ -52,7 +52,7 @@ const DashboardNewsong = () => {
     }
     if (!allSongs) {
       getAllSongs().then((data) => {
-        dispath({
+        dispatch({
           type: actionType.SET_ALL_SONGS,
           allSongs: data.songs,
         });

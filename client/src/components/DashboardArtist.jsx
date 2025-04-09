@@ -77,7 +77,7 @@ export const ArtistContainer = ({data}) => {
   return (
     <div className="flex items-center p-4 justify-center w-full h-full bg-primary shadow-lg gap-3 dark:bg-gray-700 dark:text-white rounded-lg">
        {data && data.map((artist,index) => (
-      <ArtistCard key={  artist._id} data={artist} index={index} />
+      <ArtistCard key={  artist._id} data={artist} index={index} type="artist" />
     )
     )}
     </div>

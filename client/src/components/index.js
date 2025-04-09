@@ -13,3 +13,7 @@ export {default as FillterButton} from "./FillterButton";
 export {default as Upload} from "./Upload";
 export {default as ImagekitUpload} from "./ImagekitUpload";
 export {default as Alert} from "./Alert";
+export {default as MusicPlayer} from "./MusicPlayer";
+// export {default as SearchBar} from "./SearchBar";
+// export {default as Filter} from "./Filter";
+// export {default as FilterButtons} from "./FilterButtons";
