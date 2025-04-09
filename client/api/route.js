@@ -1,7 +1,7 @@
 import ImageKit from "imagekit";
 
 
-const baseUrl2 = "http://localhost:3001/";
+const baseUrl2 = "https://g-music-pvze.onrender.com/";
 
 const imagekit = new ImageKit({
         urlEndpoint: import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT,
@@ -43,6 +43,6 @@ export async function DELETE({url, request, params}, ReactResponse,){
 //         // return ReactResponse.json({success: true, response});
 // }
 
-
+export default imagekit;
 
 
