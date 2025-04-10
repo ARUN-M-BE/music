@@ -1,8 +1,6 @@
 // Load environment variables
 require("dotenv").config();
 
-import express from 'express';
-import path from 'path';
 import { fileURLToPath } from 'url';
 import mediaRoutes from "./routes/media.js";
 

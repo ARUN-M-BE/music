@@ -2,7 +2,6 @@ import express from "express";
 import mediaRoutes from "./routes/media.js";
 import cors from "cors";
 
-import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
