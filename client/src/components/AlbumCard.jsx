@@ -5,7 +5,7 @@ import { actionType } from "../context/reducer";
 import { IoTrash } from "react-icons/io5";
 import { deleteAlbum, getAllAlbums } from "../../api";
 
-const ArtistCard = ({ data, index }) => {
+const AlbumCard = ({ data, index }) => {
   const [isDelete, setIsDelete] = useState(false);
   const [{ allAlbums, AlertType }, dispatch] = useStateValue();
   const deleteObject = async (data) => {
@@ -154,4 +154,4 @@ const ArtistCard = ({ data, index }) => {
   );
 };
 
-export default ArtistCard;
+export default AlbumCard;

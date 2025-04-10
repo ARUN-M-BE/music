@@ -69,21 +69,14 @@ const DashboardNewsong = () => {
 
   const deleteFileObject = async (
     imageFileId,
-    songImageCover,
     audioFileId,
-    audioImageCover
   ) => {
     try {
-      const response = await fetch("https://g-music-pvze.onrender.com/api/v1/files/delete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileId: imageFileId ? imageFileId : audioFileId,
-          url: songImageCover ? songImageCover : audioImageCover,
-        }),
+      await fetch(`/api/media/delete/${fileId}`, {
+        method: "DELETE",
+
       });
+      
       const result = await response.json();
       dispatch({
         type: actionType.SET_ALERT_TYPE,
@@ -115,24 +108,19 @@ const DashboardNewsong = () => {
     }
   };
 
-  const deleteFileImage = async (
-    artistFileId,
-    artistImageCover,
-    albumFileId,
-    albumImageCover
-  ) => {
-    try {
-      const response = await fetch(`${baseUrl2}delete`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileId: artistFileId ? artistFileId : albumFileId,
-          url: artistImageCover ? artistImageCover : albumImageCover,
-        }),
-      });
-      const result = await response.json();
+
+  const deleteFileImage = async () => {
+    if (!artistFileId) return;
+
+    const res = await fetch(
+      `https://g-music-pvze.onrender.com/api/media/delete/${artistFileId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    const data = await res.json();
+    if (data.success) {
       // console.log(response);
       dispatch({
         type: actionType.SET_ALERT_TYPE,
@@ -147,8 +135,7 @@ const DashboardNewsong = () => {
       }, 3000);
 
       return () => clearTimeout(timer);
-    } catch (error) {
-      // console.error("Error deleting file:", error);
+    }else{
       dispatch({
         type: actionType.SET_ALERT_TYPE,
         AlertType: "error",
@@ -860,5 +847,14 @@ const authenticator = async () => {
   }
   return response.json(); // { signature, token, expire }
 };
+
+
+// const formData = new FormData();
+// formData.append("file", selectedFile);
+// await fetch("/api/media/upload", {
+//   method: "POST",
+//   body: formData,
+// });
+
 
 export default DashboardNewsong;

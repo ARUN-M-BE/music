@@ -20,8 +20,8 @@
     "dev:server": "nodemon app.js",
     "dev:client": "cd ../client && npm start",
     "test": "npm run dev",
-    "build2": "node imagekit.js",
-    "dev": "concurrently \"nodemon app.js\" \"npm run imagekit\""
+    "build2": "node index.js",
+    "dev": "concurrently \"nodemon app.js\" \"npm run index.js\""
   },
   "dependencies": {
     "cors": "^2.8.5",
