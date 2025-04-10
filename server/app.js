@@ -1,6 +1,9 @@
 // Load environment variables
 require("dotenv").config();
 
+
+import mediaRoutes from "./routes/media.js";
+
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -8,6 +11,9 @@ const ImageKit = require("imagekit");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.use("/api/media", mediaRoutes); // this creates: /api/media/delete/:fileId
+
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
@@ -48,6 +54,7 @@ app.use("/api/users", require("./routes/auth"));
 app.use("/api/artists", require("./routes/artist"));
 app.use("/api/albums", require("./routes/album"));
 app.use("/api/songs", require("./routes/song"));
+app.use("/api/media", require("./routes/media"));
 
 // Start Server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

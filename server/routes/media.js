@@ -52,5 +52,12 @@ router.delete("/delete/:fileId", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+// server/routes/media.js
+router.delete("/delete/:fileId", async (req, res) => {
+    const { fileId } = req.params;
+    const result = await imagekit.deleteFile(fileId);
+    res.json({ success: true, message: "Deleted!", result });
+  });
+  
 
 export default router;
