@@ -67,16 +67,12 @@ const DashboardNewsong = () => {
     dispatch,
   ] = useStateValue();
 
-  const deleteFileObject = async (
-    imageFileId,
-    audioFileId,
-  ) => {
+  const deleteFileObject = async (imageFileId, audioFileId) => {
     try {
       await fetch(`/api/media/delete/${fileId}`, {
         method: "DELETE",
-
       });
-      
+
       const result = await response.json();
       dispatch({
         type: actionType.SET_ALERT_TYPE,
@@ -108,7 +104,6 @@ const DashboardNewsong = () => {
     }
   };
 
-
   const deleteFileImage = async () => {
     if (!artistFileId) return;
 
@@ -135,7 +130,7 @@ const DashboardNewsong = () => {
       }, 3000);
 
       return () => clearTimeout(timer);
-    }else{
+    } else {
       dispatch({
         type: actionType.SET_ALERT_TYPE,
         AlertType: "error",
@@ -760,7 +755,6 @@ export const FileUpLoading = ({
           onError={handleError}
           className="w-0 h-0 opacity-0"
           multiple={false}
-
         />
       </IKContext>
     </label>
@@ -848,13 +842,11 @@ const authenticator = async () => {
   return response.json(); // { signature, token, expire }
 };
 
-
 // const formData = new FormData();
 // formData.append("file", selectedFile);
 // await fetch("/api/media/upload", {
 //   method: "POST",
 //   body: formData,
 // });
-
 
 export default DashboardNewsong;
