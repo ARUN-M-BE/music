@@ -61,7 +61,7 @@ const Header = () => {
                 <span className="block text-sm text-gray-900 dark:text-white">
                   {user?.user?.name || "Guest"}
                 </span>
-                <span className="block text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                <span className="block text-sm text-gray-500 dark:text-gray-400 items-center">
                   Premium Member <FaCrown className="text-sm ml-1 text-yellow-500" />
                 </span>
               </div>
