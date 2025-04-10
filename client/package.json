@@ -7,11 +7,11 @@
   "scripts": {
     "start": "vite",
     "dev": "vite",
-    "build": "npm run build",
+    "build": "vite build",
     "lint": "eslint .",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"
-  },
+  },  
   "dependencies": {
     "@tailwindcss/vite": "^4.0.14",
     "axios": "^1.8.4",
