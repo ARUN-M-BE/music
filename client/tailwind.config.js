@@ -65,8 +65,7 @@ module.exports = {
         shadow: "rgba(0, 0, 0, 0.16)",
         shadowLight: "rgba(0, 0, 0, 0.08)",
         shadowDark: "rgba(0, 0, 0, 0.24)",
-        shadowWhite: "rgba(256, 256, 256, 0.16)",
-       
+        shadowWhite: "rgba(256, 256, 256, 0.16)"
       },
     },
   },
