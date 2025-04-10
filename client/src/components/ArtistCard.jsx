@@ -60,7 +60,7 @@ const ArtistCard = ({ data, index }) => {
         return;
       }
   
-      const response = await fetch(`${baseUrl2}delete`, {
+      const response = await fetch("https://g-music-pvze.onrender.com/delete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

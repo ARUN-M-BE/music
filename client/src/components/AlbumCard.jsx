@@ -59,7 +59,7 @@ const ArtistCard = ({ data, index }) => {
       // Extract the file ID from the URL if not provided
       const fileIdToDelete = fileId || fileURL.split("/").pop().split("?")[0];
 
-      const response = await fetch(`${baseUrl2}delete`, {
+      const response = await fetch("https://g-music-pvze.onrender.com/delete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

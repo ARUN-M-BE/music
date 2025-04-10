@@ -77,7 +77,7 @@ const SongsCard = ({ data, index, type }) => {
         throw new Error(`Missing ${fileType} file parameters`);
       }
   
-      const response = await fetch(`${baseUrl2}delete`, {
+      const response = await fetch("https://g-music-pvze.onrender.com/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 

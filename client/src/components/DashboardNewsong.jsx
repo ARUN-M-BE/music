@@ -74,7 +74,7 @@ const DashboardNewsong = () => {
     audioImageCover
   ) => {
     try {
-      const response = await fetch(`${baseUrl2}delete`, {
+      const response = await fetch("https://g-music-pvze.onrender.com/delete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -853,7 +853,7 @@ export const Fileload = ({ progress }) => (
 );
 
 const authenticator = async () => {
-  const response = await fetch(`${baseUrl}auth`);
+  const response = await fetch("https://g-music-pvze.onrender.com/auth");
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Auth error: ${error}`);
