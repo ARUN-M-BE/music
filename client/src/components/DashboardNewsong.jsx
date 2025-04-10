@@ -74,7 +74,7 @@ const DashboardNewsong = () => {
     audioImageCover
   ) => {
     try {
-      const response = await fetch("https://g-music-pvze.onrender.com/delete", {
+      const response = await fetch("https://g-music-pvze.onrender.com/api/v1/files/delete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
