@@ -1,7 +1,9 @@
 // Load environment variables
 require("dotenv").config();
 
-
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import mediaRoutes from "./routes/media.js";
 
 const express = require("express");
@@ -13,6 +15,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use("/api/media", mediaRoutes); // this creates: /api/media/delete/:fileId
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'client/dist'))); // adjust if you're using Vite
+
+// Fallback for SPA
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
+});
+
 
 
 // Middleware
