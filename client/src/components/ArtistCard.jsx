@@ -13,8 +13,8 @@ const ArtistCard = ({ data, index }) => {
       setIsDelete(true); // Show loading state
   
       // First delete the associated image file if it exists
-      if (data.imageURL && data.fileId) {
-        await deleteFileImage(data.fileId, data.imageURL);
+      if (data.artistFileId) {
+        await deleteFileImage(data.artistFileId);
       }
   
       // Then delete the database record
@@ -53,32 +53,52 @@ const ArtistCard = ({ data, index }) => {
     }
   };
   
-  const deleteFileImage = async (fileId, fileURL) => {
+  const deleteFileImage = async (artistFileId) => {
     try {
-      if (!fileURL || !fileId) {
-        console.warn("Missing fileURL or fileId");
-        return;
+      setIsDelete(true);
+      const res = await fetch(
+        `https://g-music-pvze.onrender.com/api/media/delete/${artistFileId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error ${res.status}: ${errorText}`);
       }
-  
-      const response = await fetch("https://g-music-pvze.onrender.com/api/v1/files/delete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileId: fileId,
-          url: fileURL,
-        }),
+
+      const data = await res.json();
+      console.log("Deleted successfully:", data);
+
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
       });
-  
-      if (!response.ok) {
-        throw new Error(`Failed to delete file: ${response.statusText}`);
-      }
-  
-      return await response.json();
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      throw error;
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    } catch (err) {
+      console.error("Failed to delete image:", err.message);
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
   };
   return (

@@ -104,19 +104,30 @@ const DashboardNewsong = () => {
     }
   };
 
-  const deleteFileImage = async () => {
-    if (!artistFileId) return;
-
-    const res = await fetch(
-      `https://g-music-pvze.onrender.com/api/media/delete/${artistFileId}`,
-      {
-        method: "DELETE",
+  const deleteFileImage = async (
+    albumFileId
+    ) => {
+    if (!albumFileId) {
+      console.error("No fileId provided for deletion");
+      return;
+    }
+  
+    try {
+      const res = await fetch(
+        `https://g-music-pvze.onrender.com/api/media/delete/${albumFileId}`,
+        {
+          method: "DELETE",
+        }
+      );
+  
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error ${res.status}: ${errorText}`);
       }
-    );
-
-    const data = await res.json();
-    if (data.success) {
-      // console.log(response);
+  
+      const data = await res.json();
+      console.log("Deleted successfully:", data);
+  
       dispatch({
         type: actionType.SET_ALERT_TYPE,
         AlertType: "success",
@@ -130,7 +141,9 @@ const DashboardNewsong = () => {
       }, 3000);
 
       return () => clearTimeout(timer);
-    } else {
+  
+    } catch (err) {
+      console.error("Failed to delete image:", err.message);
       dispatch({
         type: actionType.SET_ALERT_TYPE,
         AlertType: "error",
@@ -146,6 +159,8 @@ const DashboardNewsong = () => {
       return () => clearTimeout(timer);
     }
   };
+  
+
 
   const saveSong = async () => {
     if (

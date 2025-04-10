@@ -70,33 +70,81 @@ const SongsCard = ({ data, index, type }) => {
     }
   };
   
-  const deleteFile = async (fileId, fileURL, fileType) => {
+  // const deleteFile = async (fileId, fileURL, fileType) => {
+  //   try {
+  //     // Validate parameters
+  //     if (!fileId || !fileURL) {
+  //       throw new Error(`Missing ${fileType} file parameters`);
+  //     }
+  
+  //     const response = await fetch("https://g-music-pvze.onrender.com/api/v1/files/delete", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ 
+  //         fileId,
+  //         fileURL,
+  //         fileType // Helps backend identify file location
+  //       }),
+  //     });
+  
+  //     const result = await response.json();
+  
+  //     if (!response.ok || !result.success) {
+  //       throw new Error(result.message || `${fileType} deletion failed`);
+  //     }
+  
+  //     return result;
+  //   } catch (error) {
+  //     console.error(`Error deleting ${fileType} file:`, error);
+  //     throw error;
+  //   }
+  // };
+  const deleteFile = async (fileId) => {
     try {
-      // Validate parameters
-      if (!fileId || !fileURL) {
-        throw new Error(`Missing ${fileType} file parameters`);
+      setIsDelete(true);
+      const res = await fetch(
+        `https://g-music-pvze.onrender.com/api/media/delete/${fileId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error ${res.status}: ${errorText}`);
       }
-  
-      const response = await fetch("https://g-music-pvze.onrender.com/api/v1/files/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          fileId,
-          fileURL,
-          fileType // Helps backend identify file location
-        }),
+
+      const data = await res.json();
+      console.log("Deleted successfully:", data);
+
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
       });
-  
-      const result = await response.json();
-  
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || `${fileType} deletion failed`);
-      }
-  
-      return result;
-    } catch (error) {
-      console.error(`Error deleting ${fileType} file:`, error);
-      throw error;
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    } catch (err) {
+      console.error("Failed to delete image:", err.message);
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
   };
   const addToContext = () => {

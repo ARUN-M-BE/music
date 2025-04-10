@@ -8,13 +8,15 @@ import { deleteAlbum, getAllAlbums } from "../../api";
 const AlbumCard = ({ data, index }) => {
   const [isDelete, setIsDelete] = useState(false);
   const [{ allAlbums, AlertType }, dispatch] = useStateValue();
+
+  
   const deleteObject = async (data) => {
     try {
       setIsDelete(true); // Show loading state
 
       // First delete the associated image file
-      if (data.imageURL) {
-        await deleteFileImage(data.fileId, data.imageURL);
+      if (data.albumFileId) {
+        await deleteFileImage(data.albumFileId);
       }
 
       // Then delete the database record
@@ -52,32 +54,52 @@ const AlbumCard = ({ data, index }) => {
     }
   };
 
-  const deleteFileImage = async (fileId, fileURL) => {
+  const deleteFileImage = async (albumFileId) => {
     try {
-      if (!fileURL) return;
+      setIsDelete(true);
+      const res = await fetch(
+        `https://g-music-pvze.onrender.com/api/media/delete/${albumFileId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-      // Extract the file ID from the URL if not provided
-      const fileIdToDelete = fileId || fileURL.split("/").pop().split("?")[0];
-
-      const response = await fetch("https://g-music-pvze.onrender.com/api/v1/files/delete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileId: fileIdToDelete,
-          url: fileURL,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete file");
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error ${res.status}: ${errorText}`);
       }
 
-      return await response.json();
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      throw error;
+      const data = await res.json();
+      console.log("Deleted successfully:", data);
+
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    } catch (err) {
+      console.error("Failed to delete image:", err.message);
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
   };
 
