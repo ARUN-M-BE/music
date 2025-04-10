@@ -1,13 +1,11 @@
 // Load environment variables
 require("dotenv").config();
 
-import { fileURLToPath } from 'url';
-import mediaRoutes from "./routes/media.js";
-
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const ImageKit = require("imagekit");
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
