@@ -6,7 +6,7 @@ const multer = require("multer");
 const app = express();
 const upload = multer();
 
-const PORT = process.env.IMAGEKIT_PORT || 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 

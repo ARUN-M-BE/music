@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
@@ -45,3 +41,7 @@ code {
 .rhap_download-progress, .rhap_volume-bar{
   background-color: #ff000033 !important; 
 }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
