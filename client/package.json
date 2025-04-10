@@ -5,10 +5,10 @@
   "type": "module",
   "homepage": "https://g-music-a.onrender.com/",
   "scripts": {
+    "start": "vite",
     "dev": "vite",
-    "build": "npm install",
+    "build": "npm build",
     "lint": "eslint .",
-    "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"
   },
