@@ -54,7 +54,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 /**
  * DELETE /api/media/delete/:fileId
  * Delete an image by fileId
-*/
+
  
 router.delete("/delete/:fileId", async (req, res) => {
   try {
@@ -76,6 +76,8 @@ router.delete("/delete/:fileId", async (req, res) => {
     const result = await imagekit.deleteFile(fileId);
     res.json({ success: true, message: "Deleted!", result });
   });
+
+*/
 
 
 
