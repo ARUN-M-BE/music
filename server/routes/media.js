@@ -76,5 +76,8 @@ router.delete("/delete/:fileId", async (req, res) => {
     res.json({ success: true, message: "Deleted!", result });
   });
   
+const PORT = process.env.IMAGEKIT_PORT || 3001;
+app.listen(3001, () => {
+  console.log("Server running on port 3001");
+});
 
-export default router;
