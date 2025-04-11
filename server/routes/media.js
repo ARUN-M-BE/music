@@ -1,6 +1,6 @@
 const express = require("express");
 const multer = require("multer");
-const dotenv = require("dotenv");
+//const dotenv = require("dotenv");
 const imagekit =require("imagekit");
 //import multer from "multer";
 //const imagekit = require ("../imagekit.js";);
@@ -9,8 +9,6 @@ const imagekit =require("imagekit");
 //const storage = multer.memoryStorage();
 //const upload = multer({ storage });
 
-
-dotenv.config();
 
 const app = express();
 app.use(express.json());
