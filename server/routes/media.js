@@ -54,6 +54,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 /**
  * DELETE /api/media/delete/:fileId
  * Delete an image by fileId
+*/
  
 router.delete("/delete/:fileId", async (req, res) => {
   try {
@@ -75,41 +76,9 @@ router.delete("/delete/:fileId", async (req, res) => {
     const result = await imagekit.deleteFile(fileId);
     res.json({ success: true, message: "Deleted!", result });
   });
-*/
 
-// Debugging: log raw POST body
-app.use((req, res, next) => {
-  if (req.method === "POST") {
-    let data = '';
-    req.on('data', chunk => {
-      data += chunk;
-    });
-    req.on('end', () => {
-      console.log("Raw incoming POST body:", data);
-      next();
-    });
-  } else {
-    next();
-  }
-});
 
-// ✅ Delete route
-app.post("/delete", async (req, res) => {
-  const { fileId } = req.body;
 
-  if (!fileId) {
-    return res.status(400).json({ success: false, message: "fileId is required" });
-  }
-
-  try {
-    await imagekit.deleteFile(fileId);
-    res.json({ success: true });
-  } catch (err) {
-    console.error("ImageKit delete error:", err);
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-  
 const PORT = process.env.IMAGEKIT_PORT || 3001;
 app.listen(3001, () => {
   console.log("Server running on port 3001");
