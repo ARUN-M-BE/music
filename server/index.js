@@ -11,6 +11,9 @@ app.use(express.json());
 
 app.use("/api/media", mediaRoutes);
 
+app.use("/api/media", require("./routes/media"));
+
+
 // Serve static files
 app.use(express.static(path.join(__dirname, 'client/dist'))); // adjust if you're using Vite
 
@@ -24,6 +27,5 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
-app.use("/api/media", require("./routes/media"));
 
 
