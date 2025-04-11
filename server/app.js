@@ -16,11 +16,11 @@ const PORT = process.env.PORT || 3000;
 //const __dirname = path.dirname(__filename);
 
 // Serve static files
-app.use(express.static(path.join(__dirname, 'client/dist'))); // adjust if you're using Vite
+//app.use(express.static(path.join(__dirname, 'client//dist'))); // adjust if you're using Vite
 
 // Fallback for SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
+//app.get('*', (req, res) => {
+ // res.sendFile(path.join(__dirname, 'client/dist', //'index.html'));
 });
 
 
