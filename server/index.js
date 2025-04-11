@@ -15,12 +15,12 @@ app.use("/api/media", require("./routes/media"));
 
 
 // Serve static files
-app.use(express.static(path.join(__dirname, 'client/dist'))); // adjust if you're using Vite
+//app.use(express.static(path.join(__dirname, 'client//dist'))); // adjust if you're using Vite
 
 // Fallback for SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
-});
+//app.get('*', (req, res) => {
+//  res.sendFile(path.join(__dirname, 'client/dist', //'index.html'));
+//});
 
 const PORT = process.env.IMAGEKIT_PORT || 3001;
 app.listen(PORT, () => {
