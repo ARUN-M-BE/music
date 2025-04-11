@@ -15,13 +15,14 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
+/**
 const imagekit = new ImageKit({
   urlEndpoint: process.env.VITE_IMAGEKIT_URL_ENDPOINT,
   publicKey: process.env.VITE_IMAGEKIT_PUBLIC_KEY,
   privateKey: process.env.VITE_IMAGEKIT_PRIVATE_KEY,
 });
 const PORT = process.env.IMAGEKIT_PORT || 3001;
-
+*/
 /**
  * POST /api/media/upload
  * Upload an image and return fileId and other metadata
