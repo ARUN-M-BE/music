@@ -6,44 +6,31 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const ImageKit = require("imagekit");
 
-
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-//app.use("/api/media", mediaRoutes); // this //////creates:// /api/media/delete/:fileId
-
-//const __filename = fileURLToPath(import.meta.url);
-//const __dirname = path.dirname(__filename);
-
-// Serve static files
-//app.use(express.static(path.join(__dirname, 'client//dist'))); // adjust if you're using Vite
-
-// Fallback for SPA
-//app.get('*', (req, res) => {
- // res.sendFile(path.join(__dirname, 'client/dist', //'index.html'));
-//});
-
-
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-// Connect MongoDB
-mongoose.connect(process.env.DATABASE_STRING);
+// Connect to MongoDB
+mongoose.connect(process.env.DATABASE_STRING, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 mongoose.connection
   .once("open", () => console.log("Connected to database"))
   .on("error", (error) => console.log("MongoDB Error:", error));
 
-// 🔐 ImageKit Config
+// ImageKit Configuration
 const imagekit = new ImageKit({
   urlEndpoint: process.env.VITE_IMAGEKIT_URL_ENDPOINT,
   publicKey: process.env.VITE_IMAGEKIT_PUBLIC_KEY,
   privateKey: process.env.VITE_IMAGEKIT_PRIVATE_KEY,
 });
 
-// Allow CORS for ImageKit
-app.use(function (req, res, next) {
+// CORS Headers for ImageKit
+app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
     "Access-Control-Allow-Headers",
@@ -52,14 +39,16 @@ app.use(function (req, res, next) {
   next();
 });
 
-// ⛅ ImageKit Auth Route
+// ImageKit Auth Endpoint
 app.get("/auth", (req, res) => {
   const result = imagekit.getAuthenticationParameters();
   res.send(result);
 });
 
-// 🧑‍🎤 Routes
+// Test Route
 app.get("/", (req, res) => res.send("Hello World!"));
+
+// Application Routes (make sure these modules export a router)
 app.use("/api/users", require("./routes/auth"));
 app.use("/api/artists", require("./routes/artist"));
 app.use("/api/albums", require("./routes/album"));
@@ -67,4 +56,6 @@ app.use("/api/songs", require("./routes/song"));
 app.use("/api/media", require("./routes/media"));
 
 // Start Server
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
