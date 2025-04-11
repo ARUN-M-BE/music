@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 //import multer from "multer";
-import imagekit from "../imagekit.js";
+const imagekit = require ("../imagekit.js";);
 
 const router = express.Router();
 const storage = multer.memoryStorage();
