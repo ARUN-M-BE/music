@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/media", mediaRoutes);
+//app.use("/api/media", mediaRoutes);
 
 app.use("/api/media", require("./routes/media"));
 
