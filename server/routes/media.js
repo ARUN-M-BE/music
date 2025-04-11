@@ -1,4 +1,4 @@
-const express = require("express");
+const router = require("express").Router();
 const multer = require("multer");
 //const dotenv = require("dotenv");
 const imagekit =require("imagekit");
@@ -24,7 +24,7 @@ const PORT = process.env.IMAGEKIT_PORT || 3001;
 /**
  * POST /api/media/upload
  * Upload an image and return fileId and other metadata
- 
+ */
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
     const file = req.file;
@@ -47,12 +47,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
-});*/
+});
 
 /**
  * DELETE /api/media/delete/:fileId
  * Delete an image by fileId
-
+*/
  
 router.delete("/delete/:fileId", async (req, res) => {
   try {
@@ -75,7 +75,6 @@ router.delete("/delete/:fileId", async (req, res) => {
     res.json({ success: true, message: "Deleted!", result });
   });
 
-*/
 
 
 
