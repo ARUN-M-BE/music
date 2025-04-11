@@ -1,5 +1,6 @@
-import express from "express";
-import multer from "multer";
+const router = require("express").Router();
+const router = require("multer").Router();
+//import multer from "multer";
 import imagekit from "../imagekit.js";
 
 const router = express.Router();
