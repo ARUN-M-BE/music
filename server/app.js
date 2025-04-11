@@ -12,8 +12,8 @@ const PORT = process.env.PORT || 3000;
 
 app.use("/api/media", mediaRoutes); // this creates: /api/media/delete/:fileId
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+//const __filename = fileURLToPath(import.meta.url);
+//const __dirname = path.dirname(__filename);
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'client/dist'))); // adjust if you're using Vite
