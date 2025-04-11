@@ -51,7 +51,7 @@
   "license": "ISC",
 
   "resolutions": {
-    "js-yaml": ">=4.1.0",
+    "js-yaml": "4.1.0",
     "uglify-js": "^3.17.0"
   },
   "engines": {
