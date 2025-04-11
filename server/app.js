@@ -10,7 +10,7 @@ const ImageKit = require("imagekit");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use("/api/media", mediaRoutes); // this creates: /api/media/delete/:fileId
+//app.use("/api/media", mediaRoutes); // this //////creates:// /api/media/delete/:fileId
 
 //const __filename = fileURLToPath(import.meta.url);
 //const __dirname = path.dirname(__filename);
