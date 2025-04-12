@@ -1,7 +1,7 @@
 import ImageKit from "imagekit";
 
 
-const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/"
+const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
 
 const imagekit = new ImageKit({
         urlEndpoint: import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT,
