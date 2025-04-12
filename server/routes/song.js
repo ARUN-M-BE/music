@@ -11,6 +11,8 @@ router.post("/save", async (req, res) => {
     artist: req.body.artist,
     language: req.body.language,
     category: req.body.category,
+    fileId: req.body.fileId,
+    songId: req.body.songId,
   });
   try {
     const saveedSong = await newSong.save();
@@ -83,6 +85,8 @@ router.put("/update/:id", async (req, res) => {
         artist: req.body.artist,
         language: req.body.language,
         category: req.body.category,
+        fileId: req.body.fileId,
+        songId: req.body.songId,
       },
       options
     );

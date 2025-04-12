@@ -28,6 +28,14 @@ const songSchema = mongoose.Schema({
         type: String,
         required: true,
     },
+    fileId: {
+        type: String,
+        required: true,
+    },
+    songId: {
+        type: String,
+        required: true,
+    },
 },
     {
         timestamps: true,

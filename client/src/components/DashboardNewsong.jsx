@@ -25,6 +25,9 @@ import { filterByLanguage, filter } from "../utils/FillterButton";
 import { motion } from "framer-motion";
 
 const DashboardNewsong = () => {
+
+  const baseURL = "https://g-music-pvze.onrender.com/";
+
   const [SongName, setSongName] = useState("");
   const [songImageCover, setSongImageCover] = useState(null); // image URL
   const [imageFileId, setImageFileId] = useState(null);
@@ -80,7 +83,7 @@ const DashboardNewsong = () => {
     if (!fileId) return;
 
     const res = await fetch(
-      `https://g-music-pvze.onrender.com/api/media/delete/${fileId}`,
+      `${baseURL}api/media/delete/${fileId}`,
       {
         method: "DELETE",
       }
@@ -90,7 +93,7 @@ const DashboardNewsong = () => {
     if (data.success) {
       console.log(data);
       showAlert("success");
-      
+
       setArtistImageCover(null);
       setImageFileId(null);
       setAlbumImageCover(null);
