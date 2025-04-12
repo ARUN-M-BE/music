@@ -8,7 +8,8 @@ import { deleteAlbum, getAllAlbums } from "../../api";
 const AlbumCard = ({ data, index }) => {
   const [isDelete, setIsDelete] = useState(false);
   const [{ allAlbums, AlertType }, dispatch] = useStateValue();
-  const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
+  // const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
+  const baseURL = "https://g-music-pvze.onrender.com/"
   const showAlert = (type) => {
     dispatch({
       type: actionType.SET_ALERT_TYPE,

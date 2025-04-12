@@ -8,7 +8,8 @@ import { deleteSong, getAllSongs } from "../../api";
 const SongsCard = ({ data, index, type }) => {
   const [isDelete, setIsDelete] = React.useState(false);
   const [{ songPlaying, songIndex, user }, dispatch] = useStateValue();
-  const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
+  const baseURL = "https://g-music-pvze.onrender.com/"
+  // const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
 
   const showAlert = (type) => {
     dispatch({

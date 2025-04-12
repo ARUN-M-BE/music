@@ -26,8 +26,8 @@ import { motion } from "framer-motion";
 
 const DashboardNewsong = () => {
 
-  const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
-
+  // const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
+  const baseURL = "https://g-music-pvze.onrender.com/"
   const [SongName, setSongName] = useState("");
   const [songImageCover, setSongImageCover] = useState(null); // image URL
   const [imageFileId, setImageFileId] = useState(null);

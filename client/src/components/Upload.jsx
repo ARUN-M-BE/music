@@ -6,7 +6,10 @@ const Upload = () => {
   const [uploadedAudio, setUploadedAudio] = useState(null);
   const [fileId, setFileId] = useState(null); // Added fileId state
 
-  const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
+  // const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
+  const baseURL = "https://g-music-pvze.onrender.com/"
+  
+  
 
   const handleFileChange = (e) => {
     if (e.target.files.length === 0) return;
