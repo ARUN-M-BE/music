@@ -42,7 +42,7 @@ const AlbumCard = ({ data, index }) => {
   
       // Step 2: Update album in MongoDB to remove imageURL & albumFileId
       const updateRes = await fetch(
-        `https://g-music-pvze.onrender.com/api/album/update/${albumFileId}`,
+        `https://g-music-pvze.onrender.com/api/albums/update/${albumFileId}`,
         {
           method: "PUT",
           headers: {
