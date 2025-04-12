@@ -11,7 +11,6 @@ import { FaUsers } from "react-icons/fa";
 import { RiUserStarFill } from "react-icons/ri";
 import { GiLoveSong, GiMusicalNotes } from "react-icons/gi";
 import { motion } from "framer-motion";
-import Upload from "./Upload";
 
 export const DashboardCard = ({ icon, name, count }) => {
   return (
@@ -38,9 +37,6 @@ export const DashboardCard = ({ icon, name, count }) => {
           </h4>
         </div>
       </motion.div>
-      <div className=" w-full h-full items-center flex justify-center p-4 ">
-        <Upload/>
-      </div>
     </>
   );
 };
