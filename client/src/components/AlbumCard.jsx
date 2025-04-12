@@ -20,37 +20,83 @@ const AlbumCard = ({ data, index }) => {
       });
     }, 3000);
   };
-  const deleteImage = async (fileId) => {
-    if (!data.albumFileId) return;
-
-    const res = await fetch(
-      `https://g-music-pvze.onrender.com/api/media/delete/${data.albumFileId}`,
-      {
-        method: "DELETE",
+  const deleteImage = async (fileId, albumFileId, data) => {
+    try {
+      if (!fileId || !albumFileId) return;
+  
+      // Step 1: Delete image from server
+      const res = await fetch(
+        `https://g-music-pvze.onrender.com/api/media/delete/${fileId}`,
+        {
+          method: "DELETE",
+        }
+      );
+  
+      const result = await res.json();
+  
+      if (!res.ok || !result.success) {
+        throw new Error("Failed to delete image from server");
       }
-    );
-
-    const data = await res.json();
-    if (data.success) {
-      console.log(data);
-      showAlert("success");
-      
+  
+      console.log("Image deleted successfully:", result);
+  
+      // Step 2: Update album in MongoDB to remove imageURL & albumFileId
+      const updateRes = await fetch(
+        `https://g-music-pvze.onrender.com/api/album/update/${albumFileId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            imageURL: "",
+            albumFileId: "",
+          }),
+        }
+      );
+  
+      const updateData = await updateRes.json();
+  
+      if (!updateData.success) {
+        throw new Error("Failed to update MongoDB");
+      }
+  
+      // Step 3: Clear local state
       setArtistImageCover(null);
-      setArtistFileId(null); // Reset fileId
-      
-      return () => clearTimeout(timer);
-    } else {
+      setArtistFileId(null);
+  
+      // Step 4: Show success alert
+      showAlert("success");
+      const deleteResponse = await deleteAlbum(data._id);
+      if (!deleteResponse?.data) {
+        throw new Error("Failed to delete album record");
+      }
+
+      // Refresh the albums list
+      const albumsData = await getAllAlbums();
+      dispatch({
+        type: actionType.SET_ALL_ALBUMS,
+        allAlbums: albumsData.data,
+      });
+  
+    } catch (error) {
+      console.error("Error deleting image:", error.message);
       showAlert("error");
+    } finally {
+      const timer = setTimeout(() => {
+        showAlert(null); // or reset any state
+      }, 3000);
       return () => clearTimeout(timer);
     }
   };
+  
   const deleteObject = async (data) => {
     try {
       setIsDelete(true); // Show loading state
 
       // First delete the associated image file
       if (data.albumFileId) {
-        await deleteImage(data.albumFileId);
+        await deleteImage(data.albumFileId, data._id);
       }
 
       // Then delete the database record
@@ -130,7 +176,7 @@ const AlbumCard = ({ data, index }) => {
                 whileTap={{ scale: 0.75 }}
                 type="button"
                 className="text-sm font-bold text-[12px] px-2 py-1 uppercase text-black drop-shadow-md bg-red-100 hover:bg-red-500 rounded-lg  "
-                onClick={() => deleteObject(data)}
+                onClick={() => deleteImage(data.albumFileId, data._id)}
               >
                 Yes
               </motion.button>
