@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const baseURL = process.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
+const baseURL = import.meta.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
 
 export const validateUser = async (token) => {
   try {
