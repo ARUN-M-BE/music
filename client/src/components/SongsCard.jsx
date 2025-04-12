@@ -8,7 +8,7 @@ import { deleteSong, getAllSongs } from "../../api";
 const SongsCard = ({ data, index, type }) => {
   const [isDelete, setIsDelete] = React.useState(false);
   const [{ songPlaying, songIndex, user }, dispatch] = useStateValue();
-  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/" || "http://localhost:3001/";
+  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/"
 
   const showAlert = (type) => {
     dispatch({

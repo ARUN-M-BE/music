@@ -8,7 +8,7 @@ import { deleteAlbum, getAllAlbums } from "../../api";
 const AlbumCard = ({ data, index }) => {
   const [isDelete, setIsDelete] = useState(false);
   const [{ allAlbums, AlertType }, dispatch] = useStateValue();
-  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/" || "http://localhost:3001/";
+  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/"
   const showAlert = (type) => {
     dispatch({
       type: actionType.SET_ALERT_TYPE,

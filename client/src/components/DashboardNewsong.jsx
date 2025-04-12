@@ -26,7 +26,7 @@ import { motion } from "framer-motion";
 
 const DashboardNewsong = () => {
 
-  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/" || "http://localhost:3001/";
+  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/"
 
   const [SongName, setSongName] = useState("");
   const [songImageCover, setSongImageCover] = useState(null); // image URL

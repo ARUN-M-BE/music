@@ -4,7 +4,7 @@ import { useState } from "react";
 function UploadAndDelete() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);
-  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/" || "http://localhost:3001/";
+  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/"
 
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
