@@ -3,6 +3,7 @@ import { useState } from "react";
 function UploadAndDelete() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);
+  const baseURL = process.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
 
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
@@ -13,7 +14,7 @@ function UploadAndDelete() {
     formData.append("file", selectedFile);
 
     const res = await fetch(
-      "https://g-music-pvze.onrender.com/api/media/upload",
+      `${baseURL}api/media/upload`,
       {
         method: "POST",
         body: formData,
@@ -31,7 +32,7 @@ function UploadAndDelete() {
     if (!uploadedImage?.fileId) return;
 
     const res = await fetch(
-      `https://g-music-pvze.onrender.com/api/media/delete/${uploadedImage.fileId}`,
+      `${baseURL}api/media/delete/${uploadedImage.fileId}`,
       {
         method: "DELETE",
       }

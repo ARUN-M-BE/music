@@ -8,6 +8,7 @@ import { deleteSong, getAllSongs } from "../../api";
 const SongsCard = ({ data, index, type }) => {
   const [isDelete, setIsDelete] = React.useState(false);
   const [{ songPlaying, songIndex, user }, dispatch] = useStateValue();
+  const baseURL = process.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
 
   const showAlert = (type) => {
     dispatch({
@@ -28,7 +29,7 @@ const SongsCard = ({ data, index, type }) => {
   
     try {
       const res = await fetch(
-        `https://g-music-pvze.onrender.com/api/media/delete/${fileId}`,
+        `${baseURL}api/media/delete/${fileId}`,
         {
           method: "DELETE",
         }

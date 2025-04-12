@@ -8,7 +8,7 @@ import { deleteArtist, getAllArtists } from "../../api";
 const ArtistCard = ({ data, index }) => {
   const [isDelete, setIsDelete] = useState(false);
   const [{ allArtists, AlertType }, dispatch] = useStateValue();
-  const baseURL = "https://g-music-pvze.onrender.com/";
+  const baseURL = process.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
 
   const showAlert = (type) => {
     dispatch({

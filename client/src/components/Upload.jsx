@@ -6,6 +6,8 @@ const Upload = () => {
   const [uploadedAudio, setUploadedAudio] = useState(null);
   const [fileId, setFileId] = useState(null); // Added fileId state
 
+  const baseURL = process.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
+
   const handleFileChange = (e) => {
     if (e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -43,7 +45,7 @@ const Upload = () => {
     formData.append("folder", isImage ? "/images" : "/audios");
 
     const res = await fetch(
-      "https://g-music-pvze.onrender.com/api/media/upload",
+      `${baseURL}api/media/upload`,
       {
         method: "POST",
         body: formData,
@@ -65,7 +67,7 @@ const Upload = () => {
     if (!fileId) return;
 
     const res = await fetch(
-      `https://g-music-pvze.onrender.com/api/media/delete/${fileId}`,
+      `${baseURL}api/media/delete/${fileId}`,
       {
         method: "DELETE",
       }

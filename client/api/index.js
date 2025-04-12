@@ -1,10 +1,10 @@
 import axios from "axios";
 
-const baseUrl = "https://g-music-pvze.onrender.com/";
+const baseURL = process.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
 
 export const validateUser = async (token) => {
   try {
-    const res = await axios.get(`${baseUrl}api/users/login`, {
+    const res = await axios.get(`${baseURL}api/users/login`, {
       headers: {
         Authorization: "Bearer " + token,
       },
@@ -18,7 +18,7 @@ export const validateUser = async (token) => {
 
 export const getAllUsers = async (token) => {
   try {
-    const res = await axios.get(`${baseUrl}api/users/getAll`);
+    const res = await axios.get(`${baseURL}api/users/getAll`);
     return res.data;
   } catch (error) {
     return null;
@@ -27,7 +27,7 @@ export const getAllUsers = async (token) => {
 
 export const getAllSongs = async (token) => {
   try {
-    const res = await axios.get(`${baseUrl}api/songs/getAll`);
+    const res = await axios.get(`${baseURL}api/songs/getAll`);
     return res.data;
   } catch (error) {
     return null;
@@ -36,7 +36,7 @@ export const getAllSongs = async (token) => {
 
 export const getAllArtists = async (token) => {
   try {
-    const res = await axios.get(`${baseUrl}api/artists/getAll`);
+    const res = await axios.get(`${baseURL}api/artists/getAll`);
     return res.data;
   } catch (error) {
     return null;
@@ -45,7 +45,7 @@ export const getAllArtists = async (token) => {
 
 export const getAllAlbums = async (token) => {
   try {
-    const res = await axios.get(`${baseUrl}api/albums/getAll`);
+    const res = await axios.get(`${baseURL}api/albums/getAll`);
     return res.data;
   } catch (error) {
     return null;
@@ -54,7 +54,7 @@ export const getAllAlbums = async (token) => {
 
 export const changingUserRole = async (userId, role) => {
   try {
-    const res = await axios.put(`${baseUrl}api/users/updateRole/${userId}`, {
+    const res = await axios.put(`${baseURL}api/users/updateRole/${userId}`, {
       data: { role: role },
     });
     return res;
@@ -65,7 +65,7 @@ export const changingUserRole = async (userId, role) => {
 
 export const removeUser = async (userId) => {
   try {
-    const res = await axios.delete(`${baseUrl}api/users/delete/${userId}`);
+    const res = await axios.delete(`${baseURL}api/users/delete/${userId}`);
     return res;
   } catch (error) {
     return null;
@@ -74,7 +74,7 @@ export const removeUser = async (userId) => {
 
 export const saveNewSong = async (data) => {
   try {
-    const res = await axios.post(`${baseUrl}api/songs/save`, { ...data});
+    const res = await axios.post(`${baseURL}api/songs/save`, { ...data});
     return res.data.saveedSong;
   } catch (error) {
     console.error("saveNewSong error:", error.response?.data || error.message);
@@ -83,7 +83,7 @@ export const saveNewSong = async (data) => {
 };
 export const saveNewAlbum = async (data) => {
   try {
-    const res = await axios.post(`${baseUrl}api/albums/save`, { ...data});
+    const res = await axios.post(`${baseURL}api/albums/save`, { ...data});
     return res.data.saveedAlbum;
   } catch (error) {
     console.error("saveNewAlbum error:", error.response?.data || error.message);
@@ -93,7 +93,7 @@ export const saveNewAlbum = async (data) => {
 
 export const saveNewArtist = async (data) => {
   try {
-    const res = await axios.post(`${baseUrl}api/artists/save`, { ...data});
+    const res = await axios.post(`${baseURL}api/artists/save`, { ...data});
     return res.data.saveedArtist;
   } catch (error) {
     console.error("saveNewArtist error:", error.response?.data || error.message);
@@ -103,7 +103,7 @@ export const saveNewArtist = async (data) => {
 
 export const deleteSong = async (songId) => {
   try {
-    const res = await axios.delete(`${baseUrl}api/songs/delete/${songId}`);
+    const res = await axios.delete(`${baseURL}api/songs/delete/${songId}`);
     return res;
   } catch (error) {
     console.error("deleteSong error:", error.response?.data || error.message);
@@ -113,7 +113,7 @@ export const deleteSong = async (songId) => {
 
 export const deleteAlbum = async (albumId) => {
   try {
-    const res = await axios.delete(`${baseUrl}api/albums/delete/${albumId}`);
+    const res = await axios.delete(`${baseURL}api/albums/delete/${albumId}`);
     return res;
   } catch (error) {
     console.error("deleteAlbum error:", error.response?.data || error.message);
@@ -123,7 +123,7 @@ export const deleteAlbum = async (albumId) => {
 
 export const deleteArtist = async (artistId) => {
   try {
-    const res = await axios.delete(`${baseUrl}api/artists/delete/${artistId}`);
+    const res = await axios.delete(`${baseURL}api/artists/delete/${artistId}`);
     return res;
   } catch (error) {
     console.error("deleteArtist error:", error.response?.data || error.message);

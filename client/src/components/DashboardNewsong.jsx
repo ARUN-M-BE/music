@@ -26,7 +26,7 @@ import { motion } from "framer-motion";
 
 const DashboardNewsong = () => {
 
-  const baseURL = "https://g-music-pvze.onrender.com/";
+  const baseURL = process.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
 
   const [SongName, setSongName] = useState("");
   const [songImageCover, setSongImageCover] = useState(null); // image URL
@@ -642,7 +642,7 @@ export const FileUpLoading = ({
       }, 200);
 
       const res = await fetch(
-        "https://g-music-pvze.onrender.com/api/media/upload",
+        `${baseURL}api/media/upload`,
         {
           method: "POST",
           body: formData,

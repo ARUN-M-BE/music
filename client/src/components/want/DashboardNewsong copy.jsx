@@ -114,7 +114,7 @@ const DashboardNewsong = () => {
   
     try {
       const res = await fetch(
-        `https://g-music-pvze.onrender.com/api/media/delete/${albumFileId}`,
+        `${baseURL}api/media/delete/${albumFileId}`,
         {
           method: "DELETE",
         }
@@ -849,7 +849,7 @@ export const Fileload = ({ progress }) => (
 );
 
 const authenticator = async () => {
-  const response = await fetch("https://g-music-pvze.onrender.com/auth");
+  const response = await fetch(`${baseURL}auth`);
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Auth error: ${error}`);
