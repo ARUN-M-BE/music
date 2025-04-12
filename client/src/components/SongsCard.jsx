@@ -8,145 +8,93 @@ import { deleteSong, getAllSongs } from "../../api";
 const SongsCard = ({ data, index, type }) => {
   const [isDelete, setIsDelete] = React.useState(false);
   const [{ songPlaying, songIndex, user }, dispatch] = useStateValue();
-  const deleteObject = async (data) => {
-    try {
-      setIsDelete(true); // Show loading state
-  
-      // 1. Prepare file deletion promises (only if both ID and URL exist)
-      const fileDeletions = [];
-      
-      if (data.fileId && data.imageURL) {
-        fileDeletions.push(deleteFile(data.fileId, data.imageURL, 'image'));
-      }
-      
-      if (data.songId && data.songURL) {
-        fileDeletions.push(deleteFile(data.songId, data.songURL, 'audio'));
-      }
-  
-      // 2. Execute file deletions if any
-      if (fileDeletions.length > 0) {
-        const fileResults = await Promise.allSettled(fileDeletions);
-        const failedDeletions = fileResults.filter(r => r.status === 'rejected');
-        
-        if (failedDeletions.length > 0) {
-          console.error('Failed file deletions:', failedDeletions);
-          throw new Error('Failed to delete some files');
-        }
-      }
-  
-      // 3. Delete database record
-      const dbResult = await deleteSong(data._id);
-      if (!dbResult?.data?.success) {
-        throw new Error('Database deletion failed');
-      }
-  
-      // 4. Refresh data
-      const { data: updatedSongs } = await getAllSongs();
-      dispatch({
-        type: actionType.SET_ALL_SONGS,
-        allSongs: updatedSongs,
-      });
-  
-      // 5. Show success
+
+  const showAlert = (type) => {
+    dispatch({
+      type: actionType.SET_ALERT_TYPE,
+      AlertType: type,
+    });
+    const timer = setTimeout(() => {
       dispatch({
         type: actionType.SET_ALERT_TYPE,
-        AlertType: "success",
-        message: "Successfully deleted song"
+        AlertType: null,
       });
-  
-    } catch (error) {
-      console.error("Deletion error:", error);
-      dispatch({
-        type: actionType.SET_ALERT_TYPE,
-        AlertType: "error",
-        message: error.message || "Deletion failed"
-      });
-    } finally {
-      setIsDelete(false);
-      const timer = setTimeout(() => {
-        dispatch({ type: actionType.SET_ALERT_TYPE, AlertType: null });
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
+    }, 3000);
+
   };
+
+  const deleteFile = async (fileId, fileType) => {
+    if (!fileId) return;
   
-  // const deleteFile = async (fileId, fileURL, fileType) => {
-  //   try {
-  //     // Validate parameters
-  //     if (!fileId || !fileURL) {
-  //       throw new Error(`Missing ${fileType} file parameters`);
-  //     }
-  
-  //     const response = await fetch("https://g-music-pvze.onrender.com/api/v1/files/delete", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ 
-  //         fileId,
-  //         fileURL,
-  //         fileType // Helps backend identify file location
-  //       }),
-  //     });
-  
-  //     const result = await response.json();
-  
-  //     if (!response.ok || !result.success) {
-  //       throw new Error(result.message || `${fileType} deletion failed`);
-  //     }
-  
-  //     return result;
-  //   } catch (error) {
-  //     console.error(`Error deleting ${fileType} file:`, error);
-  //     throw error;
-  //   }
-  // };
-  const deleteFile = async (fileId) => {
     try {
-      setIsDelete(true);
       const res = await fetch(
         `https://g-music-pvze.onrender.com/api/media/delete/${fileId}`,
         {
           method: "DELETE",
         }
       );
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Server error ${res.status}: ${errorText}`);
-      }
-
+  
       const data = await res.json();
-      console.log("Deleted successfully:", data);
-
-      dispatch({
-        type: actionType.SET_ALERT_TYPE,
-        AlertType: "success",
-      });
-
-      const timer = setTimeout(() => {
-        dispatch({
-          type: actionType.SET_ALERT_TYPE,
-          AlertType: null,
-        });
-      }, 3000);
-
-      return () => clearTimeout(timer);
+      if (!data.success) {
+        throw new Error(`Failed to delete ${fileType}`);
+      }
+  
+      console.log(`${fileType} deleted successfully`);
     } catch (err) {
-      console.error("Failed to delete image:", err.message);
-      dispatch({
-        type: actionType.SET_ALERT_TYPE,
-        AlertType: "error",
-      });
-
-      const timer = setTimeout(() => {
-        dispatch({
-          type: actionType.SET_ALERT_TYPE,
-          AlertType: null,
-        });
-      }, 3000);
-
-      return () => clearTimeout(timer);
+      console.error(`Error deleting ${fileType}:`, err);
+      throw err;
     }
   };
+  const deleteObject = async (data) => {
+    try {
+      setIsDelete(true); // show loading
+  
+      // 1. Prepare file deletion promises
+      const fileDeletions = [];
+  
+      if (data.fileId && data.imageURL) {
+        fileDeletions.push(deleteFile(data.fileId, "image"));
+      }
+  
+      if (data.songId && data.songURL) {
+        fileDeletions.push(deleteFile(data.songId, "audio"));
+      }
+  
+      // 2. Run deletions in parallel
+      if (fileDeletions.length > 0) {
+        const results = await Promise.allSettled(fileDeletions);
+        const failed = results.filter((r) => r.status === "rejected");
+  
+        if (failed.length > 0) {
+          throw new Error("One or more files failed to delete.");
+        }
+      }
+  
+      // 3. Delete the DB record
+      const dbRes = await deleteSong(data._id);
+      if (!dbRes?.data?.success) {
+        throw new Error("Failed to delete from database");
+      }
+  
+      // 4. Refresh global songs state
+      const { data: updatedSongs } = await getAllSongs();
+      dispatch({
+        type: actionType.SET_ALL_SONGS,
+        allSongs: updatedSongs,
+      });
+  
+      showAlert("success");
+    } catch (error) {
+      console.error("Deletion error:", error);
+      showAlert("error");
+    } finally {
+      setIsDelete(false);
+    }
+  };
+  
+  
+ 
+  
   const addToContext = () => {
    if (!songPlaying) {
     dispatch({

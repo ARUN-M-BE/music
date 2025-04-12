@@ -8,13 +8,50 @@ import { deleteArtist, getAllArtists } from "../../api";
 const ArtistCard = ({ data, index }) => {
   const [isDelete, setIsDelete] = useState(false);
   const [{ allArtists, AlertType }, dispatch] = useStateValue();
+  const showAlert = (type) => {
+    dispatch({
+      type: actionType.SET_ALERT_TYPE,
+      AlertType: type,
+    });
+    const timer = setTimeout(() => {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: null,
+      });
+    }, 3000);
+  };
+
+  const deleteImage = async (artistFileId) => {
+    if (!artistFileId) return;
+
+    const res = await fetch(
+      `https://g-music-pvze.onrender.com/api/media/delete/${artistFileId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    const data = await res.json();
+    if (data.success) {
+      console.log(data);
+      showAlert("success");
+      
+      setArtistImageCover(null);
+      setArtistFileId(null); // Reset fileId
+      
+      return () => clearTimeout(timer);
+    } else {
+      showAlert("error");
+      return () => clearTimeout(timer);
+    }
+  };
   const deleteObject = async (data) => {
     try {
       setIsDelete(true); // Show loading state
   
       // First delete the associated image file if it exists
       if (data.artistFileId) {
-        await deleteFileImage(data.artistFileId);
+        await deleteImage(data.artistFileId);
       }
   
       // Then delete the database record
@@ -30,77 +67,20 @@ const ArtistCard = ({ data, index }) => {
         allArtists: artistsData.data,
       });
   
-      dispatch({
-        type: actionType.SET_ALERT_TYPE,
-        AlertType: "success",
-      });
+      showAlert("success");
     } catch (error) {
       console.error("Deletion failed:", error);
-      dispatch({
-        type: actionType.SET_ALERT_TYPE,
-        AlertType: "error",
-      });
+      showAlert("error");
     } finally {
       setIsDelete(false);
       // Clear alert after 3 seconds
-      const timer = setTimeout(() => {
-        dispatch({
-          type: actionType.SET_ALERT_TYPE,
-          AlertType: null,
-        });
-      }, 3000);
+      
       return () => clearTimeout(timer);
     }
   };
   
-  const deleteFileImage = async (artistFileId) => {
-    try {
-      setIsDelete(true);
-      const res = await fetch(
-        `https://g-music-pvze.onrender.com/api/media/delete/${artistFileId}`,
-        {
-          method: "DELETE",
-        }
-      );
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Server error ${res.status}: ${errorText}`);
-      }
-
-      const data = await res.json();
-      console.log("Deleted successfully:", data);
-
-      dispatch({
-        type: actionType.SET_ALERT_TYPE,
-        AlertType: "success",
-      });
-
-      const timer = setTimeout(() => {
-        dispatch({
-          type: actionType.SET_ALERT_TYPE,
-          AlertType: null,
-        });
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    } catch (err) {
-      console.error("Failed to delete image:", err.message);
-      dispatch({
-        type: actionType.SET_ALERT_TYPE,
-        AlertType: "error",
-      });
-
-      const timer = setTimeout(() => {
-        dispatch({
-          type: actionType.SET_ALERT_TYPE,
-          AlertType: null,
-        });
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    }
-  };
+  
   return (
     <>
       <motion.div

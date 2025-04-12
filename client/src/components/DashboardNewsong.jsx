@@ -91,6 +91,11 @@ const DashboardNewsong = () => {
       console.log(data);
       showAlert("success");
       
+      setArtistImageCover(null);
+      setImageFileId(null);
+      setAlbumImageCover(null);
+      setAlbumFileId(null);
+      
       return () => clearTimeout(timer);
     } else {
       showAlert("error");
@@ -318,6 +323,7 @@ const DashboardNewsong = () => {
                           setImageFileId(null);
                           setIsImageLoad(false);
                           setImageProgress(0);
+                          false;
                         })
                         .catch((error) => console.error(error))
                     }
@@ -360,6 +366,7 @@ const DashboardNewsong = () => {
                           setAudioFileId(null);
                           setIsAudioLoad(false);
                           setAudioProgress(0);
+                          false;
                         })
                         .catch((error) => console.error(error))
                     }
@@ -420,12 +427,13 @@ const DashboardNewsong = () => {
                   <button
                     // onClick={() => deleteFileObject(songImageCover,true) }
                     onClick={() =>
-                      deleteImage(imageFileId, true)
+                      deleteImage(artistFileId, true)
                         .then(() => {
                           setSongImageCover(null);
                           setImageFileId(null);
                           setIsImageLoad(false);
                           setImageProgress(0);
+                          false;
                         })
                         .catch((error) => console.error(error))
                     }
@@ -516,12 +524,13 @@ const DashboardNewsong = () => {
                   <button
                     // onClick={() => deleteFileObject(songImageCover,true) }
                     onClick={() =>
-                      deleteImage(imageFileId, true)
+                      deleteImage(albumFileId, true)
                         .then(() => {
                           setSongImageCover(null);
                           setImageFileId(null);
                           setIsImageLoad(false);
                           setImageProgress(0);
+                          false;
                         })
                         .catch((error) => console.error(error))
                     }
