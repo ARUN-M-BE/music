@@ -8,6 +8,7 @@ import { deleteAlbum, getAllAlbums } from "../../api";
 const AlbumCard = ({ data, index }) => {
   const [isDelete, setIsDelete] = useState(false);
   const [{ allAlbums, AlertType }, dispatch] = useStateValue();
+  const baseURL = "https://g-music-pvze.onrender.com/";
   const showAlert = (type) => {
     dispatch({
       type: actionType.SET_ALERT_TYPE,
@@ -20,13 +21,20 @@ const AlbumCard = ({ data, index }) => {
       });
     }, 3000);
   };
-  const deleteImage = async (fileId, albumFileId, data) => {
-    try {
-      if (!fileId || !albumFileId) return;
+
+
+  const deleteImage = async (fileId, data) => {
+    console.log("Delete function triggered", { fileId, data });
   
-      // Step 1: Delete image from server
+    try {
+      if (!fileId || !data?._id) {
+        console.warn("Missing fileId or album _id");
+        return;
+      }
+  
+      // Step 1: Delete image file from server
       const res = await fetch(
-        `https://g-music-pvze.onrender.com/api/media/delete/${fileId}`,
+      `${baseURL}api/media/delete/${fileId}`,
         {
           method: "DELETE",
         }
@@ -40,87 +48,39 @@ const AlbumCard = ({ data, index }) => {
   
       console.log("Image deleted successfully:", result);
   
-      // Step 2: Update album in MongoDB to remove imageURL & albumFileId
-      const updateRes = await fetch(
-        `https://g-music-pvze.onrender.com/api/albums/update/${albumFileId}`,
+      // Step 2: Delete album document using _id
+      const deleteRes = await fetch(
+        `${baseURL}api/albums/delete/${data._id}`,
         {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            imageURL: "",
-            albumFileId: "",
-          }),
+          method: "DELETE",
         }
       );
   
-      const updateData = await updateRes.json();
+      const deleteResult = await deleteRes.json();
   
-      if (!updateData.success) {
-        throw new Error("Failed to update MongoDB");
-      }
-  
-      // Step 3: Clear local state
-      setArtistImageCover(null);
-      setArtistFileId(null);
-  
-      // Step 4: Show success alert
-      showAlert("success");
-      const deleteResponse = await deleteAlbum(data._id);
-      if (!deleteResponse?.data) {
+      if (!deleteRes.ok || !deleteResult.success) {
         throw new Error("Failed to delete album record");
       }
-
-      // Refresh the albums list
+  
+      console.log("Album deleted successfully:", deleteResult);
+  
+      // Step 3: Refresh albums list
       const albumsData = await getAllAlbums();
       dispatch({
         type: actionType.SET_ALL_ALBUMS,
         allAlbums: albumsData.data,
       });
   
-    } catch (error) {
-      console.error("Error deleting image:", error.message);
-      showAlert("error");
-    } finally {
-      const timer = setTimeout(() => {
-        showAlert(null); // or reset any state
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  };
-  
-  const deleteObject = async (data) => {
-    try {
-      setIsDelete(true); // Show loading state
-
-      // First delete the associated image file
-      if (data.albumFileId) {
-        await deleteImage(data.albumFileId, data._id);
-      }
-
-      // Then delete the database record
-      const deleteResponse = await deleteAlbum(data._id);
-      if (!deleteResponse?.data) {
-        throw new Error("Failed to delete album record");
-      }
-
-      // Refresh the albums list
-      const albumsData = await getAllAlbums();
-      dispatch({
-        type: actionType.SET_ALL_ALBUMS,
-        allAlbums: albumsData.data,
-      });
-
       showAlert("success");
+      setTimeout(() => showAlert(null), 3000);
     } catch (error) {
-      console.error("Deletion failed:", error);
+      console.error("Error deleting album:", error.message);
       showAlert("error");
+      setTimeout(() => showAlert(null), 3000);
     } finally {
       setIsDelete(false);
     }
   };
-
   
 
   return (
@@ -176,7 +136,7 @@ const AlbumCard = ({ data, index }) => {
                 whileTap={{ scale: 0.75 }}
                 type="button"
                 className="text-sm font-bold text-[12px] px-2 py-1 uppercase text-black drop-shadow-md bg-red-100 hover:bg-red-500 rounded-lg  "
-                onClick={() => deleteImage(data.albumFileId, data._id)}
+                onClick={() => deleteImage(data.fileId, data)}
               >
                 Yes
               </motion.button>

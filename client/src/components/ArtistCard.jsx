@@ -8,6 +8,8 @@ import { deleteArtist, getAllArtists } from "../../api";
 const ArtistCard = ({ data, index }) => {
   const [isDelete, setIsDelete] = useState(false);
   const [{ allArtists, AlertType }, dispatch] = useStateValue();
+  const baseURL = "https://g-music-pvze.onrender.com/";
+
   const showAlert = (type) => {
     dispatch({
       type: actionType.SET_ALERT_TYPE,
@@ -21,61 +23,62 @@ const ArtistCard = ({ data, index }) => {
     }, 3000);
   };
 
-  const deleteImage = async (artistFileId) => {
-    if (!artistFileId) return;
-
-    const res = await fetch(
-      `https://g-music-pvze.onrender.com/api/media/delete/${artistFileId}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    const data = await res.json();
-    if (data.success) {
-      console.log(data);
-      showAlert("success");
-      
-      setArtistImageCover(null);
-      setArtistFileId(null); // Reset fileId
-      
-      return () => clearTimeout(timer);
-    } else {
-      showAlert("error");
-      return () => clearTimeout(timer);
-    }
-  };
-  const deleteObject = async (data) => {
+  const deleteImage = async (fileId, data) => {
+    console.log("Delete function triggered", { fileId, data });
+  
     try {
-      setIsDelete(true); // Show loading state
-  
-      // First delete the associated image file if it exists
-      if (data.artistFileId) {
-        await deleteImage(data.artistFileId);
+      if (!fileId || !data?._id) {
+        console.warn("Missing fileId or album _id");
+        return;
       }
   
-      // Then delete the database record
-      const deleteResponse = await deleteArtist(data._id);
-      if (!deleteResponse?.data) {
-        throw new Error("Failed to delete artist record");
+      // Step 1: Delete image file from server
+      const res = await fetch(
+      `${baseURL}api/media/delete/${fileId}`,
+        {
+          method: "DELETE",
+        }
+      );
+  
+      const result = await res.json();
+  
+      if (!res.ok || !result.success) {
+        throw new Error("Failed to delete image from server");
       }
   
-      // Refresh the artists list
-      const artistsData = await getAllArtists();
+      console.log("Image deleted successfully:", result);
+  
+      // Step 2: Delete album document using _id
+      const deleteRes = await fetch(
+        `${baseURL}api/artists/delete/${data._id}`,
+        {
+          method: "DELETE",
+        }
+      );
+  
+      const deleteResult = await deleteRes.json();
+  
+      if (!deleteRes.ok || !deleteResult.success) {
+        throw new Error("Failed to delete album record");
+      }
+  
+      console.log("Album deleted successfully:", deleteResult);
+  
+      // Step 3: Refresh albums list
+      const artistData = await getAllArtists();
       dispatch({
         type: actionType.SET_ALL_ARTISTS,
-        allArtists: artistsData.data,
+        allArtists: artistData.data,
       });
   
       showAlert("success");
+      setTimeout(() => showAlert(null), 3000);
     } catch (error) {
-      console.error("Deletion failed:", error);
+      console.error("Error deleting album:", error.message);
       showAlert("error");
+      setTimeout(() => showAlert(null), 3000);
     } finally {
       setIsDelete(false);
-      // Clear alert after 3 seconds
-      
-      return () => clearTimeout(timer);
     }
   };
   
@@ -129,7 +132,7 @@ const ArtistCard = ({ data, index }) => {
                 whileTap={{ scale: 0.75 }}
                 type="button"
                 className="text-sm font-bold text-[12px] px-2 py-1 uppercase text-black drop-shadow-md bg-red-100 hover:bg-red-500 rounded-lg  "
-                onClick={() => deleteObject(data)}
+                onClick={() => deleteImage(data.fileId, data)}
               >
                 Yes
               </motion.button>
