@@ -9,11 +9,11 @@ const app = express();
 app.use(express.json());
 
 const imagekit = new ImageKit({
-  urlEndpoint: process.env.VITE_IMAGEKIT_URL_ENDPOINT,
-  publicKey: process.env.VITE_IMAGEKIT_PUBLIC_KEY,
-  privateKey: process.env.VITE_IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT,
+  publicKey: import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY,
+  privateKey: import.meta.env.VITE_IMAGEKIT_PRIVATE_KEY,
 });
-const PORT = process.env.IMAGEKIT_PORT || 3001;
+const PORT = import.meta.env.IMAGEKIT_PORT || 3001;
 
 // Debugging: log raw POST body
 app.use((req, res, next) => {

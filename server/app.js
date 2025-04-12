@@ -7,14 +7,14 @@ const mongoose = require("mongoose");
 const ImageKit = require("imagekit");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = import.meta.env.PORT || 3000;
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 // Connect to MongoDB
-mongoose.connect(process.env.DATABASE_STRING, {
+mongoose.connect(import.meta.env.DATABASE_STRING, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -24,9 +24,9 @@ mongoose.connection
 
 // ImageKit Configuration
 const imagekit = new ImageKit({
-  urlEndpoint: process.env.VITE_IMAGEKIT_URL_ENDPOINT,
-  publicKey: process.env.VITE_IMAGEKIT_PUBLIC_KEY,
-  privateKey: process.env.VITE_IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT,
+  publicKey: import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY,
+  privateKey: import.meta.env.VITE_IMAGEKIT_PRIVATE_KEY,
 });
 
 // CORS Headers for ImageKit

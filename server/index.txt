@@ -3,7 +3,7 @@ const app = express();
 const cors = require("cors");
 const { default: mongoose } = require("mongoose");
 require("dotenv/config");
-const PORT = process.env.PORT || 3000;
+const PORT = import.meta.env.PORT || 3000;
 
 
 app.use(cors({ origin: true, credentials: true }));
@@ -31,7 +31,7 @@ app.use("/api/albums", albumRouter);
 const songsRouter = require("./routes/song");
 app.use("/api/songs", songsRouter);
 
-mongoose.connect(process.env.DATABASE_STRING, {
+mongoose.connect(import.meta.env.DATABASE_STRING, {
   useNewUrlParser: true,
 });
 mongoose.connection
@@ -54,12 +54,12 @@ app.listen(port, () => {
 const express = require('express');
 const app = express();
 const ImageKit = require('imagekit');
-const PORT = process.env.PORT || 3001;
+const PORT = import.meta.env.PORT || 3001;
 
 const imagekit = new ImageKit({
-  urlEndpoint: process.env.VITE_IMAGEKIT_URL_ENDPOINT ,
-  publicKey: process.env.VITE_IMAGEKIT_PUBLIC_KEY ,
-  privateKey: process.env.VITE_IMAGEKIT_PRIVATE_KEY
+  urlEndpoint: import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT ,
+  publicKey: import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY ,
+  privateKey: import.meta.env.VITE_IMAGEKIT_PRIVATE_KEY
 });
 
 // allow cross-origin requests
