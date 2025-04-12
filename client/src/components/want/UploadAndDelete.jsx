@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+
 function UploadAndDelete() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);

@@ -15,6 +15,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.0.14",
     "axios": "^1.8.4",
+    "build": "^0.1.4",
     "firebase": "^11.4.0",
     "flowbite": "^3.1.2",
     "flowbite-react": "^0.11.7",
@@ -44,17 +45,7 @@
   },
   "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
   "main": "eslint.config.js",
-  "keywords": [
-    "music app"
-  ],
+  "keywords": ["music app"],
   "author": "Arun m",
-  "license": "ISC",
-
-  "resolutions": {
-    "js-yaml": "4.1.0",
-    "uglify-js": "^3.17.0"
-  },
-  "engines": {
-    "bun": "1.0.22"
-  }
+  "license": "ISC"
 }
