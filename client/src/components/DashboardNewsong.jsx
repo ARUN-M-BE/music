@@ -25,9 +25,8 @@ import { filterByLanguage, filter } from "../utils/FillterButton";
 import { motion } from "framer-motion";
 
 const DashboardNewsong = () => {
-
   // const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
-  const baseURL = "https://g-music-pvze.onrender.com/"
+  const baseURL = "https://g-music-pvze.onrender.com/";
   const [SongName, setSongName] = useState("");
   const [songImageCover, setSongImageCover] = useState(null); // image URL
   const [imageFileId, setImageFileId] = useState(null);
@@ -77,17 +76,13 @@ const DashboardNewsong = () => {
         AlertType: null,
       });
     }, 3000);
-
   };
   const deleteImage = async (fileId, isImage = true) => {
     if (!fileId) return;
 
-    const res = await fetch(
-      `${baseURL}api/media/delete/${fileId}`,
-      {
-        method: "DELETE",
-      }
-    );
+    const res = await fetch(`${baseURL}api/media/delete/${fileId}`, {
+      method: "DELETE",
+    });
 
     const data = await res.json();
     if (data.success) {
@@ -98,7 +93,7 @@ const DashboardNewsong = () => {
       setImageFileId(null);
       setAlbumImageCover(null);
       setAlbumFileId(null);
-      
+
       return () => clearTimeout(timer);
     } else {
       showAlert("error");
@@ -244,7 +239,6 @@ const DashboardNewsong = () => {
       return () => clearTimeout(timer);
     } catch (error) {
       showAlert("error");
-      
     } finally {
       setIsArtistLoad(false);
     }
@@ -641,13 +635,10 @@ export const FileUpLoading = ({
         setProgress(simulatedProgress);
       }, 200);
 
-      const res = await fetch(
-        `${baseURL}api/media/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const res = await fetch(`${baseURL}api/media/upload`, {
+        method: "POST",
+        body: formData,
+      });
 
       clearInterval(progressInterval);
       const data = await res.json();
@@ -683,7 +674,6 @@ export const FileUpLoading = ({
     showAlert("error");
   };
 
-
   return (
     <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
       <div className="flex flex-col items-center justify-center">
@@ -702,7 +692,9 @@ export const FileUpLoading = ({
 
       {/* Show nothing if no file selected */}
       {!selectedFile && !uploading && (
-        <p className="text-sm text-textColor font-semibold mt-2">No file chosen</p>
+        <p className="text-sm text-textColor font-semibold mt-2">
+          No file chosen
+        </p>
       )}
 
       {/* Show uploading progress loader */}
