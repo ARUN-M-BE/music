@@ -11,7 +11,6 @@ export {default as SongsCard} from "./SongsCard";
 export {default as DashboardNewsong} from "./DashboardNewsong";
 export {default as FillterButton} from "./FillterButton";
 export {default as Upload} from "./Upload";
-export {default as ImagekitUpload} from "./ImagekitUpload";
 export {default as Alert} from "./Alert";
 export {default as MusicPlayer} from "./MusicPlayer";
 // export {default as SearchBar} from "./SearchBar";

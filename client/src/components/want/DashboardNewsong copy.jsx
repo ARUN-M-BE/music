@@ -4,11 +4,11 @@
 
 import React, { useEffect, useState } from "react";
 import { IKContext, IKUpload } from "imagekitio-react";
-import { useStateValue } from "../context/stateProvider";
-import { actionType } from "../context/reducer";
+import { useStateValue } from "../../context/stateProvider";
+import { actionType } from "../../context/reducer";
 import { BiCloudUpload } from "react-icons/bi";
 import { MdDelete } from "react-icons/md";
-import FillterButton from "./FillterButton";
+import FillterButton from "../FillterButton";
 import {
   getAllSongs,
   getAllAlbums,
@@ -16,13 +16,17 @@ import {
   saveNewSong,
   saveNewAlbum,
   saveNewArtist,
-} from "../../api";
-import { filterByLanguage, filter } from "../utils/FillterButton";
+} from "../../../api";
+import { filterByLanguage, filter } from "../../utils/FillterButton";
 
 // import AlertSuccess from "./AlertSuccess";
 // import AlertError from "./AlertError";
 
 import { motion } from "framer-motion";
+
+// ENV
+const urlEndpoint = import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT;
+const publicKey = import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY;
 
 const DashboardNewsong = () => {
   const [SongName, setSongName] = useState("");
@@ -63,40 +67,100 @@ const DashboardNewsong = () => {
     dispatch,
   ] = useStateValue();
 
-  const showAlert = (type) => {
-    dispatch({
-      type: actionType.SET_ALERT_TYPE,
-      AlertType: type,
-    });
-    const timer = setTimeout(() => {
+  const deleteFileObject = async (imageFileId, audioFileId) => {
+    try {
+      await fetch(`/api/media/delete/${fileId}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
       dispatch({
         type: actionType.SET_ALERT_TYPE,
-        AlertType: null,
+        AlertType: "success",
       });
-    }, 3000);
 
-  };
-  const deleteImage = async (fileId, isImage = true) => {
-    if (!fileId) return;
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
 
-    const res = await fetch(
-      `https://g-music-pvze.onrender.com/api/media/delete/${fileId}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    const data = await res.json();
-    if (data.success) {
-      console.log(data);
-      showAlert("success");
-      
       return () => clearTimeout(timer);
-    } else {
-      showAlert("error");
+    } catch (error) {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
       return () => clearTimeout(timer);
     }
   };
+
+  const deleteFileImage = async (
+    albumFileId
+    ) => {
+    if (!albumFileId) {
+      console.error("No fileId provided for deletion");
+      return;
+    }
+  
+    try {
+      const res = await fetch(
+        `https://g-music-pvze.onrender.com/api/media/delete/${albumFileId}`,
+        {
+          method: "DELETE",
+        }
+      );
+  
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error ${res.status}: ${errorText}`);
+      }
+  
+      const data = await res.json();
+      console.log("Deleted successfully:", data);
+  
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
+  
+    } catch (err) {
+      console.error("Failed to delete image:", err.message);
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  };
+  
+
 
   const saveSong = async () => {
     if (
@@ -108,7 +172,10 @@ const DashboardNewsong = () => {
       !filterLanguage ||
       !filterTerm
     ) {
-      showAlert("error");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
       return;
     }
 
@@ -137,7 +204,16 @@ const DashboardNewsong = () => {
         allSongs: songsData.songs,
       });
 
-      showAlert("success");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
+      });
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
 
       // Reset states
       setSongName("");
@@ -155,7 +231,16 @@ const DashboardNewsong = () => {
       dispatch({ type: actionType.SET_FILTER_TERM, filterTerm: null });
       return () => clearTimeout(timer);
     } catch (error) {
-      showAlert("error");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
     } finally {
       setIsImageLoad(false);
       setIsAudioLoad(false);
@@ -164,7 +249,10 @@ const DashboardNewsong = () => {
   };
   const saveAlbum = async () => {
     if (!albumImageCover || !albumName) {
-      showAlert("error");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
       return;
     }
 
@@ -184,7 +272,16 @@ const DashboardNewsong = () => {
         allAlbums: albumData.albums,
       });
 
-      showAlert("success");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
+      });
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
 
       // Reset states
       setAlbumName("");
@@ -193,7 +290,16 @@ const DashboardNewsong = () => {
       setIsAlbumLoad(null);
       return () => clearTimeout(timer);
     } catch (error) {
-      showAlert("error");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
     } finally {
       setIsAlbumLoad(false);
     }
@@ -202,7 +308,10 @@ const DashboardNewsong = () => {
 
   const saveArtist = async () => {
     if (!artistImageCover || !artistName || !twetter || !instagram) {
-      showAlert("error");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
       return;
     }
 
@@ -224,7 +333,16 @@ const DashboardNewsong = () => {
         allArtists: artistData.artist,
       });
 
-      showAlert("success");
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "success",
+      });
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
 
       // Reset states
       setArtistName("");
@@ -235,8 +353,16 @@ const DashboardNewsong = () => {
       setInstagram("");
       return () => clearTimeout(timer);
     } catch (error) {
-      showAlert("error");
-      
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: "error",
+      });
+      const timer = setTimeout(() => {
+        dispatch({
+          type: actionType.SET_ALERT_TYPE,
+          AlertType: null,
+        });
+      }, 3000);
     } finally {
       setIsArtistLoad(false);
     }
@@ -312,7 +438,7 @@ const DashboardNewsong = () => {
                   <button
                     // onClick={() => deleteFileObject(songImageCover,true) }
                     onClick={() =>
-                      deleteImage(imageFileId, true)
+                      deleteFileObject(imageFileId)
                         .then(() => {
                           setSongImageCover(null);
                           setImageFileId(null);
@@ -354,7 +480,7 @@ const DashboardNewsong = () => {
                   ></audio>
                   <button
                     onClick={() =>
-                      deleteImage(audioFileId, false)
+                      deleteFileObject(audioFileId)
                         .then(() => {
                           setAudioImageCover(null);
                           setAudioFileId(null);
@@ -420,12 +546,12 @@ const DashboardNewsong = () => {
                   <button
                     // onClick={() => deleteFileObject(songImageCover,true) }
                     onClick={() =>
-                      deleteImage(imageFileId, true)
+                      deleteFileImage(artistFileId)
                         .then(() => {
-                          setSongImageCover(null);
-                          setImageFileId(null);
-                          setIsImageLoad(false);
-                          setImageProgress(0);
+                          setArtistImageCover(null);
+                          setArtistFileId(null);
+                          setIsArtistLoad(false);
+                          setArtistProgress(0);
                         })
                         .catch((error) => console.error(error))
                     }
@@ -516,12 +642,12 @@ const DashboardNewsong = () => {
                   <button
                     // onClick={() => deleteFileObject(songImageCover,true) }
                     onClick={() =>
-                      deleteImage(imageFileId, true)
+                      deleteFileImage(albumFileId)
                         .then(() => {
-                          setSongImageCover(null);
-                          setImageFileId(null);
-                          setIsImageLoad(false);
-                          setImageProgress(0);
+                          setAlbumImageCover(null);
+                          setAlbumFileId(null);
+                          setIsAlbumLoad(false);
+                          setAlbumProgress(0);
                         })
                         .catch((error) => console.error(error))
                     }
@@ -569,13 +695,36 @@ export const FileUpLoading = ({
   setProgress,
   isImage,
 }) => {
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
   const [, dispatch] = useStateValue();
-  const showAlert = (type) => {
+
+  const handleSuccess = (res) => {
+    setProgress(100);
+    isLoading(false);
+    updateState(res.url);
+    updateStateId(res.fileId);
     dispatch({
       type: actionType.SET_ALERT_TYPE,
-      AlertType: type,
+      AlertType: "success",
+    });
+    console.log(res);
+
+    const timer = setTimeout(() => {
+      dispatch({
+        type: actionType.SET_ALERT_TYPE,
+        AlertType: null,
+      });
+    }, 3000);
+    return () => clearTimeout(timer);
+  };
+
+  const handleError = () => {
+    isLoading(false);
+    setProgress(0);
+    updateState(null);
+    updateStateId(null);
+    dispatch({
+      type: actionType.SET_ALERT_TYPE,
+      AlertType: "error",
     });
     const timer = setTimeout(() => {
       dispatch({
@@ -583,95 +732,8 @@ export const FileUpLoading = ({
         AlertType: null,
       });
     }, 3000);
-
     return () => clearTimeout(timer);
   };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const fileType = file.type;
-    const validImageTypes = ["image/jpeg", "image/png", "image/gif"];
-    const validAudioTypes = ["audio/mpeg", "audio/mp3"];
-
-    if (
-      !validImageTypes.includes(fileType) &&
-      !validAudioTypes.includes(fileType)
-    ) {
-      alert("Please select a valid image or audio file (jpeg, png, gif, mp3).");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size exceeds 5MB limit.");
-      return;
-    }
-    setSelectedFile(file);
-  };
-
-  const uploadImage = async () => {
-    if (!selectedFile) return;
-
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("folder", isImage ? "/images" : "/audios");
-    setProgress(0);
-    isLoading(true);
-    setUploading(true);
-
-    try {
-      // Simulate gradual progress animation (optional)
-      let simulatedProgress = 0;
-      const progressInterval = setInterval(() => {
-        simulatedProgress += 10;
-        if (simulatedProgress >= 90) clearInterval(progressInterval);
-        setProgress(simulatedProgress);
-      }, 200);
-
-      const res = await fetch(
-        "https://g-music-pvze.onrender.com/api/media/upload",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      clearInterval(progressInterval);
-      const data = await res.json();
-
-      if (data.success) {
-        handleSuccess(data);
-      } else {
-        handleError();
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      handleError();
-    }
-  };
-
-  const handleSuccess = (res) => {
-    setProgress(100);
-    isLoading(false);
-    setUploading(false);
-    updateState(isImage ? res.imageURL : res.songURL);
-    updateStateId(res.fileId);
-    setSelectedFile(null);
-    showAlert("success");
-  };
-
-  const handleError = () => {
-    isLoading(false);
-    setUploading(false);
-    setProgress(0);
-    updateState(null);
-    updateStateId(null);
-    setSelectedFile(null);
-    showAlert("error");
-  };
-
-
   return (
     <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
       <div className="flex flex-col items-center justify-center">
@@ -681,34 +743,38 @@ export const FileUpLoading = ({
         </p>
       </div>
 
-      <input
-        type="file"
-        onChange={handleFileChange}
-        className="w-0 h-0 opacity-0"
-        accept="image/jpeg, image/png, image/gif, audio/mpeg, audio/mp3"
-      />
-
-      {/* Show nothing if no file selected */}
-      {!selectedFile && !uploading && (
-        <p className="text-sm text-textColor font-semibold mt-2">No file chosen</p>
-      )}
-
-      {/* Show uploading progress loader */}
-      {uploading && <Fileload progress={0} />}
-
-      {/* Show upload button if file selected and not uploading */}
-      {selectedFile && !uploading && (
-        <button
-          onClick={uploadImage}
-          className="btn mt-2 hover:text-white bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-4 rounded-md shadow-lg"
-        >
-          Upload
-        </button>
-      )}
+      <IKContext
+        publicKey={publicKey}
+        urlEndpoint={urlEndpoint}
+        authenticator={authenticator}
+      >
+        <IKUpload
+          fileName={isImage ? "upload.jpg" : "upload.mp3"}
+          folder={isImage ? "/images" : "/audios"}
+          useUniqueFileName={true}
+          tags={["SONG COVER", "AUDIO COVER"]}
+          isPrivateFile={false}
+          responseFields={["tags"]}
+          onChange={() => {
+            setProgress(0);
+            isLoading(true);
+            console.log("onChange");
+          }}
+          onUploadProgress={(event) => {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setProgress(percent);
+          }}
+          overwriteAITags={true}
+          overwriteTags={true}
+          onSuccess={handleSuccess}
+          onError={handleError}
+          className="w-0 h-0 opacity-0"
+          multiple={false}
+        />
+      </IKContext>
     </label>
   );
 };
-
 export const DisableButton = () => {
   return (
     <button
@@ -781,5 +847,21 @@ export const Fileload = ({ progress }) => (
     </p>
   </div>
 );
+
+const authenticator = async () => {
+  const response = await fetch("https://g-music-pvze.onrender.com/auth");
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Auth error: ${error}`);
+  }
+  return response.json(); // { signature, token, expire }
+};
+
+// const formData = new FormData();
+// formData.append("file", selectedFile);
+// await fetch("/api/media/upload", {
+//   method: "POST",
+//   body: formData,
+// });
 
 export default DashboardNewsong;

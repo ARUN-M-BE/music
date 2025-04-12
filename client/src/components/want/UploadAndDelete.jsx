@@ -12,10 +12,13 @@ function UploadAndDelete() {
     const formData = new FormData();
     formData.append("file", selectedFile);
 
-    const res = await fetch("https://g-music-pvze.onrender.com/api/media/upload", {
-      method: "POST",
-      body: formData,
-    });
+    const res = await fetch(
+      "https://g-music-pvze.onrender.com/api/media/upload",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
 
     const data = await res.json();
     if (data.success) {
@@ -44,12 +47,16 @@ function UploadAndDelete() {
   return (
     <div className="p-4">
       <input type="file" onChange={handleFileChange} />
-      <button onClick={uploadImage} className="btn">Upload</button>
+      <button onClick={uploadImage} className="btn">
+        Upload
+      </button>
 
       {uploadedImage && (
         <div>
           <img src={uploadedImage.url} alt="Uploaded" width="200" />
-          <button onClick={deleteImage} className="btn-delete">Delete</button>
+          <button onClick={deleteImage} className="btn-delete">
+            Delete
+          </button>
         </div>
       )}
     </div>
