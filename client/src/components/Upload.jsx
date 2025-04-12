@@ -6,7 +6,7 @@ const Upload = () => {
   const [uploadedAudio, setUploadedAudio] = useState(null);
   const [fileId, setFileId] = useState(null); // Added fileId state
 
-  const baseURL = import.meta.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
+  const baseURL = process.env.API_URL || "http://localhost:3000/" || "http://localhost:3001/";
 
   const handleFileChange = (e) => {
     if (e.target.files.length === 0) return;

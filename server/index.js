@@ -22,7 +22,7 @@ app.use("/api/media", require("./routes/media"));
 //  res.sendFile(path.join(__dirname, 'client/dist', //'index.html'));
 //});
 
-const PORT = import.meta.env.IMAGEKIT_PORT || 3001;
+const PORT = process.env.IMAGEKIT_PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

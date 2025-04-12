@@ -5,9 +5,9 @@ const ImageKit = require("imagekit");
 
 // Setup ImageKit
 const imagekit = new ImageKit({
-  publicKey: import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY,
-  privateKey: import.meta.env.VITE_IMAGEKIT_PRIVATE_KEY,
-  urlEndpoint: import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT,
+  publicKey: process.env.VITE_IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.VITE_IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.VITE_IMAGEKIT_URL_ENDPOINT,
 });
 
 // Multer setup
