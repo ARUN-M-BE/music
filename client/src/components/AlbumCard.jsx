@@ -4,12 +4,11 @@ import { useStateValue } from "../context/stateProvider";
 import { actionType } from "../context/reducer";
 import { IoTrash } from "react-icons/io5";
 import { deleteAlbum, getAllAlbums } from "../../api";
+import { baseURL } from "../config/config";
 
 const AlbumCard = ({ data, index }) => {
   const [isDelete, setIsDelete] = useState(false);
   const [{ allAlbums, AlertType }, dispatch] = useStateValue();
-  // const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
-  const baseURL = "https://g-music-pvze.onrender.com/"
   const showAlert = (type) => {
     dispatch({
       type: actionType.SET_ALERT_TYPE,

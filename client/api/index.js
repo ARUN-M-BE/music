@@ -1,7 +1,5 @@
 import axios from "axios";
-
-// const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
-const baseURL = "https://g-music-pvze.onrender.com/"
+import { baseURL } from "../src/config/config";
 
 export const validateUser = async (token) => {
   try {

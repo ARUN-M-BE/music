@@ -1,13 +1,11 @@
 import React, { useState } from "react";
+import { baseURL } from "../config/config";
 
 const Upload = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);
   const [uploadedAudio, setUploadedAudio] = useState(null);
   const [fileId, setFileId] = useState(null); // Added fileId state
-
-  // const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
-  const baseURL = "https://g-music-pvze.onrender.com/"
   
   
 

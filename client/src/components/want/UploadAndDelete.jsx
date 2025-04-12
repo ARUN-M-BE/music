@@ -1,11 +1,10 @@
 import { useState } from "react";
+import { baseURL } from "../config/config";
 
 
 function UploadAndDelete() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);
-  // const baseURL = import.meta.env.VITE_API_URL || "https://g-music-pvze.onrender.com/"
-  const baseURL = "https://g-music-pvze.onrender.com/"
 
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
