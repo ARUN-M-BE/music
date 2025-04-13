@@ -3,3 +3,8 @@ echo ".env" >> .gitignore       # (Optional) Ignore environment files
 echo "dist/" >> .gitignore      # (Optional) Ignore build folders
 echo "coverage/" >> .gitignore  # (Optional) Ignore coverage reports
 echo "build/" >> .gitignore     # (Optional) Ignore build folders
+node_modules/
+*.node
+*.log
+*.tsbuildinfo
+*.tgz
