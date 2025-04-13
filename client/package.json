@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://g-music-a.onrender.com/",
+  "homepage": "https://g-music-a.onrender.com",
   "scripts": {
     "start": "vite",
     "dev": "vite",
