@@ -6,6 +6,7 @@ import App from "./App";
 import { StateProvider } from "./context/stateProvider";
 import { initialState } from "./context/InitialState";
 import reducer from "./context/reducer";
+// import "./index.css";
 
 const container = document.getElementById("root");
 const root = createRoot(container);
