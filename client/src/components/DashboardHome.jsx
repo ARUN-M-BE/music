@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useStateValue } from "../context/StateProvider";
+import { useStateValue } from "../context/stateProvider";
 import {
   getAllUsers,
   getAllAlbums,
