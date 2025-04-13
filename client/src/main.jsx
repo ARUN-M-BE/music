@@ -4,7 +4,7 @@ import { BrowserRouter as Router } from "react-router-dom";
 import ReactDOM from 'react-dom/client'
 import App from "./App";
 // import ErrorBoundary from "./ErrorBoundary";
-import { StateProvider } from "./context/stateProvider";
+import { StateProvider } from "./context/StateProvider.jsx";
 import { initialState } from "./context/InitialState";
 import reducer from "./context/reducer";
 
