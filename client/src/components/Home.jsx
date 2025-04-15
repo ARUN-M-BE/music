@@ -6,7 +6,7 @@ import { getAllSongs } from "../../api";
 import { actionType } from "../context/reducer";
 import { useStateValue } from "../context/stateProvider";
 import SongsCard from "./SongsCard";
-
+import HeaderSection from "./HeaderSection";
 
 const Home = () => {
   const [SongFilter, setSongFilter] = useState("");
@@ -24,37 +24,33 @@ const Home = () => {
     }
   }, []);
 
-  
   return (
-    <>
-      <div className="w-full h-auto flex flex-col items-center justify-center bg-primary dark:bg-gray-900 dark:text-white">
-        <Header />
-        <div className="w-full p-4 flex flex-col items-center justify-center">
+    <div className="w-full min-h-screen flex flex-col items-center bg-primary dark:bg-gray-900 dark:text-white">
+      <Header />
+      <main className="@container w-full max-w-7xl mt-[60px] mb-16 px-4 md:px-6 py-4 flex flex-col items-center">
+        {/* header content - visible on all screens */}
+        <HeaderSection />
+
         {/* Main content */}
-        <div className="relative my-4 mx-2 w-full flex flex-col items-center justify-center rounded-md border border-gray-300">
-            <div className="flex flex-wrap justify-center gap-4 my-4">
-                {allSongs &&
-                    allSongs.map((song, index) => (
-                        <SongsCard key={index} data={song} index={index} />
-                    ))}
-            </div>
+        <div className="relative my-4 md:my-6 w-full flex flex-col items-center justify-center rounded-md border border-gray-300">
+          <SongsContainer data={allSongs} />
         </div>
-      </div>
-      </div>
-      
-    </>
+      </main>
+    </div>
   );
 };
 
-export const SongsContainer = ({data}) => {
+export const SongsContainer = ({ data }) => {
   return (
-    <div className="flex items-center p-4 justify-center w-full bg-primary shadow-lg gap-3 dark:bg-gray-700 dark:text-white rounded-lg">
-       {data && data.map((song,index) => (
-      <SongsCard key={song._id} data={song} index={index} type="song" />
-    )
-    )}
+    <div className=" w-full flex flex-col items-center justify-center p-4">
+      <div className="flex flex-wrap justify-center gap-4 my-6 p-4 w-full">
+        {data &&
+          data.map((song, index) => (
+            <SongsCard key={index} data={song} index={index} />
+          ))}
+      </div>
     </div>
   );
-}
+};
 
 export default Home;

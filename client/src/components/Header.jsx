@@ -8,7 +8,7 @@ import { app } from "../config/firebase.config";
 import { getAuth } from "firebase/auth";
 import { motion } from "framer-motion";
 
-const Header = () => {
+const HeaderSection = () => {
   const [{ user }, dispatch] = useStateValue();
   const navigate = useNavigate();
   const [isMenu, setisMenu] = useState(false);
@@ -78,9 +78,7 @@ const Header = () => {
       {/* Mobile menu */}
       <div
         className={`lg:hidden w-full fixed left-0 bg-gray-600 bg-opacity-95 backdrop-blur-lg transition-all duration-300 ease-in-out ${
-          mobileMenuOpen
-            ? "top-20 h-[calc(100vh-5rem)]"
-            : "top-[-100vh] h-0"
+          mobileMenuOpen ? "top-20 h-[calc(100vh-5rem)]" : "top-[-100vh] h-0"
         }`}
       >
         <div className="flex flex-col h-full overflow-y-auto px-6 py-4">
@@ -209,9 +207,7 @@ const Header = () => {
               </div>
             </div>
           ) : (
-            <div className="mt-8 pt-6 border-t border-gray-700">
-              
-            </div>
+            <div className="mt-8 pt-6 border-t border-gray-700"></div>
           )}
         </div>
       </div>
@@ -247,19 +243,31 @@ const Header = () => {
 
           <div className="mr-3">
             <NavLink
-              to="/Premium"
+              to="/About"
               className={({ isActive }) =>
                 `inline-block px-4 py-2 ${
                   isActive ? isActiveStyle : isNotActiveStyle
                 }`
               }
             >
-              Premium
+              About
+            </NavLink>
+          </div>
+          <div className="mr-3">
+            <NavLink
+              to="/Contact"
+              className={({ isActive }) =>
+                `inline-block px-4 py-2 ${
+                  isActive ? isActiveStyle : isNotActiveStyle
+                }`
+              }
+            >
+              Contact
             </NavLink>
           </div>
 
           {/* Dropdown */}
-          <div
+          {/* <div
             className="relative inline-block"
             onMouseEnter={() => setDropdownOpen(true)}
             onMouseLeave={() => setDropdownOpen(false)}
@@ -286,62 +294,68 @@ const Header = () => {
                 </svg>
               </span>
             </button>
-
-            {dropdownOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={{ duration: 0.2 }}
-                className="absolute right-0 py-1 bg-white rounded-lg shadow-xl min-w-max dark:bg-gray-700"
+          </div> */}
+          {/* {isMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="absolute right-0 py-1 bg-white rounded-lg shadow-xl min-w-max dark:bg-gray-700"
+            >
+              <NavLink
+                to="/Contact"
+                className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
               >
+                Contact
+              </NavLink>
+              <NavLink
+                to="/about"
+                className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
+              >
+                About
+              </NavLink>
+              {user?.user?.role === "admin" && (
                 <NavLink
-                  to="/Contact"
+                  to="/dashboard/home"
                   className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
                 >
-                  Contact
+                  Dashboard
                 </NavLink>
-                <NavLink
-                  to="/about"
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
-                >
-                  About
-                </NavLink>
-                {user?.user?.role === "admin" && (
-                  <NavLink
-                    to="/dashboard/home"
-                    className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
-                  >
-                    Dashboard
-                  </NavLink>
-                )}
-              </motion.div>
-            )}
-          </div>
+              )}
+              <hr className="border-gray-600" />
+              <p
+                className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out"
+                onClick={logOut}
+              >
+                Sign Out
+              </p>
+            </motion.div>
+          )} */}
         </div>
       </div>
 
       {/* Desktop User section */}
       {user ? (
-        <div className="hidden lg:flex items-center ml-auto cursor-pointer gap-2 relative">
+        <div className="hidden lg:flex items-center ml-auto cursor-pointer gap-2 relative"
+        onMouseEnter={() => setisMenu(true)}
+            onMouseLeave={() => setisMenu(false)}>
           <img
             src={user?.user?.imageURL}
             className="w-12 h-12 min-w-[44px] object-cover rounded-full shadow-lg"
             alt="profile"
             referrerPolicy="no-referrer"
           />
-          <div
-            onMouseEnter={() => setisMenu(true)}
-            onMouseLeave={() => setisMenu(false)}
-            className="flex flex-col"
-          >
+          <div className="flex flex-col">
             <p className="text-textColor text-lg hover:text-headingColor font-semibold">
               {user?.user?.name}
             </p>
             <p className="flex items-center gap-2 text-xs text-textColor font-normal">
-              Premium Member. <FaCrown className="text-sm -ml-1 text-yellow-500" />
+              Premium Member.{" "}
+              <FaCrown className="text-sm -ml-1 text-yellow-500" />
             </p>
           </div>
+          
           {isMenu && (
             <motion.div
               onMouseEnter={() => setisMenu(true)}
@@ -359,7 +373,7 @@ const Header = () => {
               <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
                 My Favorites
               </p>
-              <hr className="border-gray-600" />
+              
               {user?.user?.role === "admin" && (
                 <NavLink to="/dashboard/home">
                   <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
@@ -367,6 +381,7 @@ const Header = () => {
                   </p>
                 </NavLink>
               )}
+              <hr className="border-gray-600" />
               <p
                 className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out"
                 onClick={logOut}
@@ -377,12 +392,10 @@ const Header = () => {
           )}
         </div>
       ) : (
-        <div className="hidden lg:flex items-center gap-4">
-          
-        </div>
+        <div className="hidden lg:flex items-center gap-4"></div>
       )}
     </header>
   );
 };
 
-export default Header;
+export default HeaderSection;

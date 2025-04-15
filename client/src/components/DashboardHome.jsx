@@ -14,30 +14,40 @@ import { motion } from "framer-motion";
 
 export const DashboardCard = ({ icon, name, count }) => {
   return (
-    <>
-      {/* <div className="w-40 h-auto bg-dark text-block p-4 rounded-lg shadow-md flex items-center justify-evenly flex-col gap-4">
-        <div className="text-4xl">{icon}</div>
-        <div className="text-2xl">{name}</div>
-        <div className="text-lg">{count}</div>
-      </div> */}
-
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{
+        scale: 1.02,
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 15,
+        delay: 0.1,
+      }}
+      className="w-full max-w-[160px] md:aspect-square mx-1 my-2 md:my-4 md:mx-2 flex flex-col justify-center items-center p-3 md:p-4 bg-white border border-gray-200 rounded-lg md:rounded-xl shadow-xs hover:shadow-sm transition-all dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+    >
+      {/* Icon Container */}
       <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 , delay: 0.2, type: "spring", stiffness: 150 }}
-        class="flex flex-col justify-center items-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm md:flex-row md:max-w-xl hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 "
+        whileHover={{ scale: 1.1 }}
+        transition={{ type: "spring", stiffness: 400 }}
+        className="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 text-xl md:text-2xl mb-2 md:mb-3"
       >
-        <div class=" w-full h-40 md:h-auto md:w-auto text-4xl">{icon}</div>
-        <div class="flex flex-col justify-center items-center p-4 leading-normal">
-          <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-            {name}
-          </h5>
-          <h4 class="mb-3 text-3xl font-bold text-gray-700 dark:text-white">
-            {count}
-          </h4>
-        </div>
+        {icon}
       </motion.div>
-    </>
+
+      {/* Content Container */}
+      <div className="text-center w-full">
+        <h5 className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-300 line-clamp-1">
+          {name}
+        </h5>
+        <h4 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mt-1">
+          {count}
+        </h4>
+      </div>
+    </motion.div>
   );
 };
 
@@ -82,7 +92,7 @@ const DashboardHome = () => {
 
   return (
     <>
-      <div className="w-full h-[480px] p-6 flex items-center justify-center flex-wrap gap-5 dark:bg-gray-700 dark:text-white rounded-lg">
+      <div className="w-full h-auto p-2 flex items-center justify-center flex-wrap dark:bg-gray-700 dark:text-white rounded-lg">
         <DashboardCard
           icon={<FaUsers className="text-4xl text-blue-700" />}
           name="Users"
