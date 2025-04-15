@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import "./styles/App.css";
+import "./App.css";
 import { Route, Routes } from "react-router-dom";
-import { Dashboard, Home, Login } from "./components";
+import { About, Contact, Dashboard, Home, Login, Musics } from "./components";
 import { app } from "./config/firebase.config";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -54,6 +54,9 @@ const App = () => {
           <Routes>
             <Route path="/*" element={<Home />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
+            <Route path="/Contact" element={<Contact />} />
+            <Route path="/About" element={<About />} />
+            <Route path="/Musics" element={<Musics />} />
             <Route path="/login" element={<Login setAuth={setAuth} />} />
           </Routes>
 
@@ -61,7 +64,7 @@ const App = () => {
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`fixed min-w-[700px] h-26 inset-x-0 bottom-0 z-50 bg-primary dark:bg-gray-800 dark:text-white flex items-center justify-center backdrop-blur-md`}
+              className={`fixed min-w-[700px] h-30 inset-x-0 bottom-0 z-50 bg-primary dark:bg-gray-800 dark:text-white flex items-center justify-center `}
             >
               <MusicPlayer />
             </motion.div>
