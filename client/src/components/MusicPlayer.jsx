@@ -9,12 +9,15 @@ import { actionType } from "../context/reducer";
 import { getAllSongs } from "../../api";
 import { FiMaximize } from "react-icons/fi";
 import { FiMinimize } from "react-icons/fi";
+import { FiMusic } from "react-icons/fi";
 
 const MusicPlayer = () => {
   const [{ songPlaying, songIndex, allSongs }, dispatch] = useStateValue();
   const [isPlayList, setIsPlayList] = useState(false);
   const [miniPlayer, setMiniPlayer] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(songIndex || 0);
+  const [isPlaying, setIsPlaying] = useState(true); // Should sync with your audio player state
+  const [groupHover, setGroupHover] = useState(false); // For hover detection
 
   if (!allSongs || allSongs.length === 0 || currentIndex === null) return null;
 
@@ -41,7 +44,7 @@ const MusicPlayer = () => {
     <div className="w-full">
       {/* Main Player */}
       <div className={`w-full mb-4 ${miniPlayer ? "hidden" : "block"}`}>
-        <div className="flex  flex-col md:flex-row items-center gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div className="flex flex-col md:flex-row items-center gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
           {/* Song Image */}
           <div className="relative flex-shrink-0">
             <img
@@ -49,42 +52,39 @@ const MusicPlayer = () => {
               className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-md"
               alt={currentSong?.name}
             />
-            {/* Mini Player Toggle - Mobile Only */}
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setMiniPlayer(true)}
-              className="md:hidden absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg"
-            >
-              <FiMinimize className="text-sm" />
-            </motion.button>
           </div>
 
           {/* Song Info */}
-          <div className="flex-1 min-w-0 text-center md:text-left">
+          <div className="flex-1 min-w-0 w-full p-2 mb-16">
             <div className="flex items-center justify-between gap-2">
               <div className="overflow-hidden">
-                <p className="text-md md:text-lg font-semibold text-gray-800 dark:text-white truncate">
+                <h2 className="text-md md:text-lg font-bold text-gray-800 dark:text-white">
                   {currentSong?.name}
-                  <span className="text-sm text-gray-500 dark:text-gray-300 ml-1">
-                    ({currentSong?.album})
-                  </span>
-                </p>
+                </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {currentSong?.artist}
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                    ({currentSong?.category})
-                  </span>
                 </p>
               </div>
 
-              {/* Playlist Button */}
-              <motion.button
-                whileTap={{ scale: 0.8 }}
-                onClick={() => setIsPlayList(!isPlayList)}
-                className="flex-shrink-0 ml-2"
-              >
-                <RiPlayListFill className="text-2xl text-gray-600 dark:text-gray-300 hover:text-red-500 transition-colors" />
-              </motion.button>
+              {/* Controls */}
+              <div className="flex items-center gap-2">
+                {/* Mini Player Toggle */}
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setMiniPlayer(true)}
+                  className="text-gray-600 dark:text-gray-300 hover:text-red-500 transition-colors"
+                >
+                  <FiMinimize className="text-lg" />
+                </motion.button>
+
+                {/* Playlist Button */}
+                <motion.button
+                  whileTap={{ scale: 0.8 }}
+                  onClick={() => setIsPlayList(!isPlayList)}
+                >
+                  <RiPlayListFill className="text-2xl text-gray-600 dark:text-gray-300 hover:text-red-500 transition-colors" />
+                </motion.button>
+              </div>
             </div>
 
             {/* Audio Player */}
@@ -96,24 +96,19 @@ const MusicPlayer = () => {
                 onClickNext={nextTrack}
                 onClickPrevious={previousTrack}
                 layout="stacked-reverse"
-                customAdditionalControls={[
-                  <button
-                    onClick={() => setMiniPlayer(true)}
-                    className="hidden md:block text-gray-600 dark:text-gray-300 hover:text-red-500 transition-colors"
-                  >
-                    <FiMinimize />
-                  </button>,
-                ]}
               />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Playlist */}
+      {/* Playlist - Second Design */}
       {isPlayList && (
-        <div className="mt-3">
-          <PlayListCard setCurrentIndex={setCurrentIndex} />
+        <div className="mt-3 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+          <h3 className="text-lg font-bold mb-3 text-gray-800 dark:text-white"></h3>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            <PlayListCard setCurrentIndex={setCurrentIndex} />
+          </div>
         </div>
       )}
 
@@ -121,36 +116,135 @@ const MusicPlayer = () => {
       {miniPlayer && (
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
+          animate={{
+            opacity: 1,
+            scale: 1,
+            }}
+          transition={{
+            opacity: { duration: 0.3 },
+            scale: { duration: 0.3 },
+            boxShadow: {
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeOut",
+              repeatType: "reverse",
+            },
+          }}
           className="fixed right-4 bottom-4 z-50"
         >
           <div className="relative group">
-            {/* Album Art with Pulse Effect */}
-            <div className="w-16 h-16 rounded-full overflow-hidden shadow-lg relative">
-              <div className="absolute inset-0 bg-red-500 opacity-20 rounded-full animate-pulse"></div>
+            {/* Album Art with Beat Animation */}
+            <motion.div
+              animate={{
+                scale: isPlaying ? [1, 1.05, 1] : 1,
+                rotate: isPlaying ? [0, 1, -1, 0] : 0,
+              }}
+              transition={{
+                scale: {
+                  duration: 0.5,
+                  repeat: Infinity,
+                  repeatType: "loop",
+                },
+                rotate: {
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatType: "mirror",
+                },
+              }}
+              className="w-24 h-24 rounded-full overflow-hidden shadow-lg relative bg-gradient-to-br from-red-500 to-pink-500"
+            >
               <img
                 src={currentSong?.imageURL}
-                className="relative w-full h-full object-cover cursor-pointer"
+                className="relative w-full h-full object-cover"
                 alt={currentSong?.name}
-                onClick={() => setMiniPlayer(false)}
               />
-                <FiMaximize className="absolut -z-10" />
-            </div>
 
-            {/* Mini Controls */}
-            {/* <div className="absolute -top-2 -right-2 flex items-center gap-1"> */}
+              {/* Pulsing Ring Effect */}
+              {isPlaying && (
+                <motion.div
+                  animate={{
+                    scale: [1, 1.2],
+                    opacity: [0.7, 0],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeOut",
+                  }}
+                  className="absolute inset-0 border-2 border-red-400 rounded-full"
+                />
+              )}
 
-            {/* </div> */}
+              {/* Maximize Button */}
+              <button
+                onClick={() => setMiniPlayer(false)}
+                className="absolute inset-0 flex items-center justify-center bg-transperant bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300"
+              >
+                <FiMaximize className="text-white text-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            </motion.div>
 
-            {/* Now Playing Info (Appears on hover) */}
-            <div className="absolute left-full ml-2 bg-white dark:bg-gray-800 p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-40">
-              <p className="text-sm font-medium truncate">
+            {/* Now Playing Info */}
+            <motion.div
+              initial={{ x: 10, opacity: 0 }}
+              animate={{
+                x: isPlaying ? [0, 5, 0] : 0,
+                opacity: groupHover ? 1 : 0,
+              }}
+              transition={{
+                x: {
+                  duration: 0.5,
+                  repeat: Infinity,
+                  repeatType: "mirror",
+                },
+              }}
+              className="absolute left-full ml-3 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xl backdrop-blur-sm bg-opacity-90 dark:bg-opacity-90 w-48"
+            >
+              <p className="text-sm font-bold truncate text-gray-800 dark:text-white">
                 {currentSong?.name}
               </p>
-              <p className="text-xs text-gray-500 truncate">
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate mb-2">
                 {currentSong?.artist}
               </p>
-            </div>
+              <div className="w-full">
+                <AudioPlayer
+                  src={currentSong?.songURL}
+                  volume={0.8}
+                  layout="stacked"
+                  showSkipControls={false}
+                  showJumpControls={false}
+                  customProgressBarSection={[]}
+                  customControlsSection={["MAIN_CONTROLS", "VOLUME_CONTROLS"]}
+                />
+              </div>
+
+              {/* Visualizer Effect */}
+              {isPlaying && (
+                <div className="flex items-center justify-center gap-1 mt-2 h-4">
+                  {[1, 2, 3, 2, 1].map((height, i) => (
+                    <motion.div
+                      key={i}
+                      animate={{
+                        height: [height * 4, height * 8, height * 4],
+                        backgroundColor: [
+                          "#ef4444",
+                          "#f97316",
+                          "#eab308",
+                          "#f97316",
+                          "#ef4444",
+                        ],
+                      }}
+                      transition={{
+                        duration: 0.5 + i * 0.1,
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                      }}
+                      className="w-1 rounded-full bg-red-500"
+                    />
+                  ))}
+                </div>
+              )}
+            </motion.div>
           </div>
         </motion.div>
       )}
@@ -190,41 +284,66 @@ export const PlayListCard = ({ setCurrentIndex }) => {
   };
 
   return (
-    <div className="absolute left-4 bottom-24 gap-2 py-2 w-350 max-w-[350px] h-510 max-h-[510px] flex flex-col overflow-y-scroll scrollbar-thin rounded-md shadow-md bg-primary">
+    <div className="absolute left-4 bottom-24 gap-2 py-2 w-[350px] max-w-[350px] h-[510px] max-h-[510px] flex flex-col overflow-y-auto scrollbar-thin rounded-md shadow-md bg-white dark:bg-gray-800">
       {allSongs && allSongs.length > 0 ? (
-        allSongs.map((music, index) => (
+        allSongs.map((song, index) => (
           <motion.div
-            key={index}
-            initial={{ opacity: 0, translateX: -50 }}
+            key={song._id || index}
+            initial={{ opacity: 0, translateX: -20 }}
             animate={{ opacity: 1, translateX: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-            className={`group w-full p-4 hover:bg-card flex gap-3 items-center cursor-pointer ${
-              music?._id === allSongs[songIndex]?._id
-                ? "bg-card"
-                : "bg-transparent"
+            transition={{ duration: 0.2, delay: index * 0.05 }}
+            onClick={() => setCurrentIndex(index)}
+            className={`p-3 rounded-lg cursor-pointer flex items-center gap-3 transition-colors ${
+              index === index
+                ? "bg-red-100 dark:bg-gray-700"
+                : "hover:bg-gray-100 dark:hover:bg-gray-700"
             }`}
-            onClick={() => setCurrentPlaySong(index)}
           >
-            <IoMusicalNote className="text-textColor group-hover:text-headingColor text-2xl cursor-pointer" />
+            <div className="relative flex-shrink-0">
+              <img
+                src={song.imageURL || "/default-song.png"}
+                className="w-12 h-12 object-cover rounded-md"
+                alt={song.name || "Unknown song"}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/default-song.png";
+                }}
+              />
+              {index === index && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-md">
+                  <FiMusic className="text-white animate-pulse" />
+                </div>
+              )}
+            </div>
 
-            <div className="flex items-start flex-col">
-              <p className="text-lg text-headingColor font-semibold">
-                {music?.name.length > 20
-                  ? music?.name.slice(0, 20)
-                  : music?.name}{" "}
-                <span className="text-base">({music?.album})</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate text-gray-800 dark:text-white">
+                {song.name || "Unknown Song"}
               </p>
-              <p className="text-textColor">
-                {music?.artist}{" "}
-                <span className="text-sm text-textColor font-semibold">
-                  ({music?.category})
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-600 dark:text-gray-300 truncate">
+                  {song.artist || "Unknown Artist"}
+                </p>
+                {song.album && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    • {song.album}
+                  </span>
+                )}
+              </div>
+              {song.category && (
+                <span className="text-[10px] px-1 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded mt-1 inline-block">
+                  {song.category}
                 </span>
-              </p>
+              )}
             </div>
           </motion.div>
         ))
       ) : (
-        <p className="text-center text-textColor">No songs available</p>
+        <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+          <FiMusic className="text-4xl mb-2" />
+          <p className="text-center">No songs available</p>
+          <p className="text-sm mt-1">Add some music to get started</p>
+        </div>
       )}
     </div>
   );
