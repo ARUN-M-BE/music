@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./App.css";
+import "./styles/App.css";
 import { Route, Routes } from "react-router-dom";
 import { About, Contact, Dashboard, Home, Login, Musics } from "./components";
 import { app } from "./config/firebase.config";
