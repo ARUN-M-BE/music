@@ -44,7 +44,7 @@ const MusicPlayer = () => {
     <div className="w-full">
       {/* Main Player */}
       <div className={`w-full mb-4 ${miniPlayer ? "hidden" : "block"}`}>
-        <div className="flex flex-col md:flex-row items-center gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div className="flex flex-col md:flex-row items-center gap-3 p-3 md:p-4 bg-transparent dark:bg-transparent dark:backdrop-blur-lg backdrop-blur-lg rounded-lg shadow-md">
           {/* Song Image */}
           <div className="relative flex-shrink-0">
             <img
@@ -198,7 +198,7 @@ const MusicPlayer = () => {
                   repeatType: "mirror",
                 },
               }}
-              className="absolute left-full ml-3 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xl backdrop-blur-sm bg-opacity-90 dark:bg-opacity-90 w-48"
+              className="absolute left-full ml-3 bg-transparent dark:backdrop-blur-lg dark:bg-transparent p-3 rounded-lg shadow-xl backdrop-blur-sm bg-opacity-90 dark:bg-opacity-90 w-48"
             >
               <p className="text-sm font-bold truncate text-gray-800 dark:text-white">
                 {currentSong?.name}
@@ -284,7 +284,7 @@ export const PlayListCard = ({ setCurrentIndex }) => {
   };
 
   return (
-    <div className="absolute left-4 bottom-24 gap-2 py-2 w-[350px] max-w-[350px] h-[510px] max-h-[510px] flex flex-col overflow-y-auto scrollbar-thin rounded-md shadow-md bg-white dark:bg-gray-800">
+    <div className="absolute left-4 bottom-24 gap-2 py-2 w-[350px] max-w-[350px] h-[510px] max-h-[510px] flex flex-col overflow-y-auto scrollbar-thin rounded-md shadow-md bg-transparent dark:bg-transparent backdrop-blur-lg dark:backdrop-blur-lg">
       {allSongs && allSongs.length > 0 ? (
         allSongs.map((song, index) => (
           <motion.div
