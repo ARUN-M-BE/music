@@ -21,8 +21,9 @@ const Dashboard= () => {
     <>
       <div className="w-full h-auto bg-primary flex flex-col items-center justify-center shadow-2xl">
         <Header />
+        <div className="h-[50px] w-full mt-[60px]"></div>
 
-        <div className="w-[60%] my-2 p-4 flex items-center justify-evenly">
+        <div className="w-[60%] my-2 top-1 p-4 flex items-center justify-evenly">
           <NavLink
             to={"/dashboard/"}
             className={({ isActive }) =>
