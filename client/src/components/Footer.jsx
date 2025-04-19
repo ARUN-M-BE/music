@@ -33,7 +33,7 @@ const Footer = () => {
 
         {/* Footer Bottom */}
         <div className="text-center text-sm text-gray-400">
-          &copy; {currentYear} <Link to="https://arunm.pages.dev">Arun M</Link> . All rights reserved.
+          &copy; {currentYear} <a href="https://arunm.pages.dev">Arun M</a> . All rights reserved.
         </div>
       </div>
     </footer>
