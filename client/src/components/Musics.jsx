@@ -25,7 +25,7 @@ const Musics = () => {
   }, []);
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center bg-primary dark:bg-gray-900 dark:text-white">
+    <div className="w-full min-h-screen flex flex-col items-center bg-gradient-to-br from-gray-800 to-purple-900 text-white">
       <Header />
       <main className="@container w-full max-w-7xl mt-[60px] mb-16 px-4 md:px-6 py-4 flex flex-col items-center">
 
