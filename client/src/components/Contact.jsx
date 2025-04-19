@@ -96,13 +96,13 @@ const Contact = () => {
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center bg-primary dark:bg-gray-900 dark:text-white">
+    <div className="w-full min-h-screen flex flex-col items-center bg-gradient-to-br from-gray-800 to-purple-900 text-white">
       <Header />
       <main className="@container w-full max-w-7xl mt-[60px] mb-16 px-4 md:px-6 py-4 flex flex-col items-center">
         <div className="relative p-6 my-4 md:my-6 w-full flex flex-col items-center justify-center rounded-md border border-gray-300">
           <Map/>
         </div>
-        <div className="min-h-screen bg-gradient-to-br p-6 from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8 dark:bg-gray-900 dark:text-white rounded-md border border-gray-300">
+        <div className="min-h-screen p-6 bg-gradient-to-r from-purple-400 to-pink-300 py-12 px-4 sm:px-6 lg:px-8 dark:bg-gray-900 dark:text-white rounded-md border border-gray-300">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row gap-8 items-center">
               {/* Left Side - Animation */}
@@ -176,7 +176,7 @@ const Contact = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                <div className="relative p-8 bg-white rounded-xl shadow-2xl border border-gray-200 hover:shadow-lg transition-shadow duration-300">
+                <div className="relative p-8 bg-gradient-to-br from-gray-800 to-purple-900 rounded-xl shadow-2xl border border-gray-200 hover:shadow-lg transition-shadow duration-300">
                   <div className="absolute -top-3 -right-3 w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -194,7 +194,7 @@ const Contact = () => {
                     </svg>
                   </div>
 
-                  <h2 className="text-3xl font-bold text-gray-800 mb-6">
+                  <h2 className="text-3xl font-bold text-white mb-6">
                     Send us a message
                   </h2>
 
@@ -236,7 +236,7 @@ const Contact = () => {
                       />
                       <label
                         htmlFor="name"
-                        className={`absolute left-4 px-1 transition-all duration-200 bg-white pointer-events-none ${
+                        className={`absolute left-4 px-1 transition-all duration-200 bg-transparent backdrop-blur-lg text-white pointer-events-none ${
                           formData.name || errors.name
                             ? "-top-2 text-xs"
                             : "top-3 text-gray-500"
@@ -269,7 +269,7 @@ const Contact = () => {
                       />
                       <label
                         htmlFor="email"
-                        className={`absolute left-4 px-1 transition-all duration-200 bg-white pointer-events-none ${
+                        className={`absolute left-4 px-1 transition-all duration-200 bg-transparent backdrop-blur-lg text-white pointer-events-none ${
                           formData.email || errors.email
                             ? "-top-2 text-xs"
                             : "top-3 text-gray-500"
@@ -302,7 +302,7 @@ const Contact = () => {
                       ></textarea>
                       <label
                         htmlFor="message"
-                        className={`absolute left-4 px-1 transition-all duration-200 bg-white pointer-events-none ${
+                        className={`absolute left-4 px-1 transition-all duration-200 bg-transparent backdrop-blur-lg text-white pointer-events-none ${
                           formData.message || errors.message
                           ? "-top-2 text-xs"
                           : "top-3 text-gray-500"
