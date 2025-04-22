@@ -1,0 +1,17 @@
+*git commit
+git init
+git add .
+
+
+
+*LFS 
+git lfs install
+git lfs track "*.csv"
+git add readme.csv
+git commit -m "filename.csv"
+
+*Branch merge 
+git branch -a 
+git checkout "branch B"
+git pull origin "branch A"
+git push -u origin "branch B"
