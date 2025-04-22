@@ -1,7 +1,8 @@
 *git commit
 git init
 git add .
-
+git commit -m "git.text"
+git push "git"
 
 
 *LFS 
