@@ -11,6 +11,89 @@ Currently, two official plugins are available:
 
 If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
 
+ 1. Auth Improvements (Login / Verification Flow)
+🔹 Goals:
+Modify login logic
+
+Add admin-side user verification
+
+🛠️ Process:
+Update backend auth flow (Node.js + MongoDB or similar):
+
+Add isVerified or status field to user schema
+
+Prevent login if user is not verified (admin must approve)
+
+Add admin dashboard control:
+
+Admin can view all pending users
+
+Admin can "verify" users (toggle flag in DB)
+
+✅ 2. Profile Page (User Side)
+🔹 Goals:
+Display all user details
+
+Allow editing (email, username, profile pic, etc.)
+
+🛠️ Process:
+Create a Profile component in React
+
+Fetch current user data from /api/user/me
+
+Show editable fields (with validation)
+
+Add update button → PUT /api/user/update
+
+✅ 3. Favorite Songs Page
+🔹 Goals:
+Let users add/remove songs from favorites
+
+Display them on a separate page
+
+🛠️ Process:
+Add favorites array to user model (list of song IDs)
+
+On song cards, add a ❤️ button → toggle favorite
+
+Create Favorites page
+
+Fetch all songs where song._id is in user.favorites
+
+✅ 4. Song Search + Filter Clear
+🔹 Goals:
+Search for songs by name, artist, etc.
+
+Add “Clear Filter” button to reset all results
+
+🛠️ Process:
+In the search page:
+
+Add input to search query
+
+Fetch songs from /api/songs?query=...
+
+Add "Clear Filter" button:
+
+Clears input and reloads default song list
+
+✅ 5. Admin: View + Edit Users
+🔹 Goals:
+Admin can select a user
+
+View their profile
+
+Update details (name, email, verification, etc.)
+
+🛠️ Process:
+Add admin route /admin/users
+
+Show a list of users with a "View" button
+
+Clicking it shows full user info (editable form)
+
+Save changes via PUT /admin/user/:id
+
 # client
 ```
 └── 📁client
