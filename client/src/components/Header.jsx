@@ -186,7 +186,7 @@ const HeaderSection = () => {
                 >
                   My Favorites
                 </NavLink>
-                {user?.user?.role === "admin" && (
+                {user?.user?.role === "admin" || "superadmin" && (
                   <NavLink
                     to="/dashboard/home"
                     className="block px-4 py-3 text-lg font-medium text-gray-200 hover:bg-gray-800 rounded-lg"
@@ -315,7 +315,7 @@ const HeaderSection = () => {
               >
                 About
               </NavLink>
-              {user?.user?.role === "admin" && (
+              {user?.user?.role === "admin" || "superadmin" && (
                 <NavLink
                   to="/dashboard/home"
                   className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
@@ -374,7 +374,7 @@ const HeaderSection = () => {
                 My Favorites
               </p>
               
-              {user?.user?.role === "admin" && (
+              {user?.user?.role === "admin" || "superadmin" && (
                 <NavLink to="/dashboard/home">
                   <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
                     Dashboard
