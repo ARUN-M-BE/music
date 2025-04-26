@@ -144,7 +144,7 @@ const SongsCard = ({ data, index, type }) => {
           </p>
         </div>
         <div className="w-full absolute bottom-2 right-2 flex items-center justify-between px-4 ">
-          {user?.user?.role === "admin" && (
+          {user?.user?.role === "superadmin" && (
             <motion.button
               whileTap={{ scale: 0.75 }}
               type="button"
