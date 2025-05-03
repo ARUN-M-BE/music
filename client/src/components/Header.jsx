@@ -8,7 +8,7 @@ import { app } from "../config/firebase.config";
 import { getAuth } from "firebase/auth";
 import { motion } from "framer-motion";
 
-const HeaderSection = () => {
+const Header = () => {
   const [{ user }, dispatch] = useStateValue();
   const navigate = useNavigate();
   const [isMenu, setisMenu] = useState(false);
@@ -27,7 +27,7 @@ const HeaderSection = () => {
   };
 
   return (
-    <header className="fixed top-0 z-50 flex flex-wrap items-center justify-between w-full px-4 py-5 tracking-wide bg-dark shadow-md bg-opacity-90 backdrop-blur-md transition-all duration-200 ease-in-out dark:bg-gray-900 dark:text-white md:py-2 md:px-6 lg:px-14">
+    <header className="fixed top-0 z-60 flex flex-wrap items-center justify-between w-full px-4 py-5 tracking-wide bg-dark shadow-md bg-opacity-90 backdrop-blur-md transition-all duration-200 ease-in-out dark:bg-gray-900 dark:text-white md:py-2 md:px-6 lg:px-14">
       {/* Left nav */}
       <div className="flex items-center">
         <NavLink to="/" className="text-3xl tracking-wide">
@@ -186,7 +186,7 @@ const HeaderSection = () => {
                 >
                   My Favorites
                 </NavLink>
-                {user?.user?.role === "admin" && "superadmin" && (
+                {user?.user?.role === "member" || "superadmin" && (
                   <NavLink
                     to="/dashboard/home"
                     className="block px-4 py-3 text-lg font-medium text-gray-200 hover:bg-gray-800 rounded-lg"
@@ -315,7 +315,7 @@ const HeaderSection = () => {
               >
                 About
               </NavLink>
-              {user?.user?.role === "admin" && "superadmin" && (
+              {user?.user?.role === "admin" && (
                 <NavLink
                   to="/dashboard/home"
                   className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
@@ -374,7 +374,7 @@ const HeaderSection = () => {
                 My Favorites
               </p>
               
-              {user?.user?.role === "admin" && "superadmin" && (
+              {user?.user?.role === "member" || "superadmin" &&(
                 <NavLink to="/dashboard/home">
                   <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
                     Dashboard
@@ -398,4 +398,4 @@ const HeaderSection = () => {
   );
 };
 
-export default HeaderSection;
+export default Header;

@@ -13,6 +13,11 @@ export const actionType = {
   SET_ALERT_TYPE: "SET_ALERT_TYPE",
   SET_SONG_PLAYING: "SET_SONG_PLAYING",
   SET_SONG_INDEX: "SET_SONG_INDEX",
+
+  SET_ALL_SONGS: "SET_ALL_SONGS",
+  SET_FILTERED_SONGS: "SET_FILTERED_SONGS",
+  SET_SONG: "SET_SONG",
+  SET_IS_SONG_PLAYING: "SET_IS_SONG_PLAYING",
 };
 
 const reducer = (state, action) => {
@@ -86,6 +91,26 @@ const reducer = (state, action) => {
         ...state,
         isPlayList: action.isPlayList,
       };
+      case actionType.SET_ALL_SONGS:
+        return {
+          ...state,
+          allSongs: action.allSongs,
+        };
+      case actionType.SET_FILTERED_SONGS:
+        return {
+          ...state,
+          filteredSongs: action.filteredSongs,
+        };
+      case actionType.SET_SONG:
+        return {
+          ...state,
+          song: action.song,
+        };
+      case actionType.SET_IS_SONG_PLAYING:
+        return {
+          ...state,
+          isSongPlaying: action.isSongPlaying,
+        };
 
     default:
       return state;

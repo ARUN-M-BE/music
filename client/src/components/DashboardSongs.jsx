@@ -1,19 +1,15 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { motion } from "framer-motion";
 import { IoAdd } from "react-icons/io5";
-import { AiOutlineClear } from "react-icons/ai";
-import { useState } from "react";
 import { useEffect } from "react";
 import { getAllSongs } from "../../api";
 import { actionType } from "../context/reducer";
 import { useStateValue } from "../context/stateProvider";
 import SongsCard from "./SongsCard";
+import SearchBar from "./SearchBar";
 
 const DashboardSongs = () => {
-  const [SongFilter, setSongFilter] = useState("");
-  const [isFocus, setIsFocus] = useState(false);
-  const [{ allSongs }, dispatch] = useStateValue();
+  const [{ allSongs, filteredSongs }, dispatch] = useStateValue();
 
   useEffect(() => {
     if (!allSongs) {
@@ -32,32 +28,34 @@ const DashboardSongs = () => {
         <div className="flex w-full items-center justify-center gap-20">
           <NavLink
             to={"/dashboard/newSong"}
-            className="text-2xl flex items-center justify-center px-3 py-2 border border-gray-300 hover:border-gray-500 rounded-full cursor-pointer"
+            className="bg-gradient-to-t from-cyan-500 to-blue-500 text-2xl flex items-center justify-center px-3 py-2 border border-gray-300 hover:border-gray-500 rounded-full cursor-pointer"
           >
             <IoAdd />
           </NavLink>
-          <input
-            type="text"
-            placeholder="Search"
-            className={`w-[52] px-4 py-2 border rounded-md bg-transparent outline-none duration-150 transition-all ease-in-out text-base text-textColor font-semibold ${
-              isFocus ? "border-gray-50 shadow-md" : "border-gray-300"
-            } dark:border-green-50 dark:text-white placeholder:dark:text-white dark:shadow-white`}
-            value={SongFilter}
-            onChange={(e) => setSongFilter(e.target.value)}
-            onBlur={() => setIsFocus(false)}
-            onFocus={() => setIsFocus(true)}
-          />
-          <i>
-            <AiOutlineClear className="text-3xl text-textColor cursor-pointer" />
-          </i>
+          <SearchBar />
         </div>
         {/* Main content */}
         <div className="relative my-4 mx-2 w-full flex flex-col items-center justify-center rounded-md border border-gray-300">
+          {/* Display search results count if filtered */}
+          {filteredSongs && (
+            <div className="w-full p-2 text-center bg-blue-100 dark:bg-gray-600">
+              Found {filteredSongs.length} result
+              {filteredSongs.length !== 1 ? "s" : ""}
+            </div>
+          )}
+
           <div className="flex flex-wrap justify-center gap-4 my-4">
-            {allSongs &&
-              allSongs.map((song, index) => (
-                <SongsCard key={index} data={song} index={index} />
-              ))}
+            {/* Display filtered songs if they exist, otherwise display all songs */}
+            {(filteredSongs ? filteredSongs : allSongs)?.map((song, index) => (
+              <SongsCard key={song._id} data={song} index={index} />
+            ))}
+
+            {/* Show message when no results found */}
+            {filteredSongs && filteredSongs.length === 0 && (
+              <div className="w-full text-center py-8 text-gray-500 dark:text-gray-300">
+                No songs found matching your search
+              </div>
+            )}
           </div>
         </div>
       </div>

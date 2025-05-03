@@ -4,10 +4,10 @@ import { motion } from "framer-motion";
 import { ImBin } from "react-icons/im";
 import { changingUserRole, getAllUsers, removeUser } from "../../api";
 import { actionType } from "../context/reducer";
-// import { FiEdit } from "react-icons/fi";
+import { FiEdit } from "react-icons/fi";
 
 const DashboardUsers = () => {
-  const [{ allUsers }] = useStateValue();
+  const [{ user, allUsers }] = useStateValue();
 
   return (
     <div className="relative overflow-x-auto shadow-md sm:rounded-lg dark:bg-gray-700 h-[480px]">
@@ -26,12 +26,21 @@ const DashboardUsers = () => {
             <th scope="col" className="px-6 py-3">
               Created
             </th>
-            <th scope="col" className="px-6 py-3">
-              Role
-            </th>
-            <th scope="col" className="px-6 py-3">
-              Action
-            </th>
+            {user?.user?.role === "superadmin" && (
+              <th scope="col" className="px-6 py-3">
+                Edit
+              </th>
+            )}
+            {user?.user?.role === "superadmin" && (
+              <th scope="col" className="px-6 py-3">
+                Action
+              </th>
+            )}
+            {user?.user?.role === "admin" && (
+              <th scope="col" className="px-6 py-3">
+                Role
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -52,20 +61,20 @@ const DashboardUsers = () => {
 const DashboardUserRow = ({ data, index }) => {
   const [{ user, allUsers }, dispatch] = useStateValue();
 
-  const [isUserRole, setisUserRole] = useState(false);
-  const updateRole = (userId, role) => {
-    setisUserRole(false);
-    changingUserRole(userId, role).then((res) => {
-      if (res) {
-        getAllUsers().then((data) => {
-          dispatch({
-            type: actionType.SET_ALL_USERS,
-            allUsers: data.data,
-          });
-        });
-      }
-    });
-  };
+  // const [isUserRole, setisUserRole] = useState(false);
+  // const updateRole = (userId, role) => {
+  //   setisUserRole(false);
+  //   changingUserRole(userId, role).then((res) => {
+  //     if (res) {
+  //       getAllUsers().then((data) => {
+  //         dispatch({
+  //           type: actionType.SET_ALL_USERS,
+  //           allUsers: data.data,
+  //         });
+  //       });
+  //     }
+  //   });
+  // };
 
   const deleteUser = (userId) => {
     removeUser(userId).then((res) => {
@@ -107,7 +116,7 @@ const DashboardUserRow = ({ data, index }) => {
       <td className="px-6 py-4 justify-center items-center text-center">
         {data.createdAt ? data.createdAt.split("T")[0] : "-"}
       </td>
-      <td className=" relative px-6 py-4 flex-row flex items-center gap-4 justify-center">
+      {/* <td className=" relative px-6 py-4 flex-row flex items-center gap-4 justify-center">
         <p className="text-base font-semibold text-gray-900 dark:text-white">
           {data.role}
         </p>
@@ -158,10 +167,28 @@ const DashboardUserRow = ({ data, index }) => {
             </div>
           </motion.div>
         )}
-      </td>
-      <td className="px-6 py-4">
-        {/* <FiEdit className="p-2 text-block hover:bg-blue-600 cursor-pointer ease-in-out  text-4xl" /> */}
-        {data._id !== user?.user._id && (
+      </td> */}
+
+      {user?.user?.role === "admin" && (
+        <td className="px-6 py-4 justify-center items-center text-center">
+          {data.role}
+        </td>
+      )}
+
+      {user?.user?.role === "superadmin" && data._id !== user?.user._id && (
+        <td className="px-6 py-4">
+          <motion.div
+            whileTap={{ scale: 0.75 }}
+            className=" justify-center items-center flex "
+            onClick={() => getUser(data._id)}
+          >
+            <FiEdit className="text-blue-400 hover:text-blue-800 hover:bg-no-repeat dark:hover:text-blue-200 p-2 cursor-pointer ease-in-out space-x-1 text-4xl" />
+          </motion.div>
+        </td>
+      )}
+
+      {user?.user?.role === "superadmin" && data._id !== user?.user._id && (
+        <td className="px-6 py-4">
           <motion.div
             whileTap={{ scale: 0.75 }}
             className=" justify-center items-center flex "
@@ -169,8 +196,8 @@ const DashboardUserRow = ({ data, index }) => {
           >
             <ImBin className="text-red-400 hover:text-red-800 hover:bg-no-repeat dark:hover:text-red-200 p-2 cursor-pointer ease-in-out space-x-1 text-4xl" />
           </motion.div>
-        )}
-      </td>
+        </td>
+      )}
     </motion.tr>
   );
 };

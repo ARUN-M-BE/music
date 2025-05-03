@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "./Header";
 import HeaderSection from "./HeaderSection";
 import Footer from "./Footer";
@@ -9,9 +10,29 @@ import {
   FaMicrophone,
   FaRegHeart,
 } from "react-icons/fa";
-
+import { useStateValue } from "../context/stateProvider";
 
 const Home = () => {
+  const navigate = useNavigate();
+  const [{ user }] = useStateValue();
+
+  useEffect(() => {
+    if (user) {
+      if (user?.user?.email_verified === false) {
+        navigate("/notfound");
+      }
+    }
+    if (user) {
+      if (user?.user?.email_verified === true) {
+        navigate("/");
+      }
+    } 
+    if (!user) {
+      window.localStorage.setItem("auth", "false");
+      navigate("/login");
+    }
+  }, [navigate, user]);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -200,16 +221,12 @@ const Home = () => {
                       <button className="absolute bottom-2 right-2 w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <FaRegHeart />
                       </button>
-                      
                     </div>
                     <div className="p-3">
                       <h3 className="text-white font-medium truncate">
-                        Poplur{" "}
-                        {item}
+                        Poplur {item}
                       </h3>
-                      <p className="text-gray-400 text-sm truncate">
-                        Artist
-                      </p>
+                      <p className="text-gray-400 text-sm truncate">Artist</p>
                     </div>
                   </motion.div>
                 ))}

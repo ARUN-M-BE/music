@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./styles/App.css";
 import { Route, Routes } from "react-router-dom";
-import { About, Contact, Dashboard, Home, Login, Musics } from "./components";
+import { About, Contact, Dashboard, EmailNotVerified, Home, Login, Musics, NotFound, Profile } from "./components";
 import { app } from "./config/firebase.config";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -50,7 +50,7 @@ const App = () => {
   return (
     <>
       <AnimatePresence mode="wait">
-        <div className="bg-primary h-auto min-w-[680px] justify-center flex items-center dark:bg-gray-900 dark:text-white">
+        <div className="bg-primary h-auto min-w-auto justify-center flex items-center dark:bg-gray-900 dark:text-white">
           <Routes>
             <Route path="/*" element={<Home />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
@@ -58,6 +58,9 @@ const App = () => {
             <Route path="/About" element={<About />} />
             <Route path="/Musics" element={<Musics />} />
             <Route path="/login" element={<Login setAuth={setAuth} />} />
+            <Route path="/NotFound" element={<NotFound />} />
+            <Route path="/Profile" element={<Profile />} />
+            <Route path="/EmailNotVerified" element={<EmailNotVerified />} />
           </Routes>
 
           {/* {songPlayer && ( */}
