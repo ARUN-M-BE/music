@@ -60,7 +60,7 @@ const App = () => {
             <Route path="/login" element={<Login setAuth={setAuth} />} />
             <Route path="/NotFound" element={<NotFound />} />
             <Route path="/Profile" element={<Profile />} />
-            <Route path="/EmailNotVerified" element={<EmailNotVerified />} />
+            
           </Routes>
 
           {/* {songPlayer && ( */}
