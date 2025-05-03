@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./styles/App.css";
 import { Route, Routes } from "react-router-dom";
-import { About, Contact, Dashboard, EmailNotVerified, Home, Login, Musics, NotFound, Profile } from "./components";
+import { About, Contact, Dashboard, Home, Login, Musics, NotFound, Profile } from "./components";
 import { app } from "./config/firebase.config";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
