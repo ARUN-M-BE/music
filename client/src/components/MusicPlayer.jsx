@@ -95,6 +95,7 @@ const MusicPlayer = () => {
                 showSkipControls
                 onClickNext={nextTrack}
                 onClickPrevious={previousTrack}
+                onEnded={nextTrack}
                 layout="stacked-reverse"
               />
             </div>
