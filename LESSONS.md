@@ -9,3 +9,4 @@
 2026-09-20 | Fixed width player overflow on mobile | Use responsive container utilities `w-full max-w-5xl px-4` instead of fixed `min-w-[700px]` | Client/UI
 2026-09-20 | Unimported `validateUser` in `Login.jsx` | Always import API helper functions before calling them inside async auth handlers | Client/Auth
 2026-09-20 | HTTP 505 error status in `auth.js` | Return standard HTTP 401/500 status codes for authentication errors | Server/Express
+2026-09-20 | Vercel build failure on missing `./DashboardUsers copy` | Export valid component files and untrack `node_modules` from git repository | Build/Vercel

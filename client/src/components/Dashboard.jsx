@@ -5,7 +5,7 @@ import { IoHome } from "react-icons/io5";
 import { isActiveStyle, isNotActiveStyle } from "../utils/style";
 import { Route, Routes } from "react-router-dom";
 import DashboardHome from "./DashboardHome";
-import DashboardUsers from "./DashboardUsers copy";
+import DashboardUsers from "./DashboardUsers";
 import DashboardSongs from "./DashboardSongs";
 import DashboardArtist from "./DashboardArtist";
 import DashboardAlbum from "./DashboardAlbum";
