@@ -9,11 +9,10 @@ import { getAuth } from "firebase/auth";
 import { motion } from "framer-motion";
 
 const Header = () => {
-  const [{ user }, dispatch] = useStateValue();
+  const [{ user }] = useStateValue();
   const navigate = useNavigate();
-  const [isMenu, setisMenu] = useState(false);
+  const [isMenu, setIsMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const logOut = () => {
     const firebaseAuth = getAuth(app);
@@ -22,20 +21,25 @@ const Header = () => {
       .then(() => {
         window.localStorage.setItem("auth", "false");
       })
-      .catch((e) => console.log(e));
+      .catch((e) => console.error("Sign out error:", e));
     navigate("/login", { replace: true });
   };
 
+  const isRoleAuthorized =
+    user?.user?.role === "admin" ||
+    user?.user?.role === "superadmin" ||
+    user?.user?.role === "member";
+
   return (
-    <header className="fixed top-0 z-60 flex flex-wrap items-center justify-between w-full px-4 py-5 tracking-wide bg-dark shadow-md bg-opacity-90 backdrop-blur-md transition-all duration-200 ease-in-out dark:bg-gray-900 dark:text-white md:py-2 md:px-6 lg:px-14">
-      {/* Left nav */}
+    <header className="fixed top-0 z-50 flex flex-wrap items-center justify-between w-full px-4 py-3 tracking-wide bg-dark shadow-md bg-opacity-90 backdrop-blur-md transition-all duration-200 ease-in-out dark:bg-gray-900 dark:text-white md:py-2 md:px-6 lg:px-14">
+      {/* Brand Logo */}
       <div className="flex items-center">
-        <NavLink to="/" className="text-3xl tracking-wide">
-          <img src={Logo} alt="Logo" className="w-16" />
+        <NavLink to="/" className="text-3xl tracking-wide flex items-center gap-2">
+          <img src={Logo} alt="Logo" className="w-12 h-12 object-contain" />
         </NavLink>
       </div>
 
-      {/* Mobile menu button */}
+      {/* Mobile Menu Hamburger Button */}
       <div className="block lg:hidden">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -75,22 +79,19 @@ const Header = () => {
         </button>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile Drawer */}
       <div
-        className={`lg:hidden w-full fixed left-0 bg-gray-600 bg-opacity-95 backdrop-blur-lg transition-all duration-300 ease-in-out ${
-          mobileMenuOpen ? "top-20 h-[calc(100vh-5rem)]" : "top-[-100vh] h-0"
+        className={`lg:hidden w-full fixed left-0 bg-gray-900 bg-opacity-95 backdrop-blur-lg transition-all duration-300 ease-in-out ${
+          mobileMenuOpen ? "top-16 h-[calc(100vh-4rem)]" : "top-[-100vh] h-0"
         }`}
       >
         <div className="flex flex-col h-full overflow-y-auto px-6 py-4">
-          {/* Main Navigation */}
           <div className="space-y-4">
             <NavLink
-              to="/home"
+              to="/"
               className={({ isActive }) =>
                 `block px-4 py-3 rounded-lg text-lg font-medium ${
-                  isActive
-                    ? "bg-primary text-white"
-                    : "text-gray-200 hover:bg-gray-800"
+                  isActive ? "bg-red-500 text-white" : "text-gray-200 hover:bg-gray-800"
                 }`
               }
               onClick={() => setMobileMenuOpen(false)}
@@ -101,62 +102,42 @@ const Header = () => {
               to="/Musics"
               className={({ isActive }) =>
                 `block px-4 py-3 rounded-lg text-lg font-medium ${
-                  isActive
-                    ? "bg-primary text-white"
-                    : "text-gray-200 hover:bg-gray-800"
+                  isActive ? "bg-red-500 text-white" : "text-gray-200 hover:bg-gray-800"
                 }`
               }
               onClick={() => setMobileMenuOpen(false)}
             >
               Musics
             </NavLink>
-            {/* <NavLink
-              to="/Premium"
-              className={({ isActive }) =>
-                `block px-4 py-3 rounded-lg text-lg font-medium ${
-                  isActive
-                    ? "bg-primary text-white"
-                    : "text-gray-200 hover:bg-gray-800"
-                }`
-              }
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Premium
-            </NavLink> */}
-            <NavLink
-              to="/Contact"
-              className={({ isActive }) =>
-                `block px-4 py-3 rounded-lg text-lg font-medium ${
-                  isActive
-                    ? "bg-primary text-white"
-                    : "text-gray-200 hover:bg-gray-800"
-                }`
-              }
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Contact
-            </NavLink>
             <NavLink
               to="/About"
               className={({ isActive }) =>
                 `block px-4 py-3 rounded-lg text-lg font-medium ${
-                  isActive
-                    ? "bg-primary text-white"
-                    : "text-gray-200 hover:bg-gray-800"
+                  isActive ? "bg-red-500 text-white" : "text-gray-200 hover:bg-gray-800"
                 }`
               }
               onClick={() => setMobileMenuOpen(false)}
             >
               About
             </NavLink>
+            <NavLink
+              to="/Contact"
+              className={({ isActive }) =>
+                `block px-4 py-3 rounded-lg text-lg font-medium ${
+                  isActive ? "bg-red-500 text-white" : "text-gray-200 hover:bg-gray-800"
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Contact
+            </NavLink>
           </div>
 
-          {/* User Section */}
           {user ? (
             <div className="mt-8 pt-6 border-t border-gray-700">
               <div className="flex items-center gap-4 mb-6">
                 <img
-                  src={user?.user?.imageURL}
+                  src={user?.user?.imageURL || "/default-avatar.png"}
                   className="w-12 h-12 min-w-[44px] object-cover rounded-full shadow-lg"
                   alt="profile"
                   referrerPolicy="no-referrer"
@@ -166,7 +147,7 @@ const Header = () => {
                     {user?.user?.name}
                   </p>
                   <p className="flex items-center gap-1 text-sm text-yellow-400">
-                    <FaCrown className="text-sm" /> Premium Member
+                    <FaCrown className="text-sm" /> Member
                   </p>
                 </div>
               </div>
@@ -179,16 +160,9 @@ const Header = () => {
                 >
                   Profile
                 </NavLink>
-                <NavLink
-                  to="/favorites"
-                  className="block px-4 py-3 text-lg font-medium text-gray-200 hover:bg-gray-800 rounded-lg"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  My Favorites
-                </NavLink>
-                {user?.user?.role === "member" || "superadmin" && (
+                {isRoleAuthorized && (
                   <NavLink
-                    to="/dashboard/home"
+                    to="/dashboard"
                     className="block px-4 py-3 text-lg font-medium text-gray-200 hover:bg-gray-800 rounded-lg"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -206,193 +180,119 @@ const Header = () => {
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="mt-8 pt-6 border-t border-gray-700"></div>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* Desktop menu */}
+      {/* Desktop Navigation */}
       <div className="hidden w-full lg:flex lg:items-center lg:w-auto">
-        <div className="items-center flex-1 pt-6 justify-center text-lg lg:pt-0 list-reset lg:flex">
-          <div className="mr-3">
-            <NavLink
-              to="/home"
-              className={({ isActive }) =>
-                `inline-block px-4 py-2 ${
-                  isActive ? isActiveStyle : isNotActiveStyle
-                }`
-              }
-            >
-              Home
-            </NavLink>
-          </div>
-
-          <div className="mr-3">
-            <NavLink
-              to="/Musics"
-              className={({ isActive }) =>
-                `inline-block px-4 py-2 ${
-                  isActive ? isActiveStyle : isNotActiveStyle
-                }`
-              }
-            >
-              Musics
-            </NavLink>
-          </div>
-
-          <div className="mr-3">
-            <NavLink
-              to="/About"
-              className={({ isActive }) =>
-                `inline-block px-4 py-2 ${
-                  isActive ? isActiveStyle : isNotActiveStyle
-                }`
-              }
-            >
-              About
-            </NavLink>
-          </div>
-          <div className="mr-3">
-            <NavLink
-              to="/Contact"
-              className={({ isActive }) =>
-                `inline-block px-4 py-2 ${
-                  isActive ? isActiveStyle : isNotActiveStyle
-                }`
-              }
-            >
-              Contact
-            </NavLink>
-          </div>
-
-          {/* Dropdown */}
-          {/* <div
-            className="relative inline-block"
-            onMouseEnter={() => setDropdownOpen(true)}
-            onMouseLeave={() => setDropdownOpen(false)}
+        <div className="items-center flex-1 justify-center text-base list-reset lg:flex gap-2">
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              `inline-block px-4 py-2 rounded-md transition ${
+                isActive ? isActiveStyle : isNotActiveStyle
+              }`
+            }
           >
-            <button
-              className={`flex items-center p-2 rounded-md ${
-                dropdownOpen
-                  ? "text-headingColor"
-                  : "text-textColor hover:text-headingColor"
-              }`}
-            >
-              <span className="mr-4">More</span>
-              <span
-                className={`transition-transform duration-500 transform ${
-                  dropdownOpen ? "-rotate-180" : ""
-                }`}
-              >
-                <svg
-                  className="w-4 h-4 fill-current"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </span>
-            </button>
-          </div> */}
-          {/* {isMenu && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.2 }}
-              className="absolute right-0 py-1 bg-white rounded-lg shadow-xl min-w-max dark:bg-gray-700"
-            >
-              <NavLink
-                to="/Contact"
-                className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
-              >
-                Contact
-              </NavLink>
-              <NavLink
-                to="/about"
-                className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
-              >
-                About
-              </NavLink>
-              {user?.user?.role === "admin" && (
-                <NavLink
-                  to="/dashboard/home"
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
-                >
-                  Dashboard
-                </NavLink>
-              )}
-              <hr className="border-gray-600" />
-              <p
-                className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out"
-                onClick={logOut}
-              >
-                Sign Out
-              </p>
-            </motion.div>
-          )} */}
+            Home
+          </NavLink>
+          <NavLink
+            to="/Musics"
+            className={({ isActive }) =>
+              `inline-block px-4 py-2 rounded-md transition ${
+                isActive ? isActiveStyle : isNotActiveStyle
+              }`
+            }
+          >
+            Musics
+          </NavLink>
+          <NavLink
+            to="/About"
+            className={({ isActive }) =>
+              `inline-block px-4 py-2 rounded-md transition ${
+                isActive ? isActiveStyle : isNotActiveStyle
+              }`
+            }
+          >
+            About
+          </NavLink>
+          <NavLink
+            to="/Contact"
+            className={({ isActive }) =>
+              `inline-block px-4 py-2 rounded-md transition ${
+                isActive ? isActiveStyle : isNotActiveStyle
+              }`
+            }
+          >
+            Contact
+          </NavLink>
         </div>
       </div>
 
-      {/* Desktop User section */}
+      {/* Desktop User Menu Dropdown */}
       {user ? (
-        <div className="hidden lg:flex items-center ml-auto cursor-pointer gap-2 relative"
-        onMouseEnter={() => setisMenu(true)}
-            onMouseLeave={() => setisMenu(false)}>
+        <div
+          className="hidden lg:flex items-center ml-auto cursor-pointer gap-3 relative py-2"
+          onMouseEnter={() => setIsMenu(true)}
+          onMouseLeave={() => setIsMenu(false)}
+        >
           <img
-            src={user?.user?.imageURL}
-            className="w-12 h-12 min-w-[44px] object-cover rounded-full shadow-lg"
+            src={user?.user?.imageURL || "/default-avatar.png"}
+            className="w-10 h-10 object-cover rounded-full shadow-lg border-2 border-red-500"
             alt="profile"
             referrerPolicy="no-referrer"
           />
           <div className="flex flex-col">
-            <p className="text-textColor text-lg hover:text-headingColor font-semibold">
+            <p className="text-gray-900 dark:text-white text-sm font-bold">
               {user?.user?.name}
             </p>
-            <p className="flex items-center gap-2 text-xs text-textColor font-normal">
-              Premium Member.{" "}
-              <FaCrown className="text-sm -ml-1 text-yellow-500" />
+            <p className="flex items-center gap-1 text-xs text-yellow-500 font-semibold">
+              <FaCrown className="text-xs" /> Member
             </p>
           </div>
-          
+
           {isMenu && (
             <motion.div
-              onMouseEnter={() => setisMenu(true)}
-              onMouseLeave={() => setisMenu(false)}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="absolute z-10 top-14 p-3 right-0 w-50 gap-2 bg-blue-100 shadow-lg rounded-lg backdrop-blur-sm flex flex-col dark:bg-gray-700 dark:text-white"
+              exit={{ opacity: 0, y: 15 }}
+              className="absolute z-50 top-14 right-0 w-48 p-2 bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col gap-1 text-gray-800 dark:text-gray-200"
             >
-              <NavLink to="/Profile">
-                <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
-                  Profile
-                </p>
+              <NavLink
+                to="/Profile"
+                className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-sm font-medium transition"
+              >
+                Profile
               </NavLink>
-              <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
-                My Favorites
-              </p>
-              
-              {user?.user?.role === "member" || "superadmin" &&(
-                <NavLink to="/dashboard/home">
-                  <p className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out">
-                    Dashboard
-                  </p>
+
+              {isRoleAuthorized && (
+                <NavLink
+                  to="/dashboard"
+                  className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-sm font-medium transition"
+                >
+                  Dashboard
                 </NavLink>
               )}
-              <hr className="border-gray-600" />
-              <p
-                className="text-base text-textColor hover:font-semibold duration-150 transition-all ease-in-out"
+              <hr className="border-gray-200 dark:border-gray-700 my-1" />
+              <button
+                className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-600 dark:text-red-400 rounded-md text-sm font-semibold transition"
                 onClick={logOut}
               >
                 Sign Out
-              </p>
+              </button>
             </motion.div>
           )}
         </div>
       ) : (
-        <div className="hidden lg:flex items-center gap-4"></div>
+        <div className="hidden lg:flex items-center gap-4">
+          <NavLink
+            to="/login"
+            className="px-4 py-2 rounded-md bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition"
+          >
+            Login
+          </NavLink>
+        </div>
       )}
     </header>
   );
