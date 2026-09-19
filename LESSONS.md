@@ -10,3 +10,4 @@
 2026-09-20 | Unimported `validateUser` in `Login.jsx` | Always import API helper functions before calling them inside async auth handlers | Client/Auth
 2026-09-20 | HTTP 505 error status in `auth.js` | Return standard HTTP 401/500 status codes for authentication errors | Server/Express
 2026-09-20 | Vercel build failure on missing `./DashboardUsers copy` | Export valid component files and untrack `node_modules` from git repository | Build/Vercel
+2026-09-20 | Vercel 404 NOT_FOUND on page refresh | Add SPA rewrites `source: "/(.*)", destination: "/index.html"` in `vercel.json` | Deployment/SPA
