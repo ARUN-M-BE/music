@@ -295,7 +295,7 @@ export const PlayListCard = ({ setCurrentIndex }) => {
             transition={{ duration: 0.2, delay: index * 0.05 }}
             onClick={() => setCurrentIndex(index)}
             className={`p-3 rounded-lg cursor-pointer flex items-center gap-3 transition-colors ${
-              index === index
+              index === songIndex
                 ? "bg-red-100 dark:bg-gray-700"
                 : "hover:bg-gray-100 dark:hover:bg-gray-700"
             }`}
@@ -310,7 +310,7 @@ export const PlayListCard = ({ setCurrentIndex }) => {
                   e.target.src = "/default-song.png";
                 }}
               />
-              {index === index && (
+              {index === songIndex && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-md">
                   <FiMusic className="text-white animate-pulse" />
                 </div>

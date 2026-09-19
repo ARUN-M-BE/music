@@ -24,8 +24,10 @@ const App = () => {
   );
 
   useEffect(() => {
-    firebaseAuth.onAuthStateChanged((userCred) => {
+    const unsubscribe = firebaseAuth.onAuthStateChanged((userCred) => {
       if (userCred) {
+        setAuth(true);
+        window.localStorage.setItem("auth", "true");
         userCred.getIdToken().then((token) => {
           validateUser(token).then((data) => {
             dispatch({
@@ -34,7 +36,6 @@ const App = () => {
             });
           });
         });
-        navigate( "/", { replace: true });
       } else {
         setAuth(false);
         window.localStorage.setItem("auth", "false");
@@ -42,9 +43,10 @@ const App = () => {
           type: actionType.SET_USER,
           user: null,
         });
-        navigate("/login");
       }
     });
+
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -67,7 +69,7 @@ const App = () => {
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`fixed min-w-[700px] h-30 inset-x-0 bottom-0 z-50 dark:bg-transparent bg-transparent dark:text-white flex items-center justify-center `}
+              className="fixed inset-x-0 bottom-2 z-50 px-2 sm:px-4 flex items-center justify-center w-full max-w-5xl mx-auto"
             >
               <MusicPlayer />
             </motion.div>

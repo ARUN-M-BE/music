@@ -14,13 +14,14 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 // Connect to MongoDB
-mongoose.connect(process.env.DATABASE_STRING, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-mongoose.connection
-  .once("open", () => console.log("Connected to database"))
-  .on("error", (error) => console.log("MongoDB Error:", error));
+if (process.env.DATABASE_STRING) {
+  mongoose
+    .connect(process.env.DATABASE_STRING)
+    .then(() => console.log("✅ Connected to MongoDB"))
+    .catch((error) => console.error("❌ MongoDB Error:", error));
+} else {
+  console.warn("⚠️ DATABASE_STRING environment variable not provided");
+}
 
 // ImageKit Configuration
 const imagekit = new ImageKit({
