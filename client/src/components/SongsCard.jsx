@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useStateValue } from "../context/stateProvider";
 import { actionType } from "../context/reducer";
-import { IoTrash } from "react-icons/io5";
+import { IoTrash, IoPlay } from "react-icons/io5";
 import { deleteSong, getAllSongs } from "../../api";
 import { baseURLL } from "../config/config";
 
@@ -10,12 +10,12 @@ const SongsCard = ({ data, index, type }) => {
   const [isDelete, setIsDelete] = React.useState(false);
   const [{ songPlaying, songIndex, user }, dispatch] = useStateValue();
 
-  const showAlert = (type) => {
+  const showAlert = (alertType) => {
     dispatch({
       type: actionType.SET_ALERT_TYPE,
-      AlertType: type,
+      AlertType: alertType,
     });
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       dispatch({
         type: actionType.SET_ALERT_TYPE,
         AlertType: null,
@@ -25,59 +25,40 @@ const SongsCard = ({ data, index, type }) => {
 
   const deleteFile = async (fileId, fileType) => {
     if (!fileId) return;
-
     try {
       const res = await fetch(`${baseURLL}api/media/delete/${fileId}`, {
         method: "DELETE",
       });
-
-      const data = await res.json();
-      if (!data.success) {
+      const resData = await res.json();
+      if (!resData.success) {
         throw new Error(`Failed to delete ${fileType}`);
       }
-
-      console.log(`${fileType} deleted successfully`);
     } catch (err) {
       console.error(`Error deleting ${fileType}:`, err);
       throw err;
     }
   };
-  const deleteObject = async (data) => {
+
+  const deleteObject = async (songData) => {
     try {
-      setIsDelete(true); // show loading
-
-      // 1. Prepare file deletion promises
+      setIsDelete(true);
       const fileDeletions = [];
+      if (songData.fileId) fileDeletions.push(deleteFile(songData.fileId, "image"));
+      if (songData.songId) fileDeletions.push(deleteFile(songData.songId, "audio"));
 
-      if (data.fileId && data.imageURL) {
-        fileDeletions.push(deleteFile(data.fileId, "image"));
-      }
-
-      if (data.songId && data.songURL) {
-        fileDeletions.push(deleteFile(data.songId, "audio"));
-      }
-
-      // 2. Run deletions in parallel
       if (fileDeletions.length > 0) {
-        const results = await Promise.allSettled(fileDeletions);
-        const failed = results.filter((r) => r.status === "rejected");
-
-        if (failed.length > 0) {
-          throw new Error("One or more files failed to delete.");
-        }
+        await Promise.allSettled(fileDeletions);
       }
 
-      // 3. Delete the DB record
-      const dbRes = await deleteSong(data._id);
+      const dbRes = await deleteSong(songData._id);
       if (!dbRes?.data?.success) {
         throw new Error("Failed to delete from database");
       }
 
-      // 4. Refresh global songs state
-      const { data: updatedSongs } = await getAllSongs();
+      const updated = await getAllSongs();
       dispatch({
         type: actionType.SET_ALL_SONGS,
-        allSongs: updatedSongs,
+        allSongs: updated?.data || updated?.songs || [],
       });
 
       showAlert("success");
@@ -96,99 +77,117 @@ const SongsCard = ({ data, index, type }) => {
         songPlaying: true,
       });
     }
-    if (songIndex !== index) {
-      dispatch({
-        type: actionType.SET_SONG_INDEX,
-        songIndex: index,
-      });
-    }
+    dispatch({
+      type: actionType.SET_SONG_INDEX,
+      songIndex: index,
+    });
   };
 
+  const isCurrentPlaying = songIndex === index && songPlaying;
+
   return (
-    <>
-      <motion.div
-        initial={{ opacity: 0, x: -50 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{
-          duration: 0.5,
-          delay: 0.2,
-          type: "spring",
-          stiffness: 150,
-          damping: 10,
-        }}
-        onClick={addToContext}
-        className="realtive w-40 min-w-[210px] px-2 py-4 cursor-pointer flex flex-col items-center justify-center bg-card hover:bg-cardhover rounded-lg backdrop-blur-lg shadow-lg shadow-gray-300 dark:shadow-gray-500 dark:bg-carddark dark:hover:bg-cardhoverdark"
-      >
-        <div className="w-40 min-w-[160px] h-40 min-h[160px] rounded-lg drop-shadow-lg overflow-hidden relative ">
-          <motion.img
-            whileHover={{ scale: 1.05 }}
-            src={data.imageURL}
-            alt={data.name}
-            className="w-full h-full rounded-lg object-cover"
-          />
-        </div>
-        <div className="flex flex-col items-center justify-center">
-          <p className="text-base text-textColor font-semibold mt-2">
-            {data.name.length > 15 ? `${data.name.slice(0, 10)}...` : data.name}
-          </p>
-          <p className="block text-sm text-gray-400 my-1 font-semibold">
-            {data.artist.length > 15
-              ? `${data.artist.slice(0, 10)}...`
-              : data.artist}
-          </p>
-          <p className="text-sm text-textColor font-semibold">
-            {" "}
-            {data.album.length > 15
-              ? `${data.album.slice(0, 10)}...`
-              : data.album}
-          </p>
-        </div>
-        <div className="w-full absolute bottom-2 right-2 flex items-center justify-between px-4 ">
-          {user?.user?.role === "superadmin" && (
-            <motion.button
-              whileTap={{ scale: 0.75 }}
-              type="button"
-              className="text-sm font-bold text-[12px] px-2 py-1 uppercase text-black drop-shadow-md bg-red-100 hover:bg-red-500 rounded-lg "
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsDelete(true);
-              }}
-            >
-              <IoTrash />
-            </motion.button>
-          )}
-        </div>
-        {isDelete && (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3, delay: index * 0.04 }}
+      onClick={addToContext}
+      className={`relative w-44 min-w-[176px] p-3 cursor-pointer flex flex-col items-center justify-between rounded-xl backdrop-blur-md transition-all duration-300 group shadow-md hover:shadow-xl ${
+        isCurrentPlaying
+          ? "bg-red-500/10 border-2 border-red-500/50 dark:bg-red-900/20"
+          : "bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
+      }`}
+    >
+      {/* Artwork with Hover Overlay */}
+      <div className="relative w-38 h-38 w-full aspect-square rounded-lg overflow-hidden shadow-inner">
+        <img
+          src={data.imageURL || "/default-song.png"}
+          alt={data.name}
+          className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "https://cdn-icons-png.flaticon.com/512/3844/3844724.png";
+          }}
+        />
+
+        {/* Play Button Overlay */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300 rounded-lg">
           <motion.div
-            className="absolute inset-0 backdrop-blur-md bg-bgCardOverlay flex flex-col items-center justify-center px-4 py-2 "
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { delay: 0.5 } }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="w-12 h-12 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg"
           >
-            <p className="text-lg text-center text-textColor font-semibold">
-              Are you sure you want to delete this?
-            </p>
-            <div className="flex items-center justify-center gap-4 mt-2">
-              <motion.button
-                whileTap={{ scale: 0.75 }}
-                type="button"
-                className="text-sm font-bold text-[12px] px-2 py-1 uppercase text-black drop-shadow-md bg-red-100 hover:bg-red-500 rounded-lg  "
-                onClick={() => deleteObject(data)}
-              >
-                Yes
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.75 }}
-                type="button"
-                className="text-sm font-bold text-[12px] px-2 py-1 uppercase text-black drop-shadow-md bg-green-100 hover:bg-green-500 rounded-lg "
-                onClick={() => setIsDelete(false)}
-              >
-                No
-              </motion.button>
-            </div>
+            <IoPlay className="text-2xl ml-1" />
           </motion.div>
+        </div>
+
+        {/* Category Tag */}
+        {data.category && (
+          <span className="absolute top-2 left-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-black/60 backdrop-blur-sm text-white uppercase tracking-wider">
+            {data.category}
+          </span>
         )}
-      </motion.div>
-    </>
+      </div>
+
+      {/* Song Information */}
+      <div className="w-full flex flex-col items-start mt-3">
+        <p className="text-sm font-bold text-gray-900 dark:text-white truncate w-full">
+          {data.name}
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate w-full mt-0.5">
+          {data.artist}
+        </p>
+        {data.album && (
+          <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate w-full mt-0.5">
+            {data.album}
+          </span>
+        )}
+      </div>
+
+      {/* Superadmin Delete Trigger */}
+      {(user?.user?.role === "admin" || user?.user?.role === "superadmin") && (
+        <div className="w-full flex justify-end mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <motion.button
+            whileTap={{ scale: 0.8 }}
+            type="button"
+            className="p-1.5 rounded-full bg-red-100 hover:bg-red-500 text-red-600 hover:text-white dark:bg-red-900/30 dark:hover:bg-red-600 dark:text-red-400 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDelete(true);
+            }}
+          >
+            <IoTrash className="text-sm" />
+          </motion.button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal Overlay */}
+      {isDelete && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute inset-0 z-20 rounded-xl bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-3 text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="text-xs font-semibold text-white mb-3">
+            Delete this song?
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              className="px-3 py-1 text-xs font-bold bg-red-600 text-white rounded-md hover:bg-red-700"
+              onClick={() => deleteObject(data)}
+            >
+              Yes
+            </button>
+            <button
+              className="px-3 py-1 text-xs font-bold bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              onClick={() => setIsDelete(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
   );
 };
 
