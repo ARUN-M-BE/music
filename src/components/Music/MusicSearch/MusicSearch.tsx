@@ -5,21 +5,9 @@ import { Search, X, SlidersHorizontal } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
+import { GENRE_NAMES } from "@/constants/categories";
 
-const GENRES = [
-  "all",
-  "Pop",
-  "Rock",
-  "Hip Hop",
-  "R&B",
-  "Electronic",
-  "Classical",
-  "Jazz",
-  "Country",
-  "Reggae",
-  "Blues",
-  "Folk",
-];
+const GENRES = ["all", ...GENRE_NAMES];
 
 const LANGUAGES = [
   "all",

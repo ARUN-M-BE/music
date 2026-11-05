@@ -24,6 +24,7 @@ import {
   Mic2,
   Layers,
 } from "lucide-react";
+import { GENRE_NAMES } from "@/constants/categories";
 
 interface MusicUploadModalProps {
   onSuccess: (track: MusicTrack) => void;
@@ -441,18 +442,7 @@ export function MusicUploadModal({
             onChange={(e) => setCategory(e.target.value)}
             className="h-10 px-3 rounded-lg bg-[#242424] border border-[#383838] focus:border-[#1db954] text-xs text-white outline-none cursor-pointer"
           >
-            {[
-              "Pop",
-              "Rock",
-              "Hip Hop",
-              "R&B",
-              "Electronic",
-              "Classical",
-              "Jazz",
-              "Country",
-              "Reggae",
-              "Blues",
-            ].map((c) => (
+            {GENRE_NAMES.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>

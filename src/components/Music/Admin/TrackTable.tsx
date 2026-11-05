@@ -7,6 +7,7 @@ import { musicService } from "@/services/music.service";
 import { useLanguage } from "@/context/LanguageContext";
 import { Trash2, Edit3, Search, AlertTriangle, Loader2 } from "lucide-react";
 import { ConfirmationModal } from "@/components/Common/ConfirmationModal";
+import { GENRE_NAMES } from "@/constants/categories";
 
 interface TrackTableProps {
   tracks: MusicTrack[];
@@ -252,13 +253,19 @@ export function TrackTable({
                 />
               </div>
               <div>
-                <label className="text-[11px] text-[#b3b3b3] font-medium block mb-1">Category</label>
+                <label className="text-[11px] text-[#b3b3b3] font-medium block mb-1">Category / Genre</label>
                 <input
                   type="text"
+                  list="genre-options"
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value)}
                   className="w-full h-9 px-3 rounded-lg bg-[#282828] border border-[#383838] focus:border-[#1db954] text-xs text-white outline-none"
                 />
+                <datalist id="genre-options">
+                  {GENRE_NAMES.map((g) => (
+                    <option key={g} value={g} />
+                  ))}
+                </datalist>
               </div>
             </div>
 
