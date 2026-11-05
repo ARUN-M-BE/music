@@ -8,7 +8,22 @@ export async function GET() {
   try {
     await connectToDatabase();
     const users = await UserModel.find({}).sort({ createdAt: -1 }).lean();
-    return NextResponse.json({ success: true, data: users, users });
+
+    const superAdminEmails = [
+      "arunm102301@gmail.com",
+      "arun102301@gmail.com",
+      (process.env.ADMIN_EMAIL || "arunm102301@gmail.com").toLowerCase(),
+    ];
+
+    const mapped = users.map((u: any) => ({
+      ...u,
+      role: superAdminEmails.includes(u.email?.toLowerCase())
+        ? "superadmin"
+        : u.role || "member",
+      status: u.status || (u.email_verified ? "approved" : "pending"),
+    }));
+
+    return NextResponse.json({ success: true, data: mapped, users: mapped });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: "Failed to fetch users", error: error.message },

@@ -12,56 +12,86 @@ export interface AuthSession {
   };
 }
 
+const SUPERADMIN_EMAILS = [
+  "arunm102301@gmail.com",
+  "arun102301@gmail.com",
+  (process.env.ADMIN_EMAIL || "arunm102301@gmail.com").toLowerCase(),
+];
+
 export async function getUserFromRequest(req: NextRequest): Promise<AuthSession | null> {
   const authHeader = req.headers.get("authorization");
+  const xUserEmail = req.headers.get("x-user-email")?.trim().toLowerCase();
 
-  // Check header Authorization: Bearer <token>
+  let token = "";
   if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.split(" ")[1];
-    if (token) {
-      try {
-        await connectToDatabase();
-        // If token matches user_id or email
-        const user = await UserModel.findOne({
-          $or: [{ user_id: token }, { email: token }],
-        }).lean();
+    token = authHeader.split(" ")[1]?.trim() || "";
+  } else if (xUserEmail) {
+    token = xUserEmail;
+  }
 
-        if (user) {
-          return {
-            user: {
-              id: user._id.toString(),
-              email: user.email,
-              name: user.name,
-              role: user.role || "member",
-              imageURL: user.imageURL,
-              email_verified: user.email_verified,
-            },
-          };
-        }
-      } catch (err) {
-        console.error("Auth header parse error:", err);
+  // 1. Check Bearer / Header token
+  if (token) {
+    const isSuperByEmail = SUPERADMIN_EMAILS.includes(token.toLowerCase());
+
+    try {
+      await connectToDatabase();
+      const user = await UserModel.findOne({
+        $or: [
+          { user_id: token },
+          { email: token.toLowerCase() },
+          { email: new RegExp(`^${token}$`, "i") },
+        ],
+      }).lean();
+
+      if (user) {
+        const isSuper =
+          isSuperByEmail ||
+          user.role === "superadmin" ||
+          SUPERADMIN_EMAILS.includes(user.email.toLowerCase());
+
+        return {
+          user: {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: isSuper ? "superadmin" : (user.role || "member"),
+            imageURL: user.imageURL,
+            email_verified: user.email_verified,
+          },
+        };
+      } else if (isSuperByEmail) {
+        return {
+          user: {
+            id: "root-superadmin",
+            email: token.toLowerCase(),
+            name: "Arun M (Superadmin)",
+            role: "superadmin",
+            email_verified: true,
+          },
+        };
       }
+    } catch (err) {
+      console.error("Auth header parse error:", err);
     }
   }
 
-  // Check Admin Fallback / Cookie Session
-  const adminEmail = process.env.ADMIN_EMAIL || "arunm102301@gmail.com";
+  // 2. Check Cookie Session fallback
   const sessionCookie = req.cookies.get("music_auth_session")?.value;
   if (sessionCookie) {
     try {
       const parsed = JSON.parse(decodeURIComponent(sessionCookie));
       if (parsed && parsed.email) {
+        const emailLower = parsed.email.toLowerCase();
+        const isSuper =
+          SUPERADMIN_EMAILS.includes(emailLower) ||
+          parsed.role === "superadmin";
+
         return {
           user: {
             id: parsed.id || parsed._id || "session-user",
             email: parsed.email,
             name: parsed.name || "User",
-            role:
-              parsed.role ||
-              (parsed.email.toLowerCase() === adminEmail.toLowerCase() ||
-              parsed.email.toLowerCase() === "arun102301@gmail.com"
-                ? "superadmin"
-                : "member"),
+            role: isSuper ? "superadmin" : (parsed.role || "member"),
             imageURL: parsed.imageURL,
             email_verified: parsed.email_verified ?? true,
           },
@@ -82,4 +112,3 @@ export async function requireAdmin(req: NextRequest): Promise<AuthSession> {
   }
   return session;
 }
-

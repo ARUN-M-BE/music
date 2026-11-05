@@ -25,6 +25,25 @@ class MusicService {
     this.artistsCache = null;
   }
 
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("music_user");
+        if (stored) {
+          const user = JSON.parse(stored);
+          if (user.email) {
+            headers["Authorization"] = `Bearer ${user.email}`;
+            headers["x-user-email"] = user.email;
+          }
+        }
+      } catch {}
+    }
+    return headers;
+  }
+
   // ================= SONGS =================
   async getSongs(options?: FilterOptions): Promise<MusicTrack[]> {
     const hasFilters =
@@ -231,26 +250,39 @@ class MusicService {
   async updateUserRole(userId: string, role: "admin" | "member" | "superadmin"): Promise<boolean> {
     const res = await fetch(`${this.baseUrl}/users/${userId}/role`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       body: JSON.stringify({ role }),
     });
-    return res.ok;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Failed to update user role");
+    }
+    return true;
   }
 
   async updateUserStatus(userId: string, status: "approved" | "pending"): Promise<boolean> {
     const res = await fetch(`${this.baseUrl}/users/${userId}/status`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       body: JSON.stringify({ status }),
     });
-    return res.ok;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Failed to update user status");
+    }
+    return true;
   }
 
   async deleteUser(userId: string): Promise<boolean> {
     const res = await fetch(`${this.baseUrl}/users/${userId}`, {
       method: "DELETE",
+      headers: this.getHeaders(),
     });
-    return res.ok;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Failed to delete user");
+    }
+    return true;
   }
 
   // ================= FAVORITES PERSISTENCE =================
