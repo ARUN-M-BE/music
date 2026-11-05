@@ -10,6 +10,7 @@ export interface MusicTrack {
   fileId: string;
   songId: string;
   playsCount: number;
+  duration?: number | string;
   createdAt?: string;
   updatedAt?: string;
 }

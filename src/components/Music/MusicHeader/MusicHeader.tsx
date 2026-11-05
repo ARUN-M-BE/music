@@ -18,6 +18,7 @@ import {
   Library,
   Home,
   ShieldAlert,
+  Heart,
 } from "lucide-react";
 
 export function MusicHeader() {
@@ -107,6 +108,15 @@ export function MusicHeader() {
                   </div>
 
                   <Link
+                    href="/favorites"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-white/10 transition-colors text-purple-300"
+                  >
+                    <Heart className="size-4 fill-purple-400 text-purple-400" />
+                    <span>{t("nav.favorites")}</span>
+                  </Link>
+
+                  <Link
                     href="/profile"
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-2.5 px-3 py-2 hover:bg-white/10 transition-colors"
@@ -169,6 +179,14 @@ export function MusicHeader() {
           >
             <Library className="size-5 text-[#1db954]" />
             <span>{t("nav.library")}</span>
+          </Link>
+          <Link
+            href="/favorites"
+            onClick={() => setMobileNavOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg text-sm text-purple-300 font-medium hover:bg-white/10"
+          >
+            <Heart className="size-5 fill-purple-400 text-purple-400" />
+            <span>{t("nav.favorites")}</span>
           </Link>
           {isAdmin && (
             <Link

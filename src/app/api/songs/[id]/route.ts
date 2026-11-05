@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, SongModel } from "@/lib/mongodb";
 import { deleteFromImageKit } from "@/lib/imagekit";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -53,10 +54,18 @@ export async function PUT(
 
 // DELETE /api/songs/[id]
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getUserFromRequest(req);
+    if (session && session.user.role !== "superadmin") {
+      return NextResponse.json(
+        { success: false, message: "Superadmin privileges required to delete tracks" },
+        { status: 403 }
+      );
+    }
+
     await connectToDatabase();
     const { id } = await params;
 

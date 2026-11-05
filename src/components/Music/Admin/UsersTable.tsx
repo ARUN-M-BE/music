@@ -5,15 +5,32 @@ import Image from "next/image";
 import { MusicUser } from "@/types/music";
 import { musicService } from "@/services/music.service";
 import { useLanguage } from "@/context/LanguageContext";
-import { Shield, ShieldAlert, Trash2, CheckCircle2, Clock, Search, Loader2 } from "lucide-react";
+import {
+  Shield,
+  ShieldAlert,
+  Trash2,
+  CheckCircle2,
+  Clock,
+  Search,
+  Loader2,
+  UserCheck,
+  UserX,
+} from "lucide-react";
 import { ConfirmationModal } from "@/components/Common/ConfirmationModal";
 
 interface UsersTableProps {
   users: MusicUser[];
+  currentUserEmail?: string;
+  isSuperAdmin?: boolean;
   onUserUpdated: () => void;
 }
 
-export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
+export function UsersTable({
+  users,
+  currentUserEmail,
+  isSuperAdmin = false,
+  onUserUpdated,
+}: UsersTableProps) {
   const { t } = useLanguage();
   const [filterText, setFilterText] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -25,14 +42,21 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
   );
 
   const [confirmModal, setConfirmModal] = useState<{
-    type: "role" | "delete";
+    type: "role" | "status" | "delete";
     user: MusicUser;
     newRole?: "admin" | "member";
+    newStatus?: "approved" | "pending";
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRoleToggleClick = (user: MusicUser) => {
-    if (user.role === "superadmin" || user.email.toLowerCase() === "arunm102301@gmail.com") return;
+    if (
+      user.role === "superadmin" ||
+      user.email.toLowerCase() === "arunm102301@gmail.com" ||
+      user.email.toLowerCase() === (currentUserEmail || "").toLowerCase()
+    ) {
+      return;
+    }
     const newRole = user.role === "admin" ? "member" : "admin";
     setConfirmModal({
       type: "role",
@@ -41,8 +65,31 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
     });
   };
 
+  const handleStatusToggleClick = (user: MusicUser) => {
+    if (
+      user.role === "superadmin" ||
+      user.email.toLowerCase() === "arunm102301@gmail.com" ||
+      user.email.toLowerCase() === (currentUserEmail || "").toLowerCase()
+    ) {
+      return;
+    }
+    const currentStatus = user.status || (user.email_verified ? "approved" : "pending");
+    const newStatus = currentStatus === "approved" ? "pending" : "approved";
+    setConfirmModal({
+      type: "status",
+      user,
+      newStatus,
+    });
+  };
+
   const handleDeleteUserClick = (user: MusicUser) => {
-    if (user.role === "superadmin" || user.email.toLowerCase() === "arunm102301@gmail.com") return;
+    if (
+      user.role === "superadmin" ||
+      user.email.toLowerCase() === "arunm102301@gmail.com" ||
+      user.email.toLowerCase() === (currentUserEmail || "").toLowerCase()
+    ) {
+      return;
+    }
     setConfirmModal({
       type: "delete",
       user,
@@ -56,6 +103,8 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
     try {
       if (confirmModal.type === "role" && confirmModal.newRole) {
         await musicService.updateUserRole(confirmModal.user._id, confirmModal.newRole);
+      } else if (confirmModal.type === "status" && confirmModal.newStatus) {
+        await musicService.updateUserStatus(confirmModal.user._id, confirmModal.newStatus);
       } else if (confirmModal.type === "delete") {
         await musicService.deleteUser(confirmModal.user._id);
       }
@@ -83,7 +132,7 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
             className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#242424] border border-[#383838] focus:border-[#1db954] text-xs text-white outline-none"
           />
         </div>
-        <span className="text-xs text-[#b3b3b3] shrink-0">
+        <span className="text-xs text-[#b3b3b3] shrink-0 font-medium">
           Total Members: {users.length}
         </span>
       </div>
@@ -108,84 +157,145 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
                 </td>
               </tr>
             ) : (
-              filtered.map((user) => (
-                <tr key={user._id} className="hover:bg-white/5 transition-colors">
-                  <td className="py-2.5 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="relative size-8 rounded-full overflow-hidden bg-[#242424] shrink-0">
-                        <Image
-                          src={user.imageURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                          alt={user.name}
-                          fill
-                          sizes="32px"
-                          className="object-cover"
-                          unoptimized
-                        />
+              filtered.map((user) => {
+                const isCurrentUser =
+                  !!currentUserEmail &&
+                  user.email.toLowerCase() === currentUserEmail.toLowerCase();
+                const isPrimarySuper =
+                  user.role === "superadmin" ||
+                  user.email.toLowerCase() === "arunm102301@gmail.com";
+                const isProtectedAccount = isCurrentUser || isPrimarySuper;
+                const userStatus = user.status || (user.email_verified ? "approved" : "pending");
+
+                return (
+                  <tr key={user._id} className="hover:bg-white/5 transition-colors">
+                    {/* User profile */}
+                    <td className="py-2.5 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="relative size-8 rounded-full overflow-hidden bg-[#242424] shrink-0">
+                          <Image
+                            src={
+                              user.imageURL ||
+                              "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                            }
+                            alt={user.name}
+                            fill
+                            sizes="32px"
+                            className="object-cover"
+                            unoptimized
+                          />
+                        </div>
+                        <span className="font-semibold text-white">{user.name}</span>
                       </div>
-                      <span className="font-semibold text-white">{user.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-2.5 px-4 font-mono text-xs">{user.email}</td>
-                  <td className="py-2.5 px-4">
-                    {user.email_verified ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400">
-                        <CheckCircle2 className="size-3" />
-                        {t("users.verified")}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-400">
-                        <Clock className="size-3" />
-                        {t("users.pending")}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2.5 px-4">
-                    {user.role === "superadmin" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/40">
-                        <ShieldAlert className="size-3 text-purple-400" />
-                        SUPERADMIN
-                      </span>
-                    ) : user.role === "admin" ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-500/20 text-red-400 border border-red-500/30">
-                        <ShieldAlert className="size-3" />
-                        ADMIN
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-white/10 text-white">
-                        <Shield className="size-3" />
-                        MEMBER
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2.5 px-4 text-right">
-                    {user.role === "superadmin" || user.email.toLowerCase() === "arunm102301@gmail.com" ? (
-                      <span className="text-[10px] text-purple-400/80 font-mono italic">Primary Superadmin</span>
-                    ) : (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleRoleToggleClick(user)}
-                          disabled={loadingId === user._id}
-                          className="px-2.5 py-1 rounded bg-[#282828] hover:bg-[#333333] text-white text-[10px] font-semibold transition-colors"
-                        >
-                          {user.role === "admin" ? t("users.makeMember") : t("users.makeAdmin")}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUserClick(user)}
-                          disabled={loadingId === user._id}
-                          className="p-1.5 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
-                          title={t("users.removeUser")}
-                        >
-                          {loadingId === user._id ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-3.5" />
+                    </td>
+
+                    {/* Email */}
+                    <td className="py-2.5 px-4 font-mono text-xs">{user.email}</td>
+
+                    {/* Status with Superadmin toggle */}
+                    <td className="py-2.5 px-4">
+                      {userStatus === "approved" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          <CheckCircle2 className="size-3" />
+                          Approved
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          <Clock className="size-3" />
+                          Pending
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Role badge */}
+                    <td className="py-2.5 px-4">
+                      {user.role === "superadmin" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/40">
+                          <ShieldAlert className="size-3 text-purple-400" />
+                          SUPERADMIN
+                        </span>
+                      ) : user.role === "admin" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-500/20 text-red-400 border border-red-500/30">
+                          <ShieldAlert className="size-3" />
+                          ADMIN
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-white/10 text-white">
+                          <Shield className="size-3" />
+                          MEMBER
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Account Actions */}
+                    <td className="py-2.5 px-4 text-right">
+                      {/* If current user or primary superadmin, strictly remove account actions to prevent self-deletion or lockout */}
+                      {isProtectedAccount ? (
+                        <span className="text-[10px] text-purple-400/90 font-mono italic font-semibold">
+                          {isCurrentUser ? "Your Account (Active)" : "Primary Superadmin"}
+                        </span>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Status toggle button for Superadmin */}
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => handleStatusToggleClick(user)}
+                              disabled={loadingId === user._id}
+                              className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors ${
+                                userStatus === "approved"
+                                  ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20"
+                                  : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                              }`}
+                              title={
+                                userStatus === "approved"
+                                  ? "Set status to pending"
+                                  : "Approve user account"
+                              }
+                            >
+                              {userStatus === "approved" ? (
+                                <>
+                                  <UserX className="size-3" />
+                                  <span>Make Pending</span>
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="size-3" />
+                                  <span>Approve</span>
+                                </>
+                              )}
+                            </button>
                           )}
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
+
+                          {/* Role toggle */}
+                          <button
+                            onClick={() => handleRoleToggleClick(user)}
+                            disabled={loadingId === user._id}
+                            className="px-2.5 py-1 rounded bg-[#282828] hover:bg-[#333333] text-white text-[10px] font-semibold transition-colors"
+                          >
+                            {user.role === "admin" ? t("users.makeMember") : t("users.makeAdmin")}
+                          </button>
+
+                          {/* Delete action: Only Superadmin */}
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => handleDeleteUserClick(user)}
+                              disabled={loadingId === user._id}
+                              className="p-1.5 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                              title={t("users.removeUser")}
+                            >
+                              {loadingId === user._id ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="size-3.5" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -194,10 +304,18 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
       {/* Confirmation Modal */}
       <ConfirmationModal
         isOpen={!!confirmModal}
-        title={confirmModal?.type === "role" ? "Update User Role" : "Remove User Permanently"}
+        title={
+          confirmModal?.type === "role"
+            ? "Update User Role"
+            : confirmModal?.type === "status"
+            ? "Change User Status"
+            : "Remove User Permanently"
+        }
         message={
           confirmModal?.type === "role"
             ? `Are you sure you want to change this user's role to ${confirmModal.newRole?.toUpperCase()}?`
+            : confirmModal?.type === "status"
+            ? `Are you sure you want to set this user's status to ${confirmModal.newStatus?.toUpperCase()}?`
             : "Are you sure you want to permanently delete this user account? This action cannot be undone."
         }
         highlight={
@@ -206,6 +324,8 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
         confirmText={
           confirmModal?.type === "role"
             ? `Change to ${confirmModal.newRole?.toUpperCase()}`
+            : confirmModal?.type === "status"
+            ? `Set to ${confirmModal.newStatus?.toUpperCase()}`
             : "Delete User"
         }
         cancelText="Cancel"
@@ -217,4 +337,3 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
     </div>
   );
 }
-

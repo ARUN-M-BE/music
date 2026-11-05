@@ -5,6 +5,8 @@ import Image from "next/image";
 import { MusicTrack, Album, Artist, MusicUser, MusicStats } from "@/types/music";
 import { musicService } from "@/services/music.service";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { compressImage } from "@/lib/mediaOptimization";
 import { StatsCards } from "./StatsCards";
 import { TrackTable } from "./TrackTable";
 import { UsersTable } from "./UsersTable";
@@ -28,6 +30,7 @@ import {
 
 export function AdminDashboard() {
   const { t } = useLanguage();
+  const { user, isSuperAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "songs" | "upload" | "albums" | "artists" | "users">("overview");
 
   const [stats, setStats] = useState<MusicStats>({
@@ -95,7 +98,7 @@ export function AdminDashboard() {
         musicService.getSongs(),
         musicService.getAlbums(),
         musicService.getArtists(),
-        musicService.getUsers(),
+        isSuperAdmin ? musicService.getUsers() : Promise.resolve([]),
       ]);
 
       const totalPlays = (songsData || []).reduce((sum, s) => sum + (s.playsCount || 0), 0);
@@ -121,7 +124,13 @@ export function AdminDashboard() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    if (!isSuperAdmin && activeTab === "users") {
+      setActiveTab("overview");
+    }
+  }, [isSuperAdmin, activeTab]);
 
   const handleTrackCreated = (track: MusicTrack) => {
     setTracks((prev) => [track, ...prev]);
@@ -144,7 +153,8 @@ export function AdminDashboard() {
     if (!file) return;
     setIsUploadingAlbumImg(true);
     try {
-      const { url, fileId } = await musicService.uploadMedia(file);
+      const compressed = await compressImage(file, 1000, 0.75);
+      const { url, fileId } = await musicService.uploadMedia(compressed);
       setNewAlbumImage(url);
       setNewAlbumFileId(fileId);
     } catch (err) {
@@ -185,7 +195,8 @@ export function AdminDashboard() {
     if (!file) return;
     setIsUploadingEditAlbumImg(true);
     try {
-      const { url, fileId } = await musicService.uploadMedia(file);
+      const compressed = await compressImage(file, 1000, 0.75);
+      const { url, fileId } = await musicService.uploadMedia(compressed);
       setEditAlbumImage(url);
       setEditAlbumFileId(fileId);
     } catch (err) {
@@ -220,7 +231,8 @@ export function AdminDashboard() {
     if (!file) return;
     setIsUploadingArtistImg(true);
     try {
-      const { url, fileId } = await musicService.uploadMedia(file);
+      const compressed = await compressImage(file, 1000, 0.75);
+      const { url, fileId } = await musicService.uploadMedia(compressed);
       setNewArtistImage(url);
       setNewArtistFileId(fileId);
     } catch (err) {
@@ -267,7 +279,8 @@ export function AdminDashboard() {
     if (!file) return;
     setIsUploadingEditArtistImg(true);
     try {
-      const { url, fileId } = await musicService.uploadMedia(file);
+      const compressed = await compressImage(file, 1000, 0.75);
+      const { url, fileId } = await musicService.uploadMedia(compressed);
       setEditArtistImage(url);
       setEditArtistFileId(fileId);
     } catch (err) {
@@ -335,7 +348,9 @@ export function AdminDashboard() {
     { id: "upload", label: t("admin.tabUpload"), icon: PlusCircle },
     { id: "albums", label: `${t("admin.tabAlbums")} (${albums.length})`, icon: Disc },
     { id: "artists", label: `${t("admin.tabArtists")} (${artists.length})`, icon: Mic2 },
-    { id: "users", label: `${t("admin.tabUsers")} (${users.length})`, icon: Users },
+    ...(isSuperAdmin
+      ? [{ id: "users", label: `${t("admin.tabUsers")} (${users.length})`, icon: Users }]
+      : []),
   ];
 
   return (
@@ -345,8 +360,14 @@ export function AdminDashboard() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
             <span>{t("admin.title")}</span>
-            <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-              SUPERADMIN NEXUS
+            <span
+              className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full ${
+                isSuperAdmin
+                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                  : "bg-red-500/20 text-red-400 border border-red-500/30"
+              }`}
+            >
+              {isSuperAdmin ? "SUPERADMIN STUDIO" : "ADMIN STUDIO"}
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-[#b3b3b3] mt-1">{t("admin.subtitle")}</p>
@@ -395,6 +416,7 @@ export function AdminDashboard() {
               tracks={tracks.slice(0, 5)}
               onTrackDeleted={handleTrackDeleted}
               onTrackUpdated={handleTrackUpdated}
+              canDelete={isSuperAdmin}
             />
           </div>
         </div>
@@ -405,6 +427,7 @@ export function AdminDashboard() {
           tracks={tracks}
           onTrackDeleted={handleTrackDeleted}
           onTrackUpdated={handleTrackUpdated}
+          canDelete={isSuperAdmin}
         />
       )}
 
@@ -525,20 +548,22 @@ export function AdminDashboard() {
                     >
                       <Edit3 className="size-3.5" />
                     </button>
-                    <button
-                      onClick={() =>
-                        setDeleteTarget({
-                          type: "album",
-                          id: album._id,
-                          name: album.name,
-                          fileId: album.fileId,
-                        })
-                      }
-                      className="p-1.5 rounded-full bg-black/70 text-red-400 hover:bg-red-500/20 transition-all"
-                      title="Delete Album"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() =>
+                          setDeleteTarget({
+                            type: "album",
+                            id: album._id,
+                            name: album.name,
+                            fileId: album.fileId,
+                          })
+                        }
+                        className="p-1.5 rounded-full bg-black/70 text-red-400 hover:bg-red-500/20 transition-all"
+                        title="Delete Album"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <span className="font-semibold text-xs text-white truncate mt-2">{album.name}</span>
@@ -674,20 +699,22 @@ export function AdminDashboard() {
                     >
                       <Edit3 className="size-3.5" />
                     </button>
-                    <button
-                      onClick={() =>
-                        setDeleteTarget({
-                          type: "artist",
-                          id: art._id,
-                          name: art.name,
-                          fileId: art.fileId,
-                        })
-                      }
-                      className="p-1.5 rounded-full bg-red-600/60 text-white hover:bg-red-600 transition-colors"
-                      title="Delete Artist"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() =>
+                          setDeleteTarget({
+                            type: "artist",
+                            id: art._id,
+                            name: art.name,
+                            fileId: art.fileId,
+                          })
+                        }
+                        className="p-1.5 rounded-full bg-red-600/60 text-white hover:bg-red-600 transition-colors"
+                        title="Delete Artist"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <span className="font-semibold text-xs text-white truncate mt-2 w-full">{art.name}</span>
@@ -699,8 +726,13 @@ export function AdminDashboard() {
       )}
 
       {/* ================= USERS TAB ================= */}
-      {activeTab === "users" && (
-        <UsersTable users={users} onUserUpdated={loadData} />
+      {activeTab === "users" && isSuperAdmin && (
+        <UsersTable
+          users={users}
+          currentUserEmail={user?.email}
+          isSuperAdmin={isSuperAdmin}
+          onUserUpdated={loadData}
+        />
       )}
 
       {/* ================= EDIT ALBUM MODAL ================= */}

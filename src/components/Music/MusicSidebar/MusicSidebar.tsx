@@ -88,10 +88,15 @@ export function MusicSidebar() {
 
         <div className="flex flex-col gap-1 overflow-y-auto pr-1">
           <Link
-            href="/library"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium hover:text-white transition-colors"
+            href="/favorites"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors",
+              pathname === "/favorites"
+                ? "bg-[#282828] text-white"
+                : "text-[#b3b3b3] hover:text-white hover:bg-white/5"
+            )}
           >
-            <div className="size-7 rounded bg-gradient-to-br from-purple-700 to-indigo-800 flex items-center justify-center text-white">
+            <div className="size-7 rounded bg-gradient-to-br from-purple-700 to-indigo-800 flex items-center justify-center text-white shrink-0">
               <Heart className="size-3.5 fill-white" />
             </div>
             <span>{t("nav.favorites")}</span>
