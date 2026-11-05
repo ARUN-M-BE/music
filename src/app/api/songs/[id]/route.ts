@@ -34,6 +34,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getUserFromRequest(req);
+    if (session && session.user.role !== "superadmin") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Superadmin privileges required to edit tracks. Track list is read-only for admin.",
+        },
+        { status: 403 }
+      );
+    }
+
     await connectToDatabase();
     const { id } = await params;
     const body = await req.json();

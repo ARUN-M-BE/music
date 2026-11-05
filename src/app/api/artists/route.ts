@@ -17,7 +17,14 @@ export async function GET() {
   try {
     await connectToDatabase();
     const artists = await ArtistModel.find({}).sort({ createdAt: -1 }).lean();
-    return NextResponse.json({ success: true, data: artists, artists });
+    return NextResponse.json(
+      { success: true, data: artists, artists },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: "Failed to fetch artists", error: error.message },

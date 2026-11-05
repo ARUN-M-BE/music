@@ -13,8 +13,31 @@ import {
 class MusicService {
   private baseUrl = "/api";
 
+  // High Performance In-Memory Cache (30s TTL)
+  private songsCache: { data: MusicTrack[]; timestamp: number } | null = null;
+  private albumsCache: { data: Album[]; timestamp: number } | null = null;
+  private artistsCache: { data: Artist[]; timestamp: number } | null = null;
+  private CACHE_TTL_MS = 30000;
+
+  invalidateCache() {
+    this.songsCache = null;
+    this.albumsCache = null;
+    this.artistsCache = null;
+  }
+
   // ================= SONGS =================
   async getSongs(options?: FilterOptions): Promise<MusicTrack[]> {
+    const hasFilters =
+      !!options?.search ||
+      (options?.category && options.category !== "all") ||
+      (options?.language && options.language !== "all") ||
+      (options?.sortBy && options.sortBy !== "newest");
+
+    // Return cached immediately if no filters and fresh
+    if (!hasFilters && this.songsCache && Date.now() - this.songsCache.timestamp < this.CACHE_TTL_MS) {
+      return this.songsCache.data;
+    }
+
     try {
       const params = new URLSearchParams();
       if (options?.search) params.set("search", options.search);
@@ -25,10 +48,16 @@ class MusicService {
       const res = await fetch(`${this.baseUrl}/songs?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch songs");
       const data = await res.json();
-      return data.songs || data.data || [];
+      const list = data.songs || data.data || [];
+
+      if (!hasFilters) {
+        this.songsCache = { data: list, timestamp: Date.now() };
+      }
+
+      return list;
     } catch (err) {
       console.error("MusicService.getSongs error:", err);
-      return [];
+      return this.songsCache?.data || [];
     }
   }
 
@@ -45,6 +74,7 @@ class MusicService {
   }
 
   async saveSong(input: CreateSongInput): Promise<MusicTrack> {
+    this.invalidateCache();
     const res = await fetch(`${this.baseUrl}/songs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -59,6 +89,7 @@ class MusicService {
   }
 
   async updateSong(id: string, input: Partial<CreateSongInput>): Promise<MusicTrack> {
+    this.invalidateCache();
     const res = await fetch(`${this.baseUrl}/songs/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -73,6 +104,7 @@ class MusicService {
   }
 
   async deleteSong(id: string, fileId?: string, songId?: string): Promise<boolean> {
+    this.invalidateCache();
     // Purge media files from ImageKit
     if (fileId) await this.deleteMedia(fileId).catch(console.warn);
     if (songId) await this.deleteMedia(songId).catch(console.warn);
@@ -85,18 +117,25 @@ class MusicService {
 
   // ================= ALBUMS =================
   async getAlbums(): Promise<Album[]> {
+    if (this.albumsCache && Date.now() - this.albumsCache.timestamp < this.CACHE_TTL_MS) {
+      return this.albumsCache.data;
+    }
+
     try {
       const res = await fetch(`${this.baseUrl}/albums`);
       if (!res.ok) return [];
       const data = await res.json();
-      return data.albums || data.data || [];
+      const list = data.albums || data.data || [];
+      this.albumsCache = { data: list, timestamp: Date.now() };
+      return list;
     } catch (err) {
       console.error("MusicService.getAlbums error:", err);
-      return [];
+      return this.albumsCache?.data || [];
     }
   }
 
   async saveAlbum(input: CreateAlbumInput): Promise<Album> {
+    this.invalidateCache();
     const res = await fetch(`${this.baseUrl}/albums`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -108,6 +147,7 @@ class MusicService {
   }
 
   async updateAlbum(id: string, input: Partial<CreateAlbumInput>): Promise<Album> {
+    this.invalidateCache();
     const res = await fetch(`${this.baseUrl}/albums/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -119,6 +159,7 @@ class MusicService {
   }
 
   async deleteAlbum(id: string, fileId?: string): Promise<boolean> {
+    this.invalidateCache();
     if (fileId) await this.deleteMedia(fileId).catch(console.warn);
     const res = await fetch(`${this.baseUrl}/albums/${id}`, { method: "DELETE" });
     return res.ok;
@@ -126,18 +167,25 @@ class MusicService {
 
   // ================= ARTISTS =================
   async getArtists(): Promise<Artist[]> {
+    if (this.artistsCache && Date.now() - this.artistsCache.timestamp < this.CACHE_TTL_MS) {
+      return this.artistsCache.data;
+    }
+
     try {
       const res = await fetch(`${this.baseUrl}/artists`);
       if (!res.ok) return [];
       const data = await res.json();
-      return data.artists || data.data || [];
+      const list = data.artists || data.data || [];
+      this.artistsCache = { data: list, timestamp: Date.now() };
+      return list;
     } catch (err) {
       console.error("MusicService.getArtists error:", err);
-      return [];
+      return this.artistsCache?.data || [];
     }
   }
 
   async saveArtist(input: CreateArtistInput): Promise<Artist> {
+    this.invalidateCache();
     const res = await fetch(`${this.baseUrl}/artists`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -149,6 +197,7 @@ class MusicService {
   }
 
   async updateArtist(id: string, input: Partial<CreateArtistInput>): Promise<Artist> {
+    this.invalidateCache();
     const res = await fetch(`${this.baseUrl}/artists/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -160,6 +209,7 @@ class MusicService {
   }
 
   async deleteArtist(id: string, fileId?: string): Promise<boolean> {
+    this.invalidateCache();
     if (fileId) await this.deleteMedia(fileId).catch(console.warn);
     const res = await fetch(`${this.baseUrl}/artists/${id}`, { method: "DELETE" });
     return res.ok;
@@ -278,6 +328,7 @@ class MusicService {
 
   // ================= BULK IMPORT =================
   async bulkImportSongs(songs: any[]): Promise<{ count: number; errors?: any[] }> {
+    this.invalidateCache();
     const res = await fetch(`${this.baseUrl}/songs/bulk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -292,6 +343,7 @@ class MusicService {
   }
 
   async bulkImportArtists(artists: any[]): Promise<{ count: number; errors?: any[] }> {
+    this.invalidateCache();
     const res = await fetch(`${this.baseUrl}/artists/bulk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -306,6 +358,7 @@ class MusicService {
   }
 
   async bulkImportAlbums(albums: any[]): Promise<{ count: number; errors?: any[] }> {
+    this.invalidateCache();
     const res = await fetch(`${this.baseUrl}/albums/bulk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

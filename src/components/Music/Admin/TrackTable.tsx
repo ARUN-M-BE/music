@@ -13,13 +13,15 @@ interface TrackTableProps {
   onTrackDeleted: (id: string) => void;
   onTrackUpdated: (track: MusicTrack) => void;
   canDelete?: boolean;
+  canEdit?: boolean;
 }
 
 export function TrackTable({
   tracks,
   onTrackDeleted,
   onTrackUpdated,
-  canDelete = true,
+  canDelete = false,
+  canEdit = false,
 }: TrackTableProps) {
   const { t } = useLanguage();
   const [filterText, setFilterText] = useState("");
@@ -156,29 +158,37 @@ export function TrackTable({
                     {track.playsCount?.toLocaleString() || 0}
                   </td>
                   <td className="py-2 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openEditModal(track)}
-                        className="p-1.5 rounded hover:bg-white/10 text-[#b3b3b3] hover:text-white transition-colors"
-                        title={t("admin.edit")}
-                      >
-                        <Edit3 className="size-4" />
-                      </button>
-                      {canDelete && (
-                        <button
-                          onClick={() => setConfirmModalTrack(track)}
-                          disabled={deletingId === track._id}
-                          className="p-1.5 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
-                          title={t("admin.delete")}
-                        >
-                          {deletingId === track._id ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-4" />
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    {!canEdit && !canDelete ? (
+                      <span className="text-[10px] text-[#727272] font-mono italic">
+                        Read-only
+                      </span>
+                    ) : (
+                      <div className="flex items-center justify-end gap-2">
+                        {canEdit && (
+                          <button
+                            onClick={() => openEditModal(track)}
+                            className="p-1.5 rounded hover:bg-white/10 text-[#b3b3b3] hover:text-white transition-colors"
+                            title={t("admin.edit")}
+                          >
+                            <Edit3 className="size-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => setConfirmModalTrack(track)}
+                            disabled={deletingId === track._id}
+                            className="p-1.5 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                            title={t("admin.delete")}
+                          >
+                            {deletingId === track._id ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-4" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))

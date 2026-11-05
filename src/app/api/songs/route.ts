@@ -58,11 +58,18 @@ export async function GET(req: NextRequest) {
 
     const songs = await SongModel.find(query).sort(sortObj).lean();
 
-    return NextResponse.json({
-      success: true,
-      data: songs,
-      songs,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: songs,
+        songs,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("GET /api/songs error:", error);
     return NextResponse.json(

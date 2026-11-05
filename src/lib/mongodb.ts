@@ -68,6 +68,14 @@ const songSchema = new Schema(
   { timestamps: true }
 );
 
+// High Performance Query Indexes
+songSchema.index({ createdAt: -1 });
+songSchema.index({ playsCount: -1 });
+songSchema.index({ category: 1 });
+songSchema.index({ artist: 1 });
+songSchema.index({ album: 1 });
+songSchema.index({ name: 1 });
+
 const albumSchema = new Schema(
   {
     name: { type: String, required: true },
@@ -76,6 +84,8 @@ const albumSchema = new Schema(
   },
   { timestamps: true }
 );
+albumSchema.index({ createdAt: -1 });
+albumSchema.index({ name: 1 });
 
 const artistSchema = new Schema(
   {
@@ -87,6 +97,8 @@ const artistSchema = new Schema(
   },
   { timestamps: true }
 );
+artistSchema.index({ createdAt: -1 });
+artistSchema.index({ name: 1 });
 
 const userSchema = new Schema(
   {
@@ -102,6 +114,9 @@ const userSchema = new Schema(
   },
   { timestamps: true }
 );
+userSchema.index({ user_id: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ createdAt: -1 });
 
 export const Song: Model<ISong> = models.song || model<ISong>("song", songSchema);
 export const Album: Model<IAlbum> = models.album || model<IAlbum>("album", albumSchema);
@@ -134,8 +149,12 @@ export async function connectToDatabase() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      dbName: "test", // Targets the 'test' database where the 75 songs are stored
-      serverSelectionTimeoutMS: 10000,
+      dbName: "test", // Targets the 'test' database where the catalog is stored
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
     };
 
     cached.promise = mongoose

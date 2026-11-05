@@ -429,6 +429,7 @@ export function AdminDashboard() {
               tracks={tracks.slice(0, 5)}
               onTrackDeleted={handleTrackDeleted}
               onTrackUpdated={handleTrackUpdated}
+              canEdit={isSuperAdmin}
               canDelete={isSuperAdmin}
             />
           </div>
@@ -440,6 +441,7 @@ export function AdminDashboard() {
           tracks={tracks}
           onTrackDeleted={handleTrackDeleted}
           onTrackUpdated={handleTrackUpdated}
+          canEdit={isSuperAdmin}
           canDelete={isSuperAdmin}
         />
       )}
@@ -553,15 +555,15 @@ export function AdminDashboard() {
                   />
 
                   {/* Action Overlay */}
-                  <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => openEditAlbumModal(album)}
-                      className="p-1.5 rounded-full bg-black/70 text-white hover:bg-white/20 transition-all"
-                      title="Edit Album"
-                    >
-                      <Edit3 className="size-3.5" />
-                    </button>
-                    {isSuperAdmin && (
+                  {isSuperAdmin && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => openEditAlbumModal(album)}
+                        className="p-1.5 rounded-full bg-black/70 text-white hover:bg-white/20 transition-all"
+                        title="Edit Album"
+                      >
+                        <Edit3 className="size-3.5" />
+                      </button>
                       <button
                         onClick={() =>
                           setDeleteTarget({
@@ -576,8 +578,8 @@ export function AdminDashboard() {
                       >
                         <Trash2 className="size-3.5" />
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
                 <span className="font-semibold text-xs text-white truncate mt-2">{album.name}</span>
                 <span className="text-[10px] text-[#727272]">Album</span>
@@ -704,15 +706,15 @@ export function AdminDashboard() {
                   />
 
                   {/* Action Overlay */}
-                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => openEditArtistModal(art)}
-                      className="p-1.5 rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
-                      title="Edit Artist"
-                    >
-                      <Edit3 className="size-3.5" />
-                    </button>
-                    {isSuperAdmin && (
+                  {isSuperAdmin && (
+                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => openEditArtistModal(art)}
+                        className="p-1.5 rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
+                        title="Edit Artist"
+                      >
+                        <Edit3 className="size-3.5" />
+                      </button>
                       <button
                         onClick={() =>
                           setDeleteTarget({
@@ -727,8 +729,8 @@ export function AdminDashboard() {
                       >
                         <Trash2 className="size-3.5" />
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
                 <span className="font-semibold text-xs text-white truncate mt-2 w-full">{art.name}</span>
                 <span className="text-[10px] text-[#b3b3b3] truncate">@{art.instagram}</span>
