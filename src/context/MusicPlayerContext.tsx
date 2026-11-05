@@ -160,39 +160,55 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
   // Play track with URL verification and autoplay rejection handling
   const playTrack = useCallback(
     async (track: MusicTrack, newQueue?: MusicTrack[]) => {
-      if (!audioRef.current || !track || !track.songURL) return;
+      const audioUrl = track?.songURL || track?.streamUrl || track?.previewUrl;
+      if (!audioRef.current || !track || !audioUrl) {
+        console.warn("Cannot play track without valid audio URL:", track);
+        return;
+      }
+
+      // Ensure normalized fields for UI
+      const normalizedTrack: MusicTrack = {
+        ...track,
+        songURL: audioUrl,
+        name: track.name || track.title || "Unknown Track",
+        imageURL: track.imageURL || track.artwork || "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60",
+      };
 
       const audio = audioRef.current;
       setError(null);
       setIsLoading(true);
 
+      const trackKey = normalizedTrack._id || normalizedTrack.id || audioUrl;
+
       if (newQueue) {
         setQueue(newQueue);
-        const idx = newQueue.findIndex((t) => t._id === track._id);
+        const idx = newQueue.findIndex((t) => (t._id || t.id) === trackKey);
         setCurrentIndex(idx !== -1 ? idx : 0);
       } else if (queue.length === 0) {
-        setQueue([track]);
+        setQueue([normalizedTrack]);
         setCurrentIndex(0);
       } else {
-        const idx = queue.findIndex((t) => t._id === track._id);
+        const idx = queue.findIndex((t) => (t._id || t.id) === trackKey);
         if (idx !== -1) {
           setCurrentIndex(idx);
         } else {
-          setQueue((prev) => [...prev, track]);
+          setQueue((prev) => [...prev, normalizedTrack]);
           setCurrentIndex(queue.length);
         }
       }
 
-      setCurrentTrack(track);
+      setCurrentTrack(normalizedTrack);
 
       try {
-        if (audio.src !== track.songURL) {
-          audio.src = track.songURL;
+        if (audio.src !== audioUrl) {
+          audio.src = audioUrl;
           audio.load();
         }
         await audio.play();
         setIsPlaying(true);
-        recordPlayCount(track._id);
+        if (normalizedTrack._id) {
+          recordPlayCount(normalizedTrack._id);
+        }
       } catch (err: any) {
         console.warn("Autoplay restriction or playback error:", err);
         setIsPlaying(false);

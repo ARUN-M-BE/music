@@ -14,6 +14,8 @@ import {
   Compass,
   Headphones,
   Music2,
+  Flame,
+  Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -103,33 +105,43 @@ export function MusicSidebar() {
           </Link>
 
           <Link
-            href="/library?category=pop"
+            href="/library?tab=trending"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium hover:text-white transition-colors"
           >
-            <div className="size-7 rounded bg-gradient-to-br from-pink-600 to-rose-700 flex items-center justify-center text-white">
-              <Disc3 className="size-3.5" />
+            <div className="size-7 rounded bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white">
+              <Flame className="size-3.5" />
             </div>
-            <span>Top Pop Hits</span>
+            <span>Trending Hits</span>
           </Link>
 
           <Link
-            href="/library?category=rock"
+            href="/library?language=Tamil"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium hover:text-white transition-colors"
           >
-            <div className="size-7 rounded bg-gradient-to-br from-amber-600 to-orange-700 flex items-center justify-center text-white">
+            <div className="size-7 rounded bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white">
               <Music2 className="size-3.5" />
             </div>
-            <span>Rock Classics</span>
+            <span>Tamil Hits</span>
           </Link>
 
           <Link
-            href="/library?category=jazz"
+            href="/library?language=Hindi"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium hover:text-white transition-colors"
+          >
+            <div className="size-7 rounded bg-gradient-to-br from-rose-600 to-pink-700 flex items-center justify-center text-white">
+              <Disc3 className="size-3.5" />
+            </div>
+            <span>Hindi Top 50</span>
+          </Link>
+
+          <Link
+            href="/library?language=English"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium hover:text-white transition-colors"
           >
             <div className="size-7 rounded bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white">
-              <Compass className="size-3.5" />
+              <Radio className="size-3.5" />
             </div>
-            <span>Midnight Jazz</span>
+            <span>English Global</span>
           </Link>
         </div>
       </div>

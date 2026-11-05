@@ -43,13 +43,22 @@ export function MusicList({ tracks, showAlbum = true }: MusicListProps) {
       {/* Track Rows */}
       <div className="mt-2 space-y-1">
         {tracks.map((track, idx) => {
-          const isCurrent = currentTrack?._id === track._id;
+          const trackKey = track._id || track.id || `track_${idx}`;
+          const trackTitle = track.name || track.title || "Unknown Track";
+          const trackImage =
+            track.imageURL ||
+            track.artwork ||
+            "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60";
+          const isCurrent =
+            (currentTrack?._id && currentTrack._id === trackKey) ||
+            (currentTrack?.id && currentTrack.id === trackKey) ||
+            (currentTrack?.name === trackTitle && currentTrack?.artist === track.artist);
           const isThisPlaying = isCurrent && isPlaying;
-          const favorited = isFavorite(track._id);
+          const favorited = isFavorite(trackKey);
 
           return (
             <div
-              key={track._id || idx}
+              key={trackKey}
               onClick={() => {
                 if (isCurrent) togglePlayPause();
                 else playTrack(track, tracks);
@@ -79,8 +88,8 @@ export function MusicList({ tracks, showAlbum = true }: MusicListProps) {
               <div className="col-span-6 md:col-span-5 flex items-center gap-3 min-w-0">
                 <div className="relative size-10 rounded shrink-0 overflow-hidden bg-[#242424]">
                   <Image
-                    src={track.imageURL || "https://cdn-icons-png.flaticon.com/512/3844/3844724.png"}
-                    alt={track.name}
+                    src={trackImage}
+                    alt={trackTitle}
                     fill
                     sizes="40px"
                     className="object-cover"
@@ -94,7 +103,7 @@ export function MusicList({ tracks, showAlbum = true }: MusicListProps) {
                       isCurrent && "text-[#1db954]"
                     )}
                   >
-                    {track.name}
+                    {trackTitle}
                   </span>
                   <span className="text-xs text-[#b3b3b3] truncate">{track.artist}</span>
                 </div>
@@ -107,9 +116,9 @@ export function MusicList({ tracks, showAlbum = true }: MusicListProps) {
                 </div>
               )}
 
-              {/* Plays */}
+              {/* Plays / Duration */}
               <div className="col-span-3 md:col-span-2 text-center text-xs text-[#b3b3b3]">
-                {track.playsCount?.toLocaleString() || 0}
+                {track.duration ? `${Math.floor(Number(track.duration) / 60)}:${String(Number(track.duration) % 60).padStart(2, '0')}` : `${track.playsCount?.toLocaleString() || 0} plays`}
               </div>
 
               {/* Like / Actions */}
@@ -118,7 +127,7 @@ export function MusicList({ tracks, showAlbum = true }: MusicListProps) {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleFavorite(track._id);
+                    toggleFavorite(trackKey);
                   }}
                   className="p-1 rounded-full text-[#b3b3b3] hover:text-white transition-colors"
                 >

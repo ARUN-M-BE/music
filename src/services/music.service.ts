@@ -8,6 +8,10 @@ import {
   CreateArtistInput,
   CreateAlbumInput,
   FilterOptions,
+  UnifiedSong,
+  UnifiedArtist,
+  UnifiedAlbum,
+  UserPlaylist,
 } from "@/types/music";
 
 class MusicService {
@@ -402,6 +406,127 @@ class MusicService {
       throw new Error(data.message || "Bulk import failed");
     }
     return { count: data.count || 0, errors: data.errors };
+  }
+
+  // ================= UNIFIED STREAMING & DISCOVERY =================
+  async searchAggregatedMusic(query: string, language?: string, limit = 30): Promise<UnifiedSong[]> {
+    if (!query.trim()) return [];
+    try {
+      const params = new URLSearchParams({ q: query, limit: limit.toString() });
+      if (language && language !== "all") params.set("language", language);
+      const res = await fetch(`${this.baseUrl}/music/search?${params.toString()}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.songs || [];
+    } catch (err) {
+      console.error("MusicService.searchAggregatedMusic error:", err);
+      return [];
+    }
+  }
+
+  async getTrendingMusic(language?: string): Promise<UnifiedSong[]> {
+    try {
+      const params = new URLSearchParams();
+      if (language && language !== "all") params.set("language", language);
+      const res = await fetch(`${this.baseUrl}/music/trending?${params.toString()}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.songs || [];
+    } catch (err) {
+      console.error("MusicService.getTrendingMusic error:", err);
+      return [];
+    }
+  }
+
+  async getArtistProfile(idOrName: string): Promise<{ artist: UnifiedArtist; songs: UnifiedSong[] } | null> {
+    try {
+      const res = await fetch(`${this.baseUrl}/music/artist/${encodeURIComponent(idOrName)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return { artist: data.artist, songs: data.songs || [] };
+    } catch (err) {
+      console.error("MusicService.getArtistProfile error:", err);
+      return null;
+    }
+  }
+
+  async getAlbumDetails(idOrTitle: string): Promise<{ album: UnifiedAlbum; songs: UnifiedSong[] } | null> {
+    try {
+      const res = await fetch(`${this.baseUrl}/music/album/${encodeURIComponent(idOrTitle)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return { album: data.album, songs: data.songs || [] };
+    } catch (err) {
+      console.error("MusicService.getAlbumDetails error:", err);
+      return null;
+    }
+  }
+
+  // ================= PLAYLISTS =================
+  async getUserPlaylists(userId?: string): Promise<UserPlaylist[]> {
+    try {
+      const params = new URLSearchParams();
+      if (userId) params.set("userId", userId);
+      const res = await fetch(`${this.baseUrl}/music/playlists?${params.toString()}`, {
+        headers: this.getHeaders(),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.playlists || [];
+    } catch (err) {
+      console.error("MusicService.getUserPlaylists error:", err);
+      return [];
+    }
+  }
+
+  async createPlaylist(data: {
+    name: string;
+    description?: string;
+    coverImage?: string;
+    userId?: string;
+    songs?: UnifiedSong[];
+  }): Promise<UserPlaylist | null> {
+    try {
+      const res = await fetch(`${this.baseUrl}/music/playlists`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.playlist || null;
+    } catch (err) {
+      console.error("MusicService.createPlaylist error:", err);
+      return null;
+    }
+  }
+
+  async updatePlaylist(id: string, updates: Partial<UserPlaylist>): Promise<UserPlaylist | null> {
+    try {
+      const res = await fetch(`${this.baseUrl}/music/playlists`, {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ id, ...updates }),
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.playlist || null;
+    } catch (err) {
+      console.error("MusicService.updatePlaylist error:", err);
+      return null;
+    }
+  }
+
+  async deletePlaylist(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${this.baseUrl}/music/playlists?id=${id}`, {
+        method: "DELETE",
+        headers: this.getHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   }
 
   // ================= OVERVIEW METRICS =================

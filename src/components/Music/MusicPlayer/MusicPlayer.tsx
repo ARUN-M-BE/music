@@ -76,7 +76,8 @@ export function MusicPlayer() {
 
   const activeTime = isSeeking ? seekValue : currentTime;
   const progressPercent = duration > 0 ? (activeTime / duration) * 100 : 0;
-  const favorited = isFavorite(currentTrack._id);
+  const trackKey = currentTrack._id || currentTrack.id || "";
+  const favorited = isFavorite(trackKey);
 
   return (
     <>
@@ -104,7 +105,7 @@ export function MusicPlayer() {
           </div>
 
           <button
-            onClick={() => toggleFavorite(currentTrack._id)}
+            onClick={() => toggleFavorite(trackKey)}
             className="p-1.5 text-[#b3b3b3] hover:text-white transition-colors shrink-0 ml-1 hidden xs:block"
             aria-label="Save to favorites"
           >

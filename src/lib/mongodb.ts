@@ -118,10 +118,34 @@ userSchema.index({ user_id: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ createdAt: -1 });
 
+export interface IPlaylist extends Document {
+  name: string;
+  description?: string;
+  coverImage?: string;
+  userId: string;
+  songs: any[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const playlistSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    description: { type: String, default: "" },
+    coverImage: { type: String, default: "" },
+    userId: { type: String, required: true, index: true },
+    songs: { type: [Schema.Types.Mixed], default: [] },
+  },
+  { timestamps: true }
+);
+
+playlistSchema.index({ userId: 1, createdAt: -1 });
+
 export const Song: Model<ISong> = models.song || model<ISong>("song", songSchema);
 export const Album: Model<IAlbum> = models.album || model<IAlbum>("album", albumSchema);
 export const Artist: Model<IArtist> = models.artist || model<IArtist>("artist", artistSchema);
 export const User: Model<IUser> = models.user || model<IUser>("user", userSchema);
+export const Playlist: Model<IPlaylist> = models.playlist || model<IPlaylist>("playlist", playlistSchema);
 
 // Connection Caching for Serverless
 const MONGODB_URI =
@@ -183,3 +207,4 @@ export const SongModel = Song;
 export const AlbumModel = Album;
 export const ArtistModel = Artist;
 export const UserModel = User;
+export const PlaylistModel = Playlist;
