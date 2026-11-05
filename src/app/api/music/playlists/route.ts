@@ -12,9 +12,9 @@ export async function GET(req: NextRequest) {
     let userId = searchParams.get("userId");
 
     if (!userId) {
-      const user = await getUserFromRequest(req);
-      if (user) {
-        userId = user.user_id || user.email;
+      const session = await getUserFromRequest(req);
+      if (session?.user) {
+        userId = session.user.id || session.user.email;
       }
     }
 
@@ -38,10 +38,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     await connectToDatabase();
-    const user = await getUserFromRequest(req);
+    const session = await getUserFromRequest(req);
     const body = await req.json();
 
-    const userId = body.userId || (user ? (user.user_id || user.email) : undefined);
+    const userId = body.userId || (session?.user ? (session.user.id || session.user.email) : undefined);
     if (!userId) {
       return NextResponse.json(
         { success: false, error: "Authentication or userId required to create playlist" },

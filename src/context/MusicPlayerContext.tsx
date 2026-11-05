@@ -311,7 +311,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const toggleRepeat = useCallback(() => {
-    setRepeatMode((prev) => {
+    setRepeatMode((prev: RepeatMode) => {
       if (prev === "off") return "all";
       if (prev === "all") return "one";
       return "off";

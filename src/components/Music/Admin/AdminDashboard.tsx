@@ -190,7 +190,7 @@ export function AdminDashboard() {
     setEditingAlbum(album);
     setEditAlbumName(album.name);
     setEditAlbumImage(album.imageURL);
-    setEditAlbumFileId(album.fileId);
+    setEditAlbumFileId(album.fileId || "");
   };
 
   const handleUploadEditAlbumImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,7 +274,7 @@ export function AdminDashboard() {
     setEditArtistImage(artist.imageURL);
     setEditArtistInstagram(artist.instagram);
     setEditArtistTwitter(artist.twetter || "");
-    setEditArtistFileId(artist.fileId);
+    setEditArtistFileId(artist.fileId || "");
   };
 
   const handleUploadEditArtistImage = async (e: React.ChangeEvent<HTMLInputElement>) => {

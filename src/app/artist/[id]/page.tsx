@@ -332,3 +332,4 @@ export default function ArtistDetailPage({
     </div>
   );
 }
+

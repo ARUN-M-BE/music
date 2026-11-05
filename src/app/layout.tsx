@@ -6,6 +6,7 @@ import { MusicPlayerProvider } from "@/context/MusicPlayerContext";
 import { MusicSidebar } from "@/components/Music/MusicSidebar/MusicSidebar";
 import { MusicHeader } from "@/components/Music/MusicHeader/MusicHeader";
 import { MusicPlayer } from "@/components/Music/MusicPlayer/MusicPlayer";
+import { PendingApprovalGate } from "@/components/Auth/PendingApprovalGate";
 
 export const metadata: Metadata = {
   title: "Good Music - Spotify-Style Streaming Platform",
@@ -22,23 +23,25 @@ export default function RootLayout({
       <body className="bg-[#121212] text-white min-h-screen flex flex-col antialiased">
         <LanguageProvider>
           <AuthProvider>
-            <MusicPlayerProvider>
-              <div className="flex h-screen w-full overflow-hidden">
-                {/* Spotify-style Left Sidebar */}
-                <MusicSidebar />
+            <PendingApprovalGate>
+              <MusicPlayerProvider>
+                <div className="flex h-screen w-full overflow-hidden">
+                  {/* Spotify-style Left Sidebar */}
+                  <MusicSidebar />
 
-                {/* Main Content Pane */}
-                <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-                  <MusicHeader />
-                  <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 pb-28">
-                    {children}
-                  </main>
+                  {/* Main Content Pane */}
+                  <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+                    <MusicHeader />
+                    <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 pb-28">
+                      {children}
+                    </main>
+                  </div>
                 </div>
-              </div>
 
-              {/* Persistent Bottom Audio Streaming Bar */}
-              <MusicPlayer />
-            </MusicPlayerProvider>
+                {/* Persistent Bottom Audio Streaming Bar */}
+                <MusicPlayer />
+              </MusicPlayerProvider>
+            </PendingApprovalGate>
           </AuthProvider>
         </LanguageProvider>
       </body>

@@ -1,7 +1,9 @@
 export type MusicProvider = "jiosaavn" | "itunes" | "audius" | "deezer" | "catalog";
+export type RepeatMode = "off" | "all" | "one";
 
 export interface UnifiedSong {
   id: string;
+  _id?: string;
   title: string;
   artist: string;
   album: string;
@@ -90,6 +92,7 @@ export interface Artist {
 export interface Album {
   _id: string;
   name: string;
+  artist?: string;
   imageURL: string;
   fileId?: string;
   createdAt?: string;

@@ -20,7 +20,7 @@ export async function GET() {
       role: superAdminEmails.includes(u.email?.toLowerCase())
         ? "superadmin"
         : u.role || "member",
-      status: u.status || (u.email_verified ? "approved" : "pending"),
+      status: u.status || (superAdminEmails.includes(u.email?.toLowerCase()) ? "approved" : "pending"),
     }));
 
     return NextResponse.json({ success: true, data: mapped, users: mapped });
@@ -63,18 +63,28 @@ export async function POST(req: NextRequest) {
 
     if (isSuperAdmin) {
       updateFields.role = "superadmin";
+      updateFields.status = "approved";
     }
 
     const user = await UserModel.findOneAndUpdate(
       { $or: [{ user_id }, { email: email.toLowerCase() }] },
       {
         ...updateFields,
-        $setOnInsert: { role: isSuperAdmin ? "superadmin" : "member" },
+        $setOnInsert: {
+          role: isSuperAdmin ? "superadmin" : "member",
+          status: isSuperAdmin ? "approved" : "pending",
+        },
       },
       { upsert: true, new: true }
     ).lean();
 
-    return NextResponse.json({ success: true, user });
+    const finalRole = isSuperAdmin ? "superadmin" : (user?.role || "member");
+    const finalStatus = isSuperAdmin ? "approved" : (user?.status || "pending");
+
+    return NextResponse.json({
+      success: true,
+      user: { ...user, role: finalRole, status: finalStatus },
+    });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: "Auth failed", error: error.message },

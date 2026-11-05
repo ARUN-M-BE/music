@@ -107,16 +107,17 @@ export function UsersTable({
   const handleExecuteAction = async () => {
     if (!confirmModal) return;
     setIsProcessing(true);
-    setLoadingId(confirmModal.user._id);
+    const targetId = confirmModal.user._id || confirmModal.user.user_id;
+    setLoadingId(targetId);
     setErrorMessage(null);
 
     try {
       if (confirmModal.type === "role" && confirmModal.newRole) {
-        await musicService.updateUserRole(confirmModal.user._id, confirmModal.newRole);
+        await musicService.updateUserRole(targetId, confirmModal.newRole);
       } else if (confirmModal.type === "status" && confirmModal.newStatus) {
-        await musicService.updateUserStatus(confirmModal.user._id, confirmModal.newStatus);
+        await musicService.updateUserStatus(targetId, confirmModal.newStatus);
       } else if (confirmModal.type === "delete") {
-        await musicService.deleteUser(confirmModal.user._id);
+        await musicService.deleteUser(targetId);
       }
       onUserUpdated();
       setConfirmModal(null);
