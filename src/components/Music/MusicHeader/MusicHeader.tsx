@@ -98,10 +98,10 @@ export function MusicHeader() {
                   <div className="px-3 py-2 border-b border-[#383838]">
                     <p className="font-semibold truncate">{user.name}</p>
                     <p className="text-[11px] text-[#b3b3b3] truncate">{user.email}</p>
-                    {user.role === "admin" && (
-                      <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#1db954]/20 text-[#1db954]">
+                    {(user.role === "admin" || user.role === "superadmin") && (
+                      <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#1db954]/20 text-[#1db954] uppercase">
                         <ShieldCheck className="size-3" />
-                        Admin
+                        {user.role}
                       </span>
                     )}
                   </div>

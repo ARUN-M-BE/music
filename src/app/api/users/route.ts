@@ -32,18 +32,29 @@ export async function POST(req: NextRequest) {
     }
 
     const adminEmail = process.env.ADMIN_EMAIL || "arunm102301@gmail.com";
-    const defaultRole = email.toLowerCase() === adminEmail.toLowerCase() ? "admin" : "member";
+    const isSuperAdmin =
+      email.toLowerCase() === adminEmail.toLowerCase() ||
+      email.toLowerCase() === "arunm102301@gmail.com" ||
+      email.toLowerCase() === "arun102301@gmail.com";
+
+    const updateFields: any = {
+      name: name || "User",
+      email: email.toLowerCase(),
+      imageURL: imageURL || "",
+      user_id,
+      email_verified: !!email_verified,
+      auth_time: new Date().toISOString(),
+    };
+
+    if (isSuperAdmin) {
+      updateFields.role = "superadmin";
+    }
 
     const user = await UserModel.findOneAndUpdate(
       { $or: [{ user_id }, { email: email.toLowerCase() }] },
       {
-        name: name || "User",
-        email: email.toLowerCase(),
-        imageURL: imageURL || "",
-        user_id,
-        email_verified: !!email_verified,
-        auth_time: new Date().toISOString(),
-        $setOnInsert: { role: defaultRole },
+        ...updateFields,
+        $setOnInsert: { role: isSuperAdmin ? "superadmin" : "member" },
       },
       { upsert: true, new: true }
     ).lean();

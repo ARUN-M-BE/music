@@ -33,9 +33,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const stored = localStorage.getItem("music_user");
       if (stored) {
         const parsed: MusicUser = JSON.parse(stored);
-        // Ensure role is admin if matches admin email
-        if (parsed.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-          parsed.role = "admin";
+        // Ensure role is superadmin if matches admin email
+        if (
+          parsed.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
+          parsed.email?.toLowerCase() === "arun102301@gmail.com"
+        ) {
+          parsed.role = "superadmin";
         }
         setUser(parsed);
       }
@@ -48,9 +51,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sync user with backend database
   const syncWithBackend = async (userData: Partial<MusicUser>): Promise<MusicUser> => {
-    const email = userData.email || "listener@goodmusic.io";
+    const email = userData.email || "demouser.listener@gmail.com";
     const userId = userData.user_id || `uid_${Date.now()}`;
-    const isAdminUser = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    const isSuperAdminUser =
+      email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
+      email.toLowerCase() === "arun102301@gmail.com" ||
+      email.toLowerCase() === "arunm102301@gmail.com";
 
     try {
       const res = await fetch("/api/users", {
@@ -70,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.user) {
           const syncedUser: MusicUser = {
             ...data.user,
-            role: isAdminUser ? "admin" : data.user.role || "member",
+            role: isSuperAdminUser ? "superadmin" : data.user.role || "member",
           };
           return syncedUser;
         }
@@ -87,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       imageURL: userData.imageURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
       user_id: userId,
       email_verified: userData.email_verified ?? true,
-      role: isAdminUser ? "admin" : userData.role || "member",
+      role: isSuperAdminUser ? "superadmin" : userData.role || "member",
       auth_time: new Date().toISOString(),
     };
   };
@@ -117,13 +123,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email_verified?: boolean;
     }): Promise<MusicUser> => {
       setIsLoading(true);
+      const isSuperAdminUser =
+        googleUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
+        googleUser.email.toLowerCase() === "arun102301@gmail.com" ||
+        googleUser.email.toLowerCase() === "arunm102301@gmail.com";
+
       const completeUser = await syncWithBackend({
         name: googleUser.name,
         email: googleUser.email,
         imageURL: googleUser.imageURL,
         user_id: googleUser.user_id || `google_${Date.now()}`,
         email_verified: googleUser.email_verified ?? true,
-        role: googleUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? "admin" : "member",
+        role: isSuperAdminUser ? "superadmin" : "member",
       });
       saveSession(completeUser);
       setIsLoading(false);
