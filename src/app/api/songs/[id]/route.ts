@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, SongModel } from "@/lib/mongodb";
+import { withDb, SongModel } from "@/lib/mongodb";
 import { deleteFromImageKit } from "@/lib/imagekit";
 import { getUserFromRequest } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // GET /api/songs/[id]
@@ -11,9 +12,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase();
     const { id } = await params;
-    const song = await SongModel.findById(id).lean();
+    const song = await withDb(() => SongModel.findById(id).lean());
 
     if (!song) {
       return NextResponse.json({ success: false, message: "Song not found" }, { status: 404 });
@@ -46,11 +46,12 @@ export async function PUT(
       );
     }
 
-    await connectToDatabase();
     const { id } = await params;
     const body = await req.json();
 
-    const updated = await SongModel.findByIdAndUpdate(id, body, { new: true }).lean();
+    const updated = await withDb(() =>
+      SongModel.findByIdAndUpdate(id, body, { new: true }).lean()
+    );
     if (!updated) {
       return NextResponse.json({ success: false, message: "Song not found" }, { status: 404 });
     }
@@ -78,10 +79,9 @@ export async function DELETE(
       );
     }
 
-    await connectToDatabase();
     const { id } = await params;
 
-    const existingSong = await SongModel.findById(id);
+    const existingSong = await withDb(() => SongModel.findById(id));
     if (!existingSong) {
       return NextResponse.json({ success: false, message: "Song not found" }, { status: 404 });
     }
@@ -94,7 +94,7 @@ export async function DELETE(
       await deleteFromImageKit(existingSong.songId).catch(console.warn);
     }
 
-    await SongModel.findByIdAndDelete(id);
+    await withDb(() => SongModel.findByIdAndDelete(id));
 
     return NextResponse.json({
       success: true,

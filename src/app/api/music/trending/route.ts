@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("Music trending API error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to fetch trending music" },
-      { status: 500 }
+      { success: false, songs: [], total: 0, error: error.message || "Failed to fetch trending music" },
+      { status: 200 }
     );
   }
 }

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, AlbumModel } from "@/lib/mongodb";
+import { withDb, AlbumModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 import { DEFAULT_COVER_URL } from "@/lib/mediaOptimization";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // POST /api/albums/bulk - Batch import albums
@@ -16,7 +17,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await connectToDatabase();
     const body = await req.json();
     const albums = body.albums;
 
@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const validAlbums = [];
-    const errors = [];
+    const validAlbums: any[] = [];
+    const errors: any[] = [];
 
     for (let i = 0; i < albums.length; i++) {
       const a = albums[i];
@@ -51,7 +51,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const inserted = await AlbumModel.insertMany(validAlbums, { ordered: false });
+    const inserted = await withDb(() =>
+      AlbumModel.insertMany(validAlbums, { ordered: false })
+    );
 
     return NextResponse.json({
       success: true,

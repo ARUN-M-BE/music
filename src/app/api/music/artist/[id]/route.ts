@@ -26,8 +26,8 @@ export async function GET(
   } catch (error: any) {
     console.error("Artist API error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to fetch artist" },
-      { status: 500 }
+      { success: false, artist: null, songs: [], error: error.message || "Failed to fetch artist" },
+      { status: 200 }
     );
   }
 }

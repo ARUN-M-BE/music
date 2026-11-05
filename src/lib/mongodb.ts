@@ -147,11 +147,18 @@ export const Artist: Model<IArtist> = models.artist || model<IArtist>("artist", 
 export const User: Model<IUser> = models.user || model<IUser>("user", userSchema);
 export const Playlist: Model<IPlaylist> = models.playlist || model<IPlaylist>("playlist", playlistSchema);
 
-// Connection Caching for Serverless
-const MONGODB_URI =
-  process.env.MONGODB_URI ||
-  process.env.DATABASE_STRING ||
-  "mongodb+srv://arunm:1Gm6yMeD4zOOYguX@cluster0.lmxpr.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0";
+// Direct replica set URI avoids DNS SRV lookup hangs and socket timeouts in serverless / Cloudflare isolates
+const DIRECT_REPLICA_SET_URI =
+  "mongodb://arunm:1Gm6yMeD4zOOYguX@cluster0-shard-00-00.lmxpr.mongodb.net:27017,cluster0-shard-00-01.lmxpr.mongodb.net:27017,cluster0-shard-00-02.lmxpr.mongodb.net:27017/test?ssl=true&replicaSet=atlas-11187l-shard-0&authSource=admin&retryWrites=true&w=majority";
+
+function getResolvedMongoUri(): string {
+  const envUri = process.env.MONGODB_URI || process.env.DATABASE_STRING;
+  if (!envUri) return DIRECT_REPLICA_SET_URI;
+  if (envUri.includes("cluster0.lmxpr.mongodb.net")) {
+    return DIRECT_REPLICA_SET_URI;
+  }
+  return envUri;
+}
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -165,30 +172,69 @@ declare global {
 
 const cached: MongooseCache = globalThis.mongooseCache || (globalThis.mongooseCache = { conn: null, promise: null });
 
-export async function connectToDatabase() {
+// Attach permanent error and disconnect listeners once to prevent unhandled socket reset events
+// from crashing the Cloudflare Worker isolate (Error 1101)
+if (typeof mongoose !== "undefined" && mongoose.connection) {
+  if (!mongoose.connection.listenerCount("error")) {
+    mongoose.connection.on("error", (err) => {
+      console.warn("MongoDB connection background warning:", err?.message || err);
+      cached.conn = null;
+      cached.promise = null;
+    });
+  }
+  if (!mongoose.connection.listenerCount("disconnected")) {
+    mongoose.connection.on("disconnected", () => {
+      cached.conn = null;
+      cached.promise = null;
+    });
+  }
+  if (!mongoose.connection.listenerCount("close")) {
+    mongoose.connection.on("close", () => {
+      cached.conn = null;
+      cached.promise = null;
+    });
+  }
+}
+
+export async function connectToDatabase(): Promise<typeof mongoose> {
+  const uri = getResolvedMongoUri();
+
+  // If already connected, verify vitality with ping so severed/frozen sockets are refreshed
   if (cached.conn && mongoose.connection.readyState === 1) {
-    return cached.conn;
+    try {
+      await mongoose.connection.db?.command({ ping: 1 });
+      return cached.conn;
+    } catch {
+      console.warn("Cached connection was severed or frozen, reconnecting...");
+      try {
+        await mongoose.disconnect();
+      } catch {}
+      cached.conn = null;
+      cached.promise = null;
+    }
   }
 
   if (!cached.promise) {
-    const opts = {
+    const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
-      dbName: "test", // Targets the 'test' database where the catalog is stored
+      dbName: "test",
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-      maxPoolSize: 10,
+      socketTimeoutMS: 20000,
+      maxPoolSize: 2,
       minPoolSize: 0,
+      maxIdleTimeMS: 5000,
     };
 
     cached.promise = mongoose
-      .connect(MONGODB_URI, opts)
+      .connect(uri, opts)
       .then((m) => {
         return m;
       })
       .catch((err) => {
         cached.promise = null;
-        console.error("❌ MongoDB Atlas Connection Error:", err.message);
+        cached.conn = null;
+        console.error("MongoDB Atlas Connection Error:", err?.message || err);
         throw err;
       });
   }
@@ -198,7 +244,28 @@ export async function connectToDatabase() {
     return cached.conn;
   } catch (err) {
     cached.promise = null;
+    cached.conn = null;
     throw err;
+  }
+}
+
+/**
+ * Execute a database operation with automatic single-retry if the connection
+ * was dropped or severed during serverless isolate freeze/thaw.
+ */
+export async function withDb<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    await connectToDatabase();
+    return await operation();
+  } catch (err: any) {
+    console.warn("Database operation encountered error, resetting connection and retrying:", err?.message || err);
+    try {
+      await mongoose.disconnect();
+    } catch {}
+    cached.conn = null;
+    cached.promise = null;
+    await connectToDatabase();
+    return await operation();
   }
 }
 

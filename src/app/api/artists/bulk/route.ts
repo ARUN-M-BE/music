@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, ArtistModel } from "@/lib/mongodb";
+import { withDb, ArtistModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const DEFAULT_ARTIST_IMG =
@@ -18,7 +19,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await connectToDatabase();
     const body = await req.json();
     const artists = body.artists;
 
@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const validArtists = [];
-    const errors = [];
+    const validArtists: any[] = [];
+    const errors: any[] = [];
 
     for (let i = 0; i < artists.length; i++) {
       const a = artists[i];
@@ -55,7 +55,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const inserted = await ArtistModel.insertMany(validArtists, { ordered: false });
+    const inserted = await withDb(() =>
+      ArtistModel.insertMany(validArtists, { ordered: false })
+    );
 
     return NextResponse.json({
       success: true,

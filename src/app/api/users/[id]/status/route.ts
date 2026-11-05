@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { connectToDatabase, UserModel } from "@/lib/mongodb";
+import { withDb, UserModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -34,8 +34,6 @@ export async function PUT(
         { status: 403 }
       );
     }
-
-    await connectToDatabase();
 
     // Safely extract target user ID
     let targetId = "";
@@ -73,16 +71,18 @@ export async function PUT(
       ? { $or: [{ _id: targetId }, { user_id: targetId }] }
       : { user_id: targetId };
 
-    const updated = await UserModel.findOneAndUpdate(
-      query,
-      {
-        $set: {
-          status,
-          email_verified: status === "approved",
+    const updated = await withDb(() =>
+      UserModel.findOneAndUpdate(
+        query,
+        {
+          $set: {
+            status,
+            email_verified: status === "approved",
+          },
         },
-      },
-      { new: true }
-    ).lean();
+        { new: true }
+      ).lean()
+    );
 
     if (!updated) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
@@ -96,8 +96,8 @@ export async function PUT(
   } catch (error: any) {
     console.error("User status update error:", error);
     return NextResponse.json(
-      { success: false, message: "Status update failed", error: error.message },
-      { status: 500 }
+      { success: false, message: error?.message || "Status update failed" },
+      { status: 400 }
     );
   }
 }

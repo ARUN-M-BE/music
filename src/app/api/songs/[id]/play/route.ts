@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, SongModel } from "@/lib/mongodb";
+import { withDb, SongModel } from "@/lib/mongodb";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // PUT /api/songs/[id]/play
@@ -9,14 +10,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase();
     const { id } = await params;
 
-    const updated = await SongModel.findByIdAndUpdate(
-      id,
-      { $inc: { playsCount: 1 } },
-      { new: true }
-    ).lean();
+    const updated = await withDb(() =>
+      SongModel.findByIdAndUpdate(
+        id,
+        { $inc: { playsCount: 1 } },
+        { new: true }
+      ).lean()
+    );
 
     return NextResponse.json({ success: true, song: updated });
   } catch (error: any) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, ArtistModel } from "@/lib/mongodb";
+import { withDb, ArtistModel } from "@/lib/mongodb";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +16,9 @@ const CreateArtistSchema = z.object({
 // GET /api/artists
 export async function GET(req: NextRequest) {
   try {
-    await connectToDatabase();
-    const artists = await ArtistModel.find({}).sort({ createdAt: -1 }).lean();
+    const artists = await withDb(() =>
+      ArtistModel.find({}).sort({ createdAt: -1 }).lean()
+    );
     return NextResponse.json(
       { success: true, data: artists, artists },
       {
@@ -28,9 +29,8 @@ export async function GET(req: NextRequest) {
     );
   } catch (error: any) {
     console.error("GET /api/artists error:", error);
-    // Return empty array gracefully to prevent UI crashes on initial load
     return NextResponse.json(
-      { success: false, data: [], artists: [], message: error.message || "Failed to fetch artists" },
+      { success: false, data: [], artists: [], message: "Failed to fetch artists" },
       { status: 200 }
     );
   }
@@ -39,11 +39,10 @@ export async function GET(req: NextRequest) {
 // POST /api/artists
 export async function POST(req: NextRequest) {
   try {
-    await connectToDatabase();
     const body = await req.json();
     const validated = CreateArtistSchema.parse(body);
 
-    const newArtist = await ArtistModel.create(validated);
+    const newArtist = await withDb(() => ArtistModel.create(validated));
     return NextResponse.json({ success: true, artist: newArtist }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(

@@ -26,8 +26,8 @@ export async function GET(
   } catch (error: any) {
     console.error("Album API error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to fetch album" },
-      { status: 500 }
+      { success: false, album: null, songs: [], error: error.message || "Failed to fetch album" },
+      { status: 200 }
     );
   }
 }

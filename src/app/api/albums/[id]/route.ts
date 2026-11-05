@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, AlbumModel } from "@/lib/mongodb";
+import { withDb, AlbumModel } from "@/lib/mongodb";
 import { deleteFromImageKit } from "@/lib/imagekit";
 import { getUserFromRequest } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // GET /api/albums/[id]
@@ -11,9 +12,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase();
     const { id } = await params;
-    const album = await AlbumModel.findById(id).lean();
+    const album = await withDb(() => AlbumModel.findById(id).lean());
 
     if (!album) {
       return NextResponse.json({ success: false, message: "Album not found" }, { status: 404 });
@@ -34,11 +34,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase();
     const { id } = await params;
     const body = await req.json();
 
-    const existingAlbum = await AlbumModel.findById(id);
+    const existingAlbum = await withDb(() => AlbumModel.findById(id));
     if (!existingAlbum) {
       return NextResponse.json({ success: false, message: "Album not found" }, { status: 404 });
     }
@@ -48,15 +47,17 @@ export async function PUT(
       await deleteFromImageKit(existingAlbum.fileId).catch(console.warn);
     }
 
-    const updated = await AlbumModel.findByIdAndUpdate(
-      id,
-      {
-        name: body.name ?? existingAlbum.name,
-        imageURL: body.imageURL ?? existingAlbum.imageURL,
-        fileId: body.fileId ?? existingAlbum.fileId,
-      },
-      { new: true }
-    ).lean();
+    const updated = await withDb(() =>
+      AlbumModel.findByIdAndUpdate(
+        id,
+        {
+          name: body.name ?? existingAlbum.name,
+          imageURL: body.imageURL ?? existingAlbum.imageURL,
+          fileId: body.fileId ?? existingAlbum.fileId,
+        },
+        { new: true }
+      ).lean()
+    );
 
     return NextResponse.json({
       success: true,
@@ -85,10 +86,9 @@ export async function DELETE(
       );
     }
 
-    await connectToDatabase();
     const { id } = await params;
 
-    const album = await AlbumModel.findById(id);
+    const album = await withDb(() => AlbumModel.findById(id));
     if (!album) {
       return NextResponse.json({ success: false, message: "Album not found" }, { status: 404 });
     }
@@ -97,7 +97,7 @@ export async function DELETE(
       await deleteFromImageKit(album.fileId).catch(console.warn);
     }
 
-    await AlbumModel.findByIdAndDelete(id);
+    await withDb(() => AlbumModel.findByIdAndDelete(id));
 
     return NextResponse.json({
       success: true,

@@ -27,8 +27,8 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("Music search API error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to search music" },
-      { status: 500 }
+      { success: false, songs: [], total: 0, error: error.message || "Failed to search music" },
+      { status: 200 }
     );
   }
 }

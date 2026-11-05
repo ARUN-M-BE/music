@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, SongModel } from "@/lib/mongodb";
+import { withDb, SongModel } from "@/lib/mongodb";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -20,8 +20,6 @@ const CreateSongSchema = z.object({
 // GET /api/songs
 export async function GET(req: NextRequest) {
   try {
-    await connectToDatabase();
-
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search");
     const category = searchParams.get("category");
@@ -57,7 +55,9 @@ export async function GET(req: NextRequest) {
       sortObj = { name: 1 };
     }
 
-    const songs = await SongModel.find(query).sort(sortObj).lean();
+    const songs = await withDb(() =>
+      SongModel.find(query).sort(sortObj).lean()
+    );
 
     return NextResponse.json(
       {
@@ -74,8 +74,8 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("GET /api/songs error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch songs", error: error.message },
-      { status: 500 }
+      { success: false, data: [], songs: [], message: "Failed to fetch songs" },
+      { status: 200 }
     );
   }
 }
@@ -83,15 +83,15 @@ export async function GET(req: NextRequest) {
 // POST /api/songs
 export async function POST(req: NextRequest) {
   try {
-    await connectToDatabase();
     const body = await req.json();
-
     const validated = CreateSongSchema.parse(body);
 
-    const newSong = await SongModel.create({
-      ...validated,
-      playsCount: 0,
-    });
+    const newSong = await withDb(() =>
+      SongModel.create({
+        ...validated,
+        playsCount: 0,
+      })
+    );
 
     return NextResponse.json(
       {
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json(
       { success: false, message: error.message || "Failed to create song" },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, ArtistModel } from "@/lib/mongodb";
+import { withDb, ArtistModel } from "@/lib/mongodb";
 import { deleteFromImageKit } from "@/lib/imagekit";
 import { getUserFromRequest } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // GET /api/artists/[id]
@@ -11,9 +12,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase();
     const { id } = await params;
-    const artist = await ArtistModel.findById(id).lean();
+    const artist = await withDb(() => ArtistModel.findById(id).lean());
 
     if (!artist) {
       return NextResponse.json({ success: false, message: "Artist not found" }, { status: 404 });
@@ -34,11 +34,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase();
     const { id } = await params;
     const body = await req.json();
 
-    const existingArtist = await ArtistModel.findById(id);
+    const existingArtist = await withDb(() => ArtistModel.findById(id));
     if (!existingArtist) {
       return NextResponse.json({ success: false, message: "Artist not found" }, { status: 404 });
     }
@@ -48,17 +47,19 @@ export async function PUT(
       await deleteFromImageKit(existingArtist.fileId).catch(console.warn);
     }
 
-    const updated = await ArtistModel.findByIdAndUpdate(
-      id,
-      {
-        name: body.name ?? existingArtist.name,
-        imageURL: body.imageURL ?? existingArtist.imageURL,
-        instagram: body.instagram ?? existingArtist.instagram,
-        twetter: body.twetter !== undefined ? body.twetter : existingArtist.twetter,
-        fileId: body.fileId ?? existingArtist.fileId,
-      },
-      { new: true }
-    ).lean();
+    const updated = await withDb(() =>
+      ArtistModel.findByIdAndUpdate(
+        id,
+        {
+          name: body.name ?? existingArtist.name,
+          imageURL: body.imageURL ?? existingArtist.imageURL,
+          instagram: body.instagram ?? existingArtist.instagram,
+          twetter: body.twetter !== undefined ? body.twetter : existingArtist.twetter,
+          fileId: body.fileId ?? existingArtist.fileId,
+        },
+        { new: true }
+      ).lean()
+    );
 
     return NextResponse.json({
       success: true,
@@ -87,10 +88,9 @@ export async function DELETE(
       );
     }
 
-    await connectToDatabase();
     const { id } = await params;
 
-    const artist = await ArtistModel.findById(id);
+    const artist = await withDb(() => ArtistModel.findById(id));
     if (!artist) {
       return NextResponse.json({ success: false, message: "Artist not found" }, { status: 404 });
     }
@@ -99,7 +99,7 @@ export async function DELETE(
       await deleteFromImageKit(artist.fileId).catch(console.warn);
     }
 
-    await ArtistModel.findByIdAndDelete(id);
+    await withDb(() => ArtistModel.findByIdAndDelete(id));
 
     return NextResponse.json({
       success: true,

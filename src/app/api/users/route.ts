@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, UserModel } from "@/lib/mongodb";
+import { withDb, UserModel } from "@/lib/mongodb";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -7,8 +7,9 @@ export const runtime = "nodejs";
 // GET /api/users - Get all users for admin
 export async function GET(req: NextRequest) {
   try {
-    await connectToDatabase();
-    const users = await UserModel.find({}).sort({ createdAt: -1 }).lean();
+    const users = await withDb(() =>
+      UserModel.find({}).sort({ createdAt: -1 }).lean()
+    );
 
     const superAdminEmails = [
       "arunm102301@gmail.com",
@@ -26,9 +27,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: mapped, users: mapped });
   } catch (error: any) {
+    console.error("GET /api/users error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch users", error: error.message },
-      { status: 500 }
+      { success: false, data: [], users: [], message: "Failed to fetch users" },
+      { status: 200 }
     );
   }
 }
@@ -36,7 +38,6 @@ export async function GET(req: NextRequest) {
 // POST /api/users - Login or Upsert user
 export async function POST(req: NextRequest) {
   try {
-    await connectToDatabase();
     const body = await req.json();
 
     const { email, name, imageURL, user_id, email_verified } = body;
@@ -67,17 +68,19 @@ export async function POST(req: NextRequest) {
       updateFields.status = "approved";
     }
 
-    const user = await UserModel.findOneAndUpdate(
-      { $or: [{ user_id }, { email: email.toLowerCase() }] },
-      {
-        ...updateFields,
-        $setOnInsert: {
-          role: isSuperAdmin ? "superadmin" : "member",
-          status: isSuperAdmin ? "approved" : "pending",
+    const user = await withDb(() =>
+      UserModel.findOneAndUpdate(
+        { $or: [{ user_id }, { email: email.toLowerCase() }] },
+        {
+          ...updateFields,
+          $setOnInsert: {
+            role: isSuperAdmin ? "superadmin" : "member",
+            status: isSuperAdmin ? "approved" : "pending",
+          },
         },
-      },
-      { upsert: true, new: true }
-    ).lean();
+        { upsert: true, new: true }
+      ).lean()
+    );
 
     const finalRole = isSuperAdmin ? "superadmin" : (user?.role || "member");
     const finalStatus = isSuperAdmin ? "approved" : (user?.status || "pending");
@@ -87,9 +90,10 @@ export async function POST(req: NextRequest) {
       user: { ...user, role: finalRole, status: finalStatus },
     });
   } catch (error: any) {
+    console.error("POST /api/users error:", error);
     return NextResponse.json(
       { success: false, message: "Auth failed", error: error.message },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }

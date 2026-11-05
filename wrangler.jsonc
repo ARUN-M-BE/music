@@ -12,8 +12,8 @@
     "binding": "ASSETS"
   },
   "vars": {
-    "MONGODB_URI": "mongodb+srv://arunm:1Gm6yMeD4zOOYguX@cluster0.lmxpr.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0",
-    "DATABASE_STRING": "mongodb+srv://arunm:1Gm6yMeD4zOOYguX@cluster0.lmxpr.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0",
+    "MONGODB_URI": "mongodb://arunm:1Gm6yMeD4zOOYguX@cluster0-shard-00-00.lmxpr.mongodb.net:27017,cluster0-shard-00-01.lmxpr.mongodb.net:27017,cluster0-shard-00-02.lmxpr.mongodb.net:27017/test?ssl=true&replicaSet=atlas-11187l-shard-0&authSource=admin&retryWrites=true&w=majority",
+    "DATABASE_STRING": "mongodb://arunm:1Gm6yMeD4zOOYguX@cluster0-shard-00-00.lmxpr.mongodb.net:27017,cluster0-shard-00-01.lmxpr.mongodb.net:27017,cluster0-shard-00-02.lmxpr.mongodb.net:27017/test?ssl=true&replicaSet=atlas-11187l-shard-0&authSource=admin&retryWrites=true&w=majority",
     "ADMIN_EMAIL": "arunm102301@gmail.com"
   }
 }

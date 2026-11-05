@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { connectToDatabase, UserModel } from "@/lib/mongodb";
+import { withDb, UserModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -34,8 +34,6 @@ export async function PUT(
         { status: 403 }
       );
     }
-
-    await connectToDatabase();
 
     // Safely extract target user ID
     let targetId = "";
@@ -73,7 +71,7 @@ export async function PUT(
       ? { $or: [{ _id: targetId }, { user_id: targetId }] }
       : { user_id: targetId };
 
-    const existingUser = await UserModel.findOne(query).lean();
+    const existingUser = await withDb(() => UserModel.findOne(query).lean());
     if (!existingUser) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
     }
@@ -86,11 +84,13 @@ export async function PUT(
       );
     }
 
-    const updatedUser = await UserModel.findOneAndUpdate(
-      query,
-      { $set: { role } },
-      { new: true }
-    ).lean();
+    const updatedUser = await withDb(() =>
+      UserModel.findOneAndUpdate(
+        query,
+        { $set: { role } },
+        { new: true }
+      ).lean()
+    );
 
     return NextResponse.json({
       success: true,
@@ -100,8 +100,8 @@ export async function PUT(
   } catch (error: any) {
     console.error("User role update error:", error);
     return NextResponse.json(
-      { success: false, message: "Role update failed", error: error.message },
-      { status: 500 }
+      { success: false, message: error?.message || "Role update failed" },
+      { status: 400 }
     );
   }
 }

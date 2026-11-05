@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, SongModel } from "@/lib/mongodb";
+import { withDb, SongModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 import { DEFAULT_COVER_URL } from "@/lib/mediaOptimization";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // POST /api/songs/bulk - Batch import songs
@@ -16,7 +17,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await connectToDatabase();
     const body = await req.json();
     const songs = body.songs;
 
@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const validSongs = [];
-    const errors = [];
+    const validSongs: any[] = [];
+    const errors: any[] = [];
 
     for (let i = 0; i < songs.length; i++) {
       const s = songs[i];
@@ -70,7 +70,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const inserted = await SongModel.insertMany(validSongs, { ordered: false });
+    const inserted = await withDb(() =>
+      SongModel.insertMany(validSongs, { ordered: false })
+    );
 
     return NextResponse.json({
       success: true,

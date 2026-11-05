@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { connectToDatabase, UserModel } from "./mongodb";
+import { withDb, UserModel } from "./mongodb";
 
 export interface AuthSession {
   user: {
@@ -34,14 +34,15 @@ export async function getUserFromRequest(req: NextRequest): Promise<AuthSession 
     const isSuperByEmail = SUPERADMIN_EMAILS.includes(token.toLowerCase());
 
     try {
-      await connectToDatabase();
-      const user = await UserModel.findOne({
-        $or: [
-          { user_id: token },
-          { email: token.toLowerCase() },
-          { email: new RegExp(`^${token}$`, "i") },
-        ],
-      }).lean();
+      const user = await withDb(() =>
+        UserModel.findOne({
+          $or: [
+            { user_id: token },
+            { email: token.toLowerCase() },
+            { email: new RegExp(`^${token}$`, "i") },
+          ],
+        }).lean()
+      );
 
       if (user) {
         const isSuper =

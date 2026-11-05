@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, AlbumModel } from "@/lib/mongodb";
+import { withDb, AlbumModel } from "@/lib/mongodb";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +14,9 @@ const CreateAlbumSchema = z.object({
 // GET /api/albums
 export async function GET(req: NextRequest) {
   try {
-    await connectToDatabase();
-    const albums = await AlbumModel.find({}).sort({ createdAt: -1 }).lean();
+    const albums = await withDb(() =>
+      AlbumModel.find({}).sort({ createdAt: -1 }).lean()
+    );
     return NextResponse.json(
       { success: true, data: albums, albums },
       {
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("GET /api/albums error:", error);
     return NextResponse.json(
-      { success: false, data: [], albums: [], message: error.message || "Failed to fetch albums" },
+      { success: false, data: [], albums: [], message: "Failed to fetch albums" },
       { status: 200 }
     );
   }
@@ -36,11 +37,10 @@ export async function GET(req: NextRequest) {
 // POST /api/albums
 export async function POST(req: NextRequest) {
   try {
-    await connectToDatabase();
     const body = await req.json();
     const validated = CreateAlbumSchema.parse(body);
 
-    const newAlbum = await AlbumModel.create(validated);
+    const newAlbum = await withDb(() => AlbumModel.create(validated));
     return NextResponse.json({ success: true, album: newAlbum }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, PlaylistModel } from "@/lib/mongodb";
+import { withDb, PlaylistModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // GET /api/music/playlists?userId=...
 export async function GET(req: NextRequest) {
   try {
-    await connectToDatabase();
     const { searchParams } = new URL(req.url);
     let userId = searchParams.get("userId");
 
@@ -22,14 +22,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, playlists: [] });
     }
 
-    const playlists = await PlaylistModel.find({ userId }).sort({ createdAt: -1 }).lean();
+    const playlists = await withDb(() =>
+      PlaylistModel.find({ userId }).sort({ createdAt: -1 }).lean()
+    );
 
     return NextResponse.json({ success: true, playlists });
   } catch (error: any) {
     console.error("Playlists GET error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to fetch playlists" },
-      { status: 500 }
+      { success: false, playlists: [], error: error.message || "Failed to fetch playlists" },
+      { status: 200 }
     );
   }
 }
@@ -37,7 +39,6 @@ export async function GET(req: NextRequest) {
 // POST /api/music/playlists
 export async function POST(req: NextRequest) {
   try {
-    await connectToDatabase();
     const session = await getUserFromRequest(req);
     const body = await req.json();
 
@@ -56,20 +57,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const playlist = await PlaylistModel.create({
-      name: body.name.trim(),
-      description: body.description?.trim() || "",
-      coverImage: body.coverImage || "",
-      userId,
-      songs: Array.isArray(body.songs) ? body.songs : [],
-    });
+    const playlist = await withDb(() =>
+      PlaylistModel.create({
+        name: body.name.trim(),
+        description: body.description?.trim() || "",
+        coverImage: body.coverImage || "",
+        userId,
+        songs: Array.isArray(body.songs) ? body.songs : [],
+      })
+    );
 
     return NextResponse.json({ success: true, playlist }, { status: 201 });
   } catch (error: any) {
     console.error("Playlists POST error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Failed to create playlist" },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
@@ -77,7 +80,6 @@ export async function POST(req: NextRequest) {
 // PUT /api/music/playlists (update name, songs, etc.)
 export async function PUT(req: NextRequest) {
   try {
-    await connectToDatabase();
     const body = await req.json();
     const { id, name, description, coverImage, songs } = body;
 
@@ -94,10 +96,12 @@ export async function PUT(req: NextRequest) {
     if (coverImage !== undefined) updateData.coverImage = coverImage;
     if (songs !== undefined) updateData.songs = songs;
 
-    const playlist = await PlaylistModel.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true }
+    const playlist = await withDb(() =>
+      PlaylistModel.findByIdAndUpdate(
+        id,
+        { $set: updateData },
+        { new: true }
+      ).lean()
     );
 
     if (!playlist) {
@@ -112,7 +116,7 @@ export async function PUT(req: NextRequest) {
     console.error("Playlists PUT error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Failed to update playlist" },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
@@ -120,7 +124,6 @@ export async function PUT(req: NextRequest) {
 // DELETE /api/music/playlists?id=...
 export async function DELETE(req: NextRequest) {
   try {
-    await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
@@ -131,7 +134,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const deleted = await PlaylistModel.findByIdAndDelete(id);
+    const deleted = await withDb(() => PlaylistModel.findByIdAndDelete(id));
     if (!deleted) {
       return NextResponse.json(
         { success: false, error: "Playlist not found" },
@@ -144,7 +147,7 @@ export async function DELETE(req: NextRequest) {
     console.error("Playlists DELETE error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Failed to delete playlist" },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }

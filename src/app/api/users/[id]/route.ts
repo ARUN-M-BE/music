@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { connectToDatabase, UserModel } from "@/lib/mongodb";
+import { withDb, UserModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,6 @@ export async function DELETE(
       );
     }
 
-    await connectToDatabase();
     const { id } = await params;
 
     // Check if id is valid ObjectId or user_id string
@@ -40,15 +39,15 @@ export async function DELETE(
       ? { $or: [{ _id: id }, { user_id: id }] }
       : { user_id: id };
 
-    const userToDelete = await UserModel.findOne(query);
+    const userToDelete = await withDb(() => UserModel.findOne(query).lean());
     if (!userToDelete) {
       return NextResponse.json({ success: false, message: "User not found in database" }, { status: 404 });
     }
 
     // Protect primary Superadmin account
     if (
-      SUPERADMIN_EMAILS.includes(userToDelete.email.toLowerCase()) ||
-      userToDelete.role === "superadmin"
+      SUPERADMIN_EMAILS.includes((userToDelete as any).email?.toLowerCase()) ||
+      (userToDelete as any).role === "superadmin"
     ) {
       return NextResponse.json(
         { success: false, message: "Cannot delete the Superadmin account" },
@@ -56,16 +55,17 @@ export async function DELETE(
       );
     }
 
-    await UserModel.deleteOne({ _id: userToDelete._id });
+    await withDb(() => UserModel.deleteOne({ _id: (userToDelete as any)._id }));
 
     return NextResponse.json({
       success: true,
-      message: `User ${userToDelete.name || userToDelete.email} permanently deleted from database`,
+      message: `User ${(userToDelete as any).name || (userToDelete as any).email} permanently deleted from database`,
     });
   } catch (error: any) {
+    console.error("DELETE /api/users/[id] error:", error);
     return NextResponse.json(
-      { success: false, message: "User deletion failed", error: error.message },
-      { status: 500 }
+      { success: false, message: error?.message || "User deletion failed" },
+      { status: 400 }
     );
   }
 }
