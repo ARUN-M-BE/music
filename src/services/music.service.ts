@@ -276,6 +276,49 @@ class MusicService {
     }
   }
 
+  // ================= BULK IMPORT =================
+  async bulkImportSongs(songs: any[]): Promise<{ count: number; errors?: any[] }> {
+    const res = await fetch(`${this.baseUrl}/songs/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ songs }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || "Bulk import failed");
+    }
+    return { count: data.count || 0, errors: data.errors };
+  }
+
+  async bulkImportArtists(artists: any[]): Promise<{ count: number; errors?: any[] }> {
+    const res = await fetch(`${this.baseUrl}/artists/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ artists }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || "Bulk import failed");
+    }
+    return { count: data.count || 0, errors: data.errors };
+  }
+
+  async bulkImportAlbums(albums: any[]): Promise<{ count: number; errors?: any[] }> {
+    const res = await fetch(`${this.baseUrl}/albums/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ albums }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || "Bulk import failed");
+    }
+    return { count: data.count || 0, errors: data.errors };
+  }
+
   // ================= OVERVIEW METRICS =================
   async getMetrics(): Promise<MusicStats> {
     const [songs, albums, artists, users] = await Promise.all([

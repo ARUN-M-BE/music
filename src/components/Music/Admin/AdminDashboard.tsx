@@ -11,6 +11,7 @@ import { StatsCards } from "./StatsCards";
 import { TrackTable } from "./TrackTable";
 import { UsersTable } from "./UsersTable";
 import { MusicUploadModal } from "../MusicUpload/MusicUploadModal";
+import { BulkUploadModal } from "./BulkUploadModal";
 import { ConfirmationModal } from "@/components/Common/ConfirmationModal";
 import {
   LayoutDashboard,
@@ -26,12 +27,14 @@ import {
   Image as ImageIcon,
   CheckCircle,
   X,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export function AdminDashboard() {
   const { t } = useLanguage();
   const { user, isSuperAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "songs" | "upload" | "albums" | "artists" | "users">("overview");
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   const [stats, setStats] = useState<MusicStats>({
     totalSongs: 0,
@@ -373,13 +376,23 @@ export function AdminDashboard() {
           <p className="text-xs sm:text-sm text-[#b3b3b3] mt-1">{t("admin.subtitle")}</p>
         </div>
 
-        <button
-          onClick={() => setActiveTab("upload")}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1db954] hover:bg-[#1ed760] text-black font-bold text-xs transition-transform active:scale-95 shadow-lg self-start sm:self-auto"
-        >
-          <PlusCircle className="size-4" />
-          <span>{t("admin.addNewSong")}</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button
+            onClick={() => setIsBulkModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 font-bold text-xs transition-transform active:scale-95 shadow-lg"
+          >
+            <FileSpreadsheet className="size-4" />
+            <span>Bulk Upload & Export</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("upload")}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1db954] hover:bg-[#1ed760] text-black font-bold text-xs transition-transform active:scale-95 shadow-lg"
+          >
+            <PlusCircle className="size-4" />
+            <span>{t("admin.addNewSong")}</span>
+          </button>
+        </div>
       </div>
 
       {/* Navigation Tabs */}
@@ -939,6 +952,13 @@ export function AdminDashboard() {
         isLoading={isDeleting}
         onConfirm={confirmDeleteTarget}
         onClose={() => setDeleteTarget(null)}
+      />
+
+      {/* Bulk Catalog Importer & Exporter Modal */}
+      <BulkUploadModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onSuccess={loadData}
       />
     </div>
   );
