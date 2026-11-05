@@ -4,6 +4,9 @@ node_modules/
 .env.staging
 dist/
 build/
+.next/
+.open-next/
+tsconfig.tsbuildinfo
 coverage/
 *.log
 .DS_Store

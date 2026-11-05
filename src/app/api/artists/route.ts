@@ -1,0 +1,45 @@
+import { NextRequest, NextResponse } from "next/server";
+import { connectToDatabase, ArtistModel } from "@/lib/mongodb";
+import { z } from "zod";
+
+export const runtime = "nodejs";
+
+const CreateArtistSchema = z.object({
+  name: z.string().min(1, "Artist name is required"),
+  imageURL: z.string().url("Valid image URL is required"),
+  twetter: z.string().optional().default(""),
+  instagram: z.string().min(1, "Instagram profile handle is required"),
+  fileId: z.string().min(1, "fileId is required"),
+});
+
+// GET /api/artists
+export async function GET() {
+  try {
+    await connectToDatabase();
+    const artists = await ArtistModel.find({}).sort({ createdAt: -1 }).lean();
+    return NextResponse.json({ success: true, data: artists, artists });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch artists", error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/artists
+export async function POST(req: NextRequest) {
+  try {
+    await connectToDatabase();
+    const body = await req.json();
+    const validated = CreateArtistSchema.parse(body);
+
+    const newArtist = await ArtistModel.create(validated);
+    return NextResponse.json({ success: true, artist: newArtist }, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error.message || "Failed to create artist" },
+      { status: 400 }
+    );
+  }
+}
+

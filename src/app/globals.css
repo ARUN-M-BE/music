@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --background: #121212;
+  --foreground: #ffffff;
+  --sidebar-bg: #000000;
+  --card-bg: #181818;
+  --card-hover: #282828;
+  --primary: #1db954;
+  --primary-hover: #1ed760;
+  --border: #282828;
+  --muted: #b3b3b3;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom modern Spotify-style scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* RTL Specific Overrides */
+[dir="rtl"] {
+  text-align: right;
+}
+
+/* Animated Sound Wave Visualizer */
+@keyframes soundWave {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: 20px;
+  }
+}
+
+.animate-wave-1 {
+  animation: soundWave 0.8s ease-in-out infinite;
+}
+.animate-wave-2 {
+  animation: soundWave 1.1s ease-in-out 0.2s infinite;
+}
+.animate-wave-3 {
+  animation: soundWave 0.9s ease-in-out 0.4s infinite;
+}
+.animate-wave-4 {
+  animation: soundWave 1.2s ease-in-out 0.1s infinite;
+}
+
