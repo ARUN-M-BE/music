@@ -178,7 +178,7 @@ export async function connectToDatabase() {
       connectTimeoutMS: 10000,
       socketTimeoutMS: 45000,
       maxPoolSize: 10,
-      minPoolSize: 1,
+      minPoolSize: 0,
     };
 
     cached.promise = mongoose

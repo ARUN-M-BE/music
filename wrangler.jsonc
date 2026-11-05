@@ -10,6 +10,11 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  "vars": {
+    "MONGODB_URI": "mongodb+srv://arunm:1Gm6yMeD4zOOYguX@cluster0.lmxpr.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0",
+    "DATABASE_STRING": "mongodb+srv://arunm:1Gm6yMeD4zOOYguX@cluster0.lmxpr.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0",
+    "ADMIN_EMAIL": "arunm102301@gmail.com"
   }
 }
 

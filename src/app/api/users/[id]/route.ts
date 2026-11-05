@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { connectToDatabase, UserModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const SUPERADMIN_EMAILS = [

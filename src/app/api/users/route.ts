@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, UserModel } from "@/lib/mongodb";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // GET /api/users - Get all users for admin
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
     const users = await UserModel.find({}).sort({ createdAt: -1 }).lean();

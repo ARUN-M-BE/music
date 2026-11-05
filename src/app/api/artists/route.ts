@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, ArtistModel } from "@/lib/mongodb";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const CreateArtistSchema = z.object({
@@ -13,7 +14,7 @@ const CreateArtistSchema = z.object({
 });
 
 // GET /api/artists
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
     const artists = await ArtistModel.find({}).sort({ createdAt: -1 }).lean();
@@ -26,9 +27,11 @@ export async function GET() {
       }
     );
   } catch (error: any) {
+    console.error("GET /api/artists error:", error);
+    // Return empty array gracefully to prevent UI crashes on initial load
     return NextResponse.json(
-      { success: false, message: "Failed to fetch artists", error: error.message },
-      { status: 500 }
+      { success: false, data: [], artists: [], message: error.message || "Failed to fetch artists" },
+      { status: 200 }
     );
   }
 }
@@ -49,4 +52,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

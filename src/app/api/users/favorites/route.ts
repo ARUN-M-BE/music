@@ -1,30 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectToDatabase, UserModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // GET /api/users/favorites - Get current user's saved favorites
 export async function GET(req: NextRequest) {
   try {
     const session = await getUserFromRequest(req);
-    if (!session || !session.user) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    if (!session || !session.user || !session.user.email) {
+      // Unauthenticated or guest: return empty list gracefully (status 200)
+      return NextResponse.json({ success: true, favorites: [] });
     }
 
     await connectToDatabase();
+    const isObjectId = mongoose.Types.ObjectId.isValid(session.user.id);
     const user = await UserModel.findOne({
-      $or: [{ email: session.user.email.toLowerCase() }, { user_id: session.user.id }],
+      $or: [
+        { email: session.user.email.toLowerCase() },
+        { user_id: session.user.id },
+        ...(isObjectId ? [{ _id: session.user.id }] : []),
+      ],
     }).lean();
+
+    const favorites = Array.isArray((user as any)?.favorites) ? (user as any).favorites : [];
 
     return NextResponse.json({
       success: true,
-      favorites: (user as any)?.favorites || [],
+      favorites,
     });
   } catch (error: any) {
+    console.error("GET /api/users/favorites error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to load favorites", error: error.message },
-      { status: 500 }
+      { success: true, favorites: [], message: error.message || "Failed to load favorites" },
+      { status: 200 }
     );
   }
 }
@@ -41,8 +52,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { songId, favorites: newFavoritesList } = body;
 
+    const isObjectId = mongoose.Types.ObjectId.isValid(session.user.id);
     const user = await UserModel.findOne({
-      $or: [{ email: session.user.email.toLowerCase() }, { user_id: session.user.id }],
+      $or: [
+        { email: session.user.email.toLowerCase() },
+        { user_id: session.user.id },
+        ...(isObjectId ? [{ _id: session.user.id }] : []),
+      ],
     });
 
     if (!user) {
@@ -78,4 +94,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, SongModel } from "@/lib/mongodb";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const CreateSongSchema = z.object({

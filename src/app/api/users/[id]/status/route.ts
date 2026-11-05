@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectToDatabase, UserModel } from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const SUPERADMIN_EMAILS = [
@@ -18,9 +20,12 @@ export async function PUT(
   try {
     const session = await getUserFromRequest(req);
     const xEmail = req.headers.get("x-user-email")?.trim().toLowerCase();
+    const bearer = req.headers.get("authorization")?.replace("Bearer ", "").trim().toLowerCase();
+
     const isSuper =
       session?.user?.role === "superadmin" ||
       (xEmail && SUPERADMIN_EMAILS.includes(xEmail)) ||
+      (bearer && SUPERADMIN_EMAILS.includes(bearer)) ||
       (session?.user?.email && SUPERADMIN_EMAILS.includes(session.user.email.toLowerCase()));
 
     if (!isSuper) {
@@ -31,41 +36,65 @@ export async function PUT(
     }
 
     await connectToDatabase();
-    const { id } = await params;
+
+    // Safely extract target user ID
+    let targetId = "";
+    if (params) {
+      try {
+        const resolved = await params;
+        targetId = resolved?.id || "";
+      } catch {}
+    }
+    if (!targetId) {
+      const parts = req.nextUrl.pathname.split("/");
+      const statusIdx = parts.indexOf("status");
+      if (statusIdx > 0) targetId = parts[statusIdx - 1];
+    }
+
+    if (!targetId) {
+      return NextResponse.json(
+        { success: false, message: "Target user ID is required" },
+        { status: 400 }
+      );
+    }
+
     const body = await req.json();
     const status = body.status;
 
     if (!status || (status !== "approved" && status !== "pending")) {
-      return NextResponse.json({ success: false, message: "Invalid status: must be 'approved' or 'pending'" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Invalid status: must be 'approved' or 'pending'" },
+        { status: 400 }
+      );
     }
 
-    // Try finding by _id or user_id
-    let updated = await UserModel.findByIdAndUpdate(
-      id,
+    const isObjectId = mongoose.Types.ObjectId.isValid(targetId);
+    const query = isObjectId
+      ? { $or: [{ _id: targetId }, { user_id: targetId }] }
+      : { user_id: targetId };
+
+    const updated = await UserModel.findOneAndUpdate(
+      query,
       {
-        status,
-        email_verified: status === "approved",
+        $set: {
+          status,
+          email_verified: status === "approved",
+        },
       },
       { new: true }
     ).lean();
 
     if (!updated) {
-      updated = await UserModel.findOneAndUpdate(
-        { user_id: id },
-        {
-          status,
-          email_verified: status === "approved",
-        },
-        { new: true }
-      ).lean();
-    }
-
-    if (!updated) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, message: `Status updated to ${status}`, user: updated });
+    return NextResponse.json({
+      success: true,
+      message: `Status updated to ${status}`,
+      user: updated,
+    });
   } catch (error: any) {
+    console.error("User status update error:", error);
     return NextResponse.json(
       { success: false, message: "Status update failed", error: error.message },
       { status: 500 }

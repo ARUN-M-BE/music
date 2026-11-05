@@ -292,7 +292,9 @@ class MusicService {
   // ================= FAVORITES PERSISTENCE =================
   async getUserFavorites(): Promise<string[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/users/favorites`);
+      const res = await fetch(`${this.baseUrl}/users/favorites`, {
+        headers: this.getHeaders(),
+      });
       if (!res.ok) return [];
       const data = await res.json();
       return data.favorites || [];
@@ -305,7 +307,7 @@ class MusicService {
     try {
       const res = await fetch(`${this.baseUrl}/users/favorites`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.getHeaders(),
         body: JSON.stringify({ songId }),
       });
       if (!res.ok) return [];

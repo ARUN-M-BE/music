@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, AlbumModel } from "@/lib/mongodb";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const CreateAlbumSchema = z.object({
@@ -11,7 +12,7 @@ const CreateAlbumSchema = z.object({
 });
 
 // GET /api/albums
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
     const albums = await AlbumModel.find({}).sort({ createdAt: -1 }).lean();
@@ -24,9 +25,10 @@ export async function GET() {
       }
     );
   } catch (error: any) {
+    console.error("GET /api/albums error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch albums", error: error.message },
-      { status: 500 }
+      { success: false, data: [], albums: [], message: error.message || "Failed to fetch albums" },
+      { status: 200 }
     );
   }
 }
@@ -47,4 +49,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
