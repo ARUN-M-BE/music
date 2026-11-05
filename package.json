@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "opennextjs-cloudflare build",
+    "build:next": "next build --webpack",
+    "deploy": "opennextjs-cloudflare deploy",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "build:cloudflare": "opennextjs-cloudflare build"
-    
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "clsx": "^2.1.1",
