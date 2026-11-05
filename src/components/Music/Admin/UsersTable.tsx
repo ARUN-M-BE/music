@@ -20,8 +20,8 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
 
   const filtered = users.filter(
     (u) =>
-      u.name.toLowerCase().includes(filterText.toLowerCase()) ||
-      u.email.toLowerCase().includes(filterText.toLowerCase())
+      (u.name || "").toLowerCase().includes(filterText.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(filterText.toLowerCase())
   );
 
   const [confirmModal, setConfirmModal] = useState<{
@@ -32,6 +32,7 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRoleToggleClick = (user: MusicUser) => {
+    if (user.role === "superadmin" || user.email.toLowerCase() === "arunm102301@gmail.com") return;
     const newRole = user.role === "admin" ? "member" : "admin";
     setConfirmModal({
       type: "role",
@@ -41,6 +42,7 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
   };
 
   const handleDeleteUserClick = (user: MusicUser) => {
+    if (user.role === "superadmin" || user.email.toLowerCase() === "arunm102301@gmail.com") return;
     setConfirmModal({
       type: "delete",
       user,
@@ -138,39 +140,49 @@ export function UsersTable({ users, onUserUpdated }: UsersTableProps) {
                     )}
                   </td>
                   <td className="py-2.5 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        user.role === "admin"
-                          ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                          : "bg-white/10 text-white"
-                      }`}
-                    >
-                      {user.role === "admin" ? <ShieldAlert className="size-3" /> : <Shield className="size-3" />}
-                      {user.role}
-                    </span>
+                    {user.role === "superadmin" ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/40">
+                        <ShieldAlert className="size-3 text-purple-400" />
+                        SUPERADMIN
+                      </span>
+                    ) : user.role === "admin" ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-500/20 text-red-400 border border-red-500/30">
+                        <ShieldAlert className="size-3" />
+                        ADMIN
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-white/10 text-white">
+                        <Shield className="size-3" />
+                        MEMBER
+                      </span>
+                    )}
                   </td>
                   <td className="py-2.5 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleRoleToggleClick(user)}
-                        disabled={loadingId === user._id}
-                        className="px-2.5 py-1 rounded bg-[#282828] hover:bg-[#333333] text-white text-[10px] font-semibold transition-colors"
-                      >
-                        {user.role === "admin" ? t("users.makeMember") : t("users.makeAdmin")}
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUserClick(user)}
-                        disabled={loadingId === user._id}
-                        className="p-1.5 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
-                        title={t("users.removeUser")}
-                      >
-                        {loadingId === user._id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-3.5" />
-                        )}
-                      </button>
-                    </div>
+                    {user.role === "superadmin" || user.email.toLowerCase() === "arunm102301@gmail.com" ? (
+                      <span className="text-[10px] text-purple-400/80 font-mono italic">Primary Superadmin</span>
+                    ) : (
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleRoleToggleClick(user)}
+                          disabled={loadingId === user._id}
+                          className="px-2.5 py-1 rounded bg-[#282828] hover:bg-[#333333] text-white text-[10px] font-semibold transition-colors"
+                        >
+                          {user.role === "admin" ? t("users.makeMember") : t("users.makeAdmin")}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUserClick(user)}
+                          disabled={loadingId === user._id}
+                          className="p-1.5 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                          title={t("users.removeUser")}
+                        >
+                          {loadingId === user._id ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))

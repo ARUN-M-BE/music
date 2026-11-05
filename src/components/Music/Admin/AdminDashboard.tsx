@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { MusicTrack, Album, Artist, MusicUser, MusicStats } from "@/types/music";
 import { musicService } from "@/services/music.service";
 import { useLanguage } from "@/context/LanguageContext";
@@ -8,6 +9,7 @@ import { StatsCards } from "./StatsCards";
 import { TrackTable } from "./TrackTable";
 import { UsersTable } from "./UsersTable";
 import { MusicUploadModal } from "../MusicUpload/MusicUploadModal";
+import { ConfirmationModal } from "@/components/Common/ConfirmationModal";
 import {
   LayoutDashboard,
   Music,
@@ -16,10 +18,13 @@ import {
   Disc,
   Mic2,
   Trash2,
+  Edit3,
   Loader2,
+  Upload,
+  Image as ImageIcon,
+  CheckCircle,
+  X,
 } from "lucide-react";
-import Image from "next/image";
-import { ConfirmationModal } from "@/components/Common/ConfirmationModal";
 
 export function AdminDashboard() {
   const { t } = useLanguage();
@@ -43,6 +48,17 @@ export function AdminDashboard() {
   const [newAlbumName, setNewAlbumName] = useState("");
   const [newAlbumImage, setNewAlbumImage] = useState("");
   const [newAlbumFileId, setNewAlbumFileId] = useState("");
+  const [isUploadingAlbumImg, setIsUploadingAlbumImg] = useState(false);
+  const albumFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Edit Album Modal State
+  const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
+  const [editAlbumName, setEditAlbumName] = useState("");
+  const [editAlbumImage, setEditAlbumImage] = useState("");
+  const [editAlbumFileId, setEditAlbumFileId] = useState("");
+  const [isUploadingEditAlbumImg, setIsUploadingEditAlbumImg] = useState(false);
+  const [isUpdatingAlbum, setIsUpdatingAlbum] = useState(false);
+  const editAlbumFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // New Artist Form State
   const [newArtistName, setNewArtistName] = useState("");
@@ -50,6 +66,19 @@ export function AdminDashboard() {
   const [newArtistInstagram, setNewArtistInstagram] = useState("");
   const [newArtistTwitter, setNewArtistTwitter] = useState("");
   const [newArtistFileId, setNewArtistFileId] = useState("");
+  const [isUploadingArtistImg, setIsUploadingArtistImg] = useState(false);
+  const artistFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Edit Artist Modal State
+  const [editingArtist, setEditingArtist] = useState<Artist | null>(null);
+  const [editArtistName, setEditArtistName] = useState("");
+  const [editArtistImage, setEditArtistImage] = useState("");
+  const [editArtistInstagram, setEditArtistInstagram] = useState("");
+  const [editArtistTwitter, setEditArtistTwitter] = useState("");
+  const [editArtistFileId, setEditArtistFileId] = useState("");
+  const [isUploadingEditArtistImg, setIsUploadingEditArtistImg] = useState(false);
+  const [isUpdatingArtist, setIsUpdatingArtist] = useState(false);
+  const editArtistFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Confirmation Modal State
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -62,19 +91,27 @@ export function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [metricsData, songsData, albumsData, artistsData, usersData] = await Promise.all([
-        musicService.getMetrics(),
+      const [songsData, albumsData, artistsData, usersData] = await Promise.all([
         musicService.getSongs(),
         musicService.getAlbums(),
         musicService.getArtists(),
         musicService.getUsers(),
       ]);
 
-      setStats(metricsData);
-      setTracks(songsData);
-      setAlbums(albumsData);
-      setArtists(artistsData);
-      setUsers(usersData);
+      const totalPlays = (songsData || []).reduce((sum, s) => sum + (s.playsCount || 0), 0);
+
+      setStats({
+        totalSongs: (songsData || []).length,
+        totalAlbums: (albumsData || []).length,
+        totalArtists: (artistsData || []).length,
+        totalUsers: (usersData || []).length,
+        totalPlays,
+      });
+
+      setTracks(songsData || []);
+      setAlbums(albumsData || []);
+      setArtists(artistsData || []);
+      setUsers(usersData || []);
     } catch (err) {
       console.error("Failed to load admin data:", err);
     } finally {
@@ -101,6 +138,22 @@ export function AdminDashboard() {
     setTracks((prev) => prev.map((t) => (t._id === updated._id ? updated : t)));
   };
 
+  // ================= ALBUM HANDLERS =================
+  const handleUploadAlbumImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAlbumImg(true);
+    try {
+      const { url, fileId } = await musicService.uploadMedia(file);
+      setNewAlbumImage(url);
+      setNewAlbumFileId(fileId);
+    } catch (err) {
+      console.error("Album artwork upload error:", err);
+    } finally {
+      setIsUploadingAlbumImg(false);
+    }
+  };
+
   const handleCreateAlbum = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAlbumName.trim() || !newAlbumImage.trim()) return;
@@ -113,8 +166,67 @@ export function AdminDashboard() {
       setAlbums((prev) => [created, ...prev]);
       setNewAlbumName("");
       setNewAlbumImage("");
+      setNewAlbumFileId("");
+      setStats((prev) => ({ ...prev, totalAlbums: prev.totalAlbums + 1 }));
     } catch (err) {
       console.error("Create album failed:", err);
+    }
+  };
+
+  const openEditAlbumModal = (album: Album) => {
+    setEditingAlbum(album);
+    setEditAlbumName(album.name);
+    setEditAlbumImage(album.imageURL);
+    setEditAlbumFileId(album.fileId);
+  };
+
+  const handleUploadEditAlbumImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingEditAlbumImg(true);
+    try {
+      const { url, fileId } = await musicService.uploadMedia(file);
+      setEditAlbumImage(url);
+      setEditAlbumFileId(fileId);
+    } catch (err) {
+      console.error("Edit album artwork upload error:", err);
+    } finally {
+      setIsUploadingEditAlbumImg(false);
+    }
+  };
+
+  const handleUpdateAlbum = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAlbum || !editAlbumName.trim() || !editAlbumImage.trim()) return;
+    setIsUpdatingAlbum(true);
+    try {
+      const updated = await musicService.updateAlbum(editingAlbum._id, {
+        name: editAlbumName.trim(),
+        imageURL: editAlbumImage.trim(),
+        fileId: editAlbumFileId,
+      });
+      setAlbums((prev) => prev.map((a) => (a._id === updated._id ? updated : a)));
+      setEditingAlbum(null);
+    } catch (err) {
+      console.error("Update album failed:", err);
+    } finally {
+      setIsUpdatingAlbum(false);
+    }
+  };
+
+  // ================= ARTIST HANDLERS =================
+  const handleUploadArtistImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingArtistImg(true);
+    try {
+      const { url, fileId } = await musicService.uploadMedia(file);
+      setNewArtistImage(url);
+      setNewArtistFileId(fileId);
+    } catch (err) {
+      console.error("Artist photo upload error:", err);
+    } finally {
+      setIsUploadingArtistImg(false);
     }
   };
 
@@ -134,12 +246,59 @@ export function AdminDashboard() {
       setNewArtistImage("");
       setNewArtistInstagram("");
       setNewArtistTwitter("");
+      setNewArtistFileId("");
       setStats((prev) => ({ ...prev, totalArtists: prev.totalArtists + 1 }));
     } catch (err) {
       console.error("Create artist failed:", err);
     }
   };
 
+  const openEditArtistModal = (artist: Artist) => {
+    setEditingArtist(artist);
+    setEditArtistName(artist.name);
+    setEditArtistImage(artist.imageURL);
+    setEditArtistInstagram(artist.instagram);
+    setEditArtistTwitter(artist.twetter || "");
+    setEditArtistFileId(artist.fileId);
+  };
+
+  const handleUploadEditArtistImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingEditArtistImg(true);
+    try {
+      const { url, fileId } = await musicService.uploadMedia(file);
+      setEditArtistImage(url);
+      setEditArtistFileId(fileId);
+    } catch (err) {
+      console.error("Edit artist photo upload error:", err);
+    } finally {
+      setIsUploadingEditArtistImg(false);
+    }
+  };
+
+  const handleUpdateArtist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingArtist || !editArtistName.trim() || !editArtistImage.trim()) return;
+    setIsUpdatingArtist(true);
+    try {
+      const updated = await musicService.updateArtist(editingArtist._id, {
+        name: editArtistName.trim(),
+        imageURL: editArtistImage.trim(),
+        instagram: editArtistInstagram.trim(),
+        twetter: editArtistTwitter.trim(),
+        fileId: editArtistFileId,
+      });
+      setArtists((prev) => prev.map((a) => (a._id === updated._id ? updated : a)));
+      setEditingArtist(null);
+    } catch (err) {
+      console.error("Update artist failed:", err);
+    } finally {
+      setIsUpdatingArtist(false);
+    }
+  };
+
+  // ================= DELETE HANDLER =================
   const confirmDeleteTarget = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
@@ -172,11 +331,11 @@ export function AdminDashboard() {
 
   const tabs = [
     { id: "overview", label: t("admin.tabOverview"), icon: LayoutDashboard },
-    { id: "songs", label: t("admin.tabSongs"), icon: Music },
+    { id: "songs", label: `${t("admin.tabSongs")} (${tracks.length})`, icon: Music },
     { id: "upload", label: t("admin.tabUpload"), icon: PlusCircle },
-    { id: "albums", label: t("admin.tabAlbums"), icon: Disc },
-    { id: "artists", label: t("admin.tabArtists"), icon: Mic2 },
-    { id: "users", label: t("admin.tabUsers"), icon: Users },
+    { id: "albums", label: `${t("admin.tabAlbums")} (${albums.length})`, icon: Disc },
+    { id: "artists", label: `${t("admin.tabArtists")} (${artists.length})`, icon: Mic2 },
+    { id: "users", label: `${t("admin.tabUsers")} (${users.length})`, icon: Users },
   ];
 
   return (
@@ -186,8 +345,8 @@ export function AdminDashboard() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
             <span>{t("admin.title")}</span>
-            <span className="text-xs font-mono font-normal px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-              RBAC ADMIN
+            <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              SUPERADMIN NEXUS
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-[#b3b3b3] mt-1">{t("admin.subtitle")}</p>
@@ -259,38 +418,88 @@ export function AdminDashboard() {
         </div>
       )}
 
+      {/* ================= ALBUMS TAB ================= */}
       {activeTab === "albums" && (
         <div className="space-y-6">
-          {/* Create Album Form */}
+          {/* Create Album Form with File Upload & URL */}
           <form
             onSubmit={handleCreateAlbum}
-            className="p-4 rounded-xl bg-[#181818] border border-[#282828] flex flex-wrap items-center gap-3"
+            className="p-5 rounded-2xl bg-[#181818] border border-[#282828] space-y-4"
           >
-            <input
-              type="text"
-              required
-              placeholder="New album name..."
-              value={newAlbumName}
-              onChange={(e) => setNewAlbumName(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none flex-1 min-w-[200px]"
-            />
-            <input
-              type="text"
-              required
-              placeholder="Artwork image URL..."
-              value={newAlbumImage}
-              onChange={(e) => setNewAlbumImage(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none flex-1 min-w-[200px]"
-            />
-            <button
-              type="submit"
-              className="h-10 px-5 rounded-lg bg-[#1db954] hover:bg-[#1ed760] text-black font-bold text-xs"
-            >
-              {t("admin.addNewAlbum")}
-            </button>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                Create New Album
+              </span>
+              {isUploadingAlbumImg && (
+                <span className="text-xs text-[#1db954] flex items-center gap-1.5 font-medium">
+                  <Loader2 className="size-3.5 animate-spin" /> Uploading artwork to ImageKit...
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                type="text"
+                required
+                placeholder="Album title..."
+                value={newAlbumName}
+                onChange={(e) => setNewAlbumName(e.target.value)}
+                className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none"
+              />
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  required
+                  placeholder="Artwork URL or upload..."
+                  value={newAlbumImage}
+                  onChange={(e) => setNewAlbumImage(e.target.value)}
+                  className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none flex-1 min-w-0"
+                />
+
+                <input
+                  ref={albumFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUploadAlbumImage}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => albumFileInputRef.current?.click()}
+                  disabled={isUploadingAlbumImg}
+                  className="h-10 px-3 rounded-lg bg-[#2e2e2e] hover:bg-[#383838] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors"
+                  title="Upload artwork image"
+                >
+                  <Upload className="size-3.5 text-[#1db954]" />
+                  <span>Upload</span>
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!newAlbumName.trim() || !newAlbumImage.trim() || isUploadingAlbumImg}
+                className="h-10 px-5 rounded-lg bg-[#1db954] hover:bg-[#1ed760] text-black font-extrabold text-xs transition-transform active:scale-95 disabled:opacity-50"
+              >
+                {t("admin.addNewAlbum")}
+              </button>
+            </div>
+
+            {/* Preview Thumbnail */}
+            {newAlbumImage && (
+              <div className="flex items-center gap-3 pt-2">
+                <div className="relative size-12 rounded-lg overflow-hidden bg-[#242424] border border-white/10 shrink-0">
+                  <Image src={newAlbumImage} alt="Preview" fill sizes="48px" className="object-cover" unoptimized />
+                </div>
+                <span className="text-[11px] text-[#b3b3b3] truncate flex items-center gap-1">
+                  <CheckCircle className="size-3.5 text-[#1db954]" /> Artwork verified
+                </span>
+              </div>
+            )}
           </form>
 
-          {/* Album Grid */}
+          {/* Album Grid with Edit & Delete Actions */}
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
             {albums.map((album) => (
               <div
@@ -306,67 +515,140 @@ export function AdminDashboard() {
                     className="object-cover"
                     unoptimized
                   />
-                  <button
-                    onClick={() =>
-                      setDeleteTarget({
-                        type: "album",
-                        id: album._id,
-                        name: album.name,
-                        fileId: album.fileId,
-                      })
-                    }
-                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-red-400 opacity-0 group-hover:opacity-100 hover:scale-110 transition-all"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
+
+                  {/* Action Overlay */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => openEditAlbumModal(album)}
+                      className="p-1.5 rounded-full bg-black/70 text-white hover:bg-white/20 transition-all"
+                      title="Edit Album"
+                    >
+                      <Edit3 className="size-3.5" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setDeleteTarget({
+                          type: "album",
+                          id: album._id,
+                          name: album.name,
+                          fileId: album.fileId,
+                        })
+                      }
+                      className="p-1.5 rounded-full bg-black/70 text-red-400 hover:bg-red-500/20 transition-all"
+                      title="Delete Album"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <span className="font-semibold text-xs text-white truncate mt-2">{album.name}</span>
+                <span className="text-[10px] text-[#727272]">Album</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
+      {/* ================= ARTISTS TAB ================= */}
       {activeTab === "artists" && (
         <div className="space-y-6">
-          {/* Create Artist Form */}
+          {/* Create Artist Form with File Upload & URL */}
           <form
             onSubmit={handleCreateArtist}
-            className="p-4 rounded-xl bg-[#181818] border border-[#282828] flex flex-wrap items-center gap-3"
+            className="p-5 rounded-2xl bg-[#181818] border border-[#282828] space-y-4"
           >
-            <input
-              type="text"
-              required
-              placeholder="Artist name..."
-              value={newArtistName}
-              onChange={(e) => setNewArtistName(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none flex-1 min-w-[150px]"
-            />
-            <input
-              type="text"
-              required
-              placeholder="Photo image URL..."
-              value={newArtistImage}
-              onChange={(e) => setNewArtistImage(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none flex-1 min-w-[150px]"
-            />
-            <input
-              type="text"
-              required
-              placeholder="Instagram handle..."
-              value={newArtistInstagram}
-              onChange={(e) => setNewArtistInstagram(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none flex-1 min-w-[150px]"
-            />
-            <button
-              type="submit"
-              className="h-10 px-5 rounded-lg bg-[#1db954] hover:bg-[#1ed760] text-black font-bold text-xs"
-            >
-              {t("admin.addNewArtist")}
-            </button>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                Create New Artist
+              </span>
+              {isUploadingArtistImg && (
+                <span className="text-xs text-[#1db954] flex items-center gap-1.5 font-medium">
+                  <Loader2 className="size-3.5 animate-spin" /> Uploading photo to ImageKit...
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <input
+                type="text"
+                required
+                placeholder="Artist name..."
+                value={newArtistName}
+                onChange={(e) => setNewArtistName(e.target.value)}
+                className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none"
+              />
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  required
+                  placeholder="Photo URL or upload..."
+                  value={newArtistImage}
+                  onChange={(e) => setNewArtistImage(e.target.value)}
+                  className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none flex-1 min-w-0"
+                />
+
+                <input
+                  ref={artistFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUploadArtistImage}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => artistFileInputRef.current?.click()}
+                  disabled={isUploadingArtistImg}
+                  className="h-10 px-3 rounded-lg bg-[#2e2e2e] hover:bg-[#383838] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors"
+                  title="Upload artist photo"
+                >
+                  <Upload className="size-3.5 text-[#1db954]" />
+                  <span>Upload</span>
+                </button>
+              </div>
+
+              <input
+                type="text"
+                required
+                placeholder="Instagram handle (e.g. arun_official)..."
+                value={newArtistInstagram}
+                onChange={(e) => setNewArtistInstagram(e.target.value)}
+                className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none"
+              />
+
+              <input
+                type="text"
+                placeholder="Twitter handle (optional)..."
+                value={newArtistTwitter}
+                onChange={(e) => setNewArtistTwitter(e.target.value)}
+                className="h-10 px-3 rounded-lg bg-[#242424] text-xs text-white border border-[#383838] focus:border-[#1db954] outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              {newArtistImage ? (
+                <div className="flex items-center gap-2">
+                  <div className="relative size-9 rounded-full overflow-hidden bg-[#242424] border border-white/10 shrink-0">
+                    <Image src={newArtistImage} alt="Preview" fill sizes="36px" className="object-cover" unoptimized />
+                  </div>
+                  <span className="text-[11px] text-[#b3b3b3]">Photo ready</span>
+                </div>
+              ) : (
+                <div />
+              )}
+
+              <button
+                type="submit"
+                disabled={!newArtistName.trim() || !newArtistImage.trim() || !newArtistInstagram.trim() || isUploadingArtistImg}
+                className="h-10 px-6 rounded-lg bg-[#1db954] hover:bg-[#1ed760] text-black font-extrabold text-xs transition-transform active:scale-95 disabled:opacity-50"
+              >
+                {t("admin.addNewArtist")}
+              </button>
+            </div>
           </form>
 
-          {/* Artist Circles */}
+          {/* Artist Circles with Edit & Delete Actions */}
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
             {artists.map((art) => (
               <div
@@ -382,19 +664,31 @@ export function AdminDashboard() {
                     className="object-cover"
                     unoptimized
                   />
-                  <button
-                    onClick={() =>
-                      setDeleteTarget({
-                        type: "artist",
-                        id: art._id,
-                        name: art.name,
-                        fileId: art.fileId,
-                      })
-                    }
-                    className="absolute inset-0 bg-black/60 flex items-center justify-center text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+
+                  {/* Action Overlay */}
+                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => openEditArtistModal(art)}
+                      className="p-1.5 rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
+                      title="Edit Artist"
+                    >
+                      <Edit3 className="size-3.5" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setDeleteTarget({
+                          type: "artist",
+                          id: art._id,
+                          name: art.name,
+                          fileId: art.fileId,
+                        })
+                      }
+                      className="p-1.5 rounded-full bg-red-600/60 text-white hover:bg-red-600 transition-colors"
+                      title="Delete Artist"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <span className="font-semibold text-xs text-white truncate mt-2 w-full">{art.name}</span>
                 <span className="text-[10px] text-[#b3b3b3] truncate">@{art.instagram}</span>
@@ -404,8 +698,197 @@ export function AdminDashboard() {
         </div>
       )}
 
+      {/* ================= USERS TAB ================= */}
       {activeTab === "users" && (
         <UsersTable users={users} onUserUpdated={loadData} />
+      )}
+
+      {/* ================= EDIT ALBUM MODAL ================= */}
+      {editingAlbum && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setEditingAlbum(null)} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md p-6 rounded-2xl bg-[#181818] border border-white/10 shadow-2xl space-y-4 text-left z-10 animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Disc className="size-4 text-[#1db954]" /> Edit Album
+              </h3>
+              <button onClick={() => setEditingAlbum(null)} className="text-[#b3b3b3] hover:text-white">
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateAlbum} className="space-y-4">
+              <div>
+                <label className="text-[11px] text-[#b3b3b3] block mb-1">Album Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={editAlbumName}
+                  onChange={(e) => setEditAlbumName(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg bg-[#242424] border border-[#383838] focus:border-[#1db954] text-xs text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-[#b3b3b3] block mb-1">Artwork Image *</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={editAlbumImage}
+                    onChange={(e) => setEditAlbumImage(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-[#242424] border border-[#383838] focus:border-[#1db954] text-xs text-white outline-none flex-1 min-w-0"
+                  />
+                  <input
+                    ref={editAlbumFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadEditAlbumImage}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => editAlbumFileInputRef.current?.click()}
+                    disabled={isUploadingEditAlbumImg}
+                    className="h-10 px-3 rounded-lg bg-[#2e2e2e] hover:bg-[#383838] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                  >
+                    <Upload className="size-3.5 text-[#1db954]" />
+                    <span>Upload</span>
+                  </button>
+                </div>
+              </div>
+
+              {editAlbumImage && (
+                <div className="relative size-16 rounded-lg overflow-hidden bg-[#242424] border border-white/10">
+                  <Image src={editAlbumImage} alt="Album artwork" fill sizes="64px" className="object-cover" unoptimized />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingAlbum(null)}
+                  className="px-4 py-2 rounded-full bg-[#242424] text-xs font-semibold text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingAlbum || !editAlbumName.trim() || !editAlbumImage.trim()}
+                  className="px-5 py-2 rounded-full bg-[#1db954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center gap-2"
+                >
+                  {isUpdatingAlbum && <Loader2 className="size-3.5 animate-spin" />}
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= EDIT ARTIST MODAL ================= */}
+      {editingArtist && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setEditingArtist(null)} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md p-6 rounded-2xl bg-[#181818] border border-white/10 shadow-2xl space-y-4 text-left z-10 animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Mic2 className="size-4 text-[#1db954]" /> Edit Artist
+              </h3>
+              <button onClick={() => setEditingArtist(null)} className="text-[#b3b3b3] hover:text-white">
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateArtist} className="space-y-4">
+              <div>
+                <label className="text-[11px] text-[#b3b3b3] block mb-1">Artist Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editArtistName}
+                  onChange={(e) => setEditArtistName(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg bg-[#242424] border border-[#383838] focus:border-[#1db954] text-xs text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-[#b3b3b3] block mb-1">Photo Image *</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={editArtistImage}
+                    onChange={(e) => setEditArtistImage(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-[#242424] border border-[#383838] focus:border-[#1db954] text-xs text-white outline-none flex-1 min-w-0"
+                  />
+                  <input
+                    ref={editArtistFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadEditArtistImage}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => editArtistFileInputRef.current?.click()}
+                    disabled={isUploadingEditArtistImg}
+                    className="h-10 px-3 rounded-lg bg-[#2e2e2e] hover:bg-[#383838] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                  >
+                    <Upload className="size-3.5 text-[#1db954]" />
+                    <span>Upload</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-[#b3b3b3] block mb-1">Instagram Handle *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editArtistInstagram}
+                    onChange={(e) => setEditArtistInstagram(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-[#242424] border border-[#383838] focus:border-[#1db954] text-xs text-white outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-[#b3b3b3] block mb-1">Twitter Handle</label>
+                  <input
+                    type="text"
+                    value={editArtistTwitter}
+                    onChange={(e) => setEditArtistTwitter(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-[#242424] border border-[#383838] focus:border-[#1db954] text-xs text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              {editArtistImage && (
+                <div className="relative size-16 rounded-full overflow-hidden bg-[#242424] border border-white/10">
+                  <Image src={editArtistImage} alt="Artist photo" fill sizes="64px" className="object-cover" unoptimized />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingArtist(null)}
+                  className="px-4 py-2 rounded-full bg-[#242424] text-xs font-semibold text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingArtist || !editArtistName.trim() || !editArtistImage.trim()}
+                  className="px-5 py-2 rounded-full bg-[#1db954] hover:bg-[#1ed760] text-black font-extrabold text-xs flex items-center gap-2"
+                >
+                  {isUpdatingArtist && <Loader2 className="size-3.5 animate-spin" />}
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Action Confirmation Modal */}
@@ -428,4 +911,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-

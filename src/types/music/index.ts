@@ -41,6 +41,8 @@ export interface MusicUser {
   imageURL?: string;
   user_id: string;
   email_verified: boolean;
+  status?: "approved" | "pending";
+  favorites?: string[];
   role: "admin" | "member" | "superadmin";
   auth_time: string;
   createdAt?: string;

@@ -43,8 +43,10 @@ export interface IUser {
   imageURL?: string;
   user_id: string;
   email_verified: boolean;
+  status?: "approved" | "pending";
   role: "admin" | "member" | "superadmin";
   auth_time: string;
+  favorites?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -93,8 +95,10 @@ const userSchema = new Schema(
     imageURL: { type: String, default: "" },
     user_id: { type: String, required: true },
     email_verified: { type: Boolean, default: false },
+    status: { type: String, enum: ["approved", "pending"], default: "approved" },
     role: { type: String, default: "member" },
     auth_time: { type: String, default: "" },
+    favorites: { type: [String], default: [] },
   },
   { timestamps: true }
 );

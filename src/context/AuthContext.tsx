@@ -7,6 +7,7 @@ interface AuthContextType {
   user: MusicUser | null;
   isLoading: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   login: (userData: Partial<MusicUser>) => Promise<MusicUser>;
   loginWithGoogle: (googleUser: {
     name: string;
@@ -167,7 +168,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isSuperAdmin =
+    user?.role === "superadmin" ||
+    user?.email?.toLowerCase() === "arunm102301@gmail.com" ||
+    user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+  const isAdmin = isSuperAdmin || user?.role === "admin";
 
   return (
     <AuthContext.Provider
@@ -175,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         isAdmin,
+        isSuperAdmin,
         login,
         loginWithGoogle,
         logout,

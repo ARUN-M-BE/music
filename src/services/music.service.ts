@@ -107,6 +107,17 @@ class MusicService {
     return data.album;
   }
 
+  async updateAlbum(id: string, input: Partial<CreateAlbumInput>): Promise<Album> {
+    const res = await fetch(`${this.baseUrl}/albums/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error("Failed to update album");
+    const data = await res.json();
+    return data.album;
+  }
+
   async deleteAlbum(id: string, fileId?: string): Promise<boolean> {
     if (fileId) await this.deleteMedia(fileId).catch(console.warn);
     const res = await fetch(`${this.baseUrl}/albums/${id}`, { method: "DELETE" });
@@ -137,6 +148,17 @@ class MusicService {
     return data.artist;
   }
 
+  async updateArtist(id: string, input: Partial<CreateArtistInput>): Promise<Artist> {
+    const res = await fetch(`${this.baseUrl}/artists/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error("Failed to update artist");
+    const data = await res.json();
+    return data.artist;
+  }
+
   async deleteArtist(id: string, fileId?: string): Promise<boolean> {
     if (fileId) await this.deleteMedia(fileId).catch(console.warn);
     const res = await fetch(`${this.baseUrl}/artists/${id}`, { method: "DELETE" });
@@ -156,11 +178,20 @@ class MusicService {
     }
   }
 
-  async updateUserRole(userId: string, role: "admin" | "member"): Promise<boolean> {
+  async updateUserRole(userId: string, role: "admin" | "member" | "superadmin"): Promise<boolean> {
     const res = await fetch(`${this.baseUrl}/users/${userId}/role`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role }),
+    });
+    return res.ok;
+  }
+
+  async updateUserStatus(userId: string, status: "approved" | "pending"): Promise<boolean> {
+    const res = await fetch(`${this.baseUrl}/users/${userId}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
     });
     return res.ok;
   }
@@ -170,6 +201,33 @@ class MusicService {
       method: "DELETE",
     });
     return res.ok;
+  }
+
+  // ================= FAVORITES PERSISTENCE =================
+  async getUserFavorites(): Promise<string[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/users/favorites`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.favorites || [];
+    } catch {
+      return [];
+    }
+  }
+
+  async toggleUserFavorite(songId: string): Promise<string[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/users/favorites`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ songId }),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.favorites || [];
+    } catch {
+      return [];
+    }
   }
 
   // ================= MEDIA UPLOADS =================

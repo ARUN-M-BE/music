@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from "react";
 import { MusicTrack, RepeatMode } from "@/types/music";
+import { musicService } from "@/services/music.service";
 
 interface MusicPlayerContextType {
   currentTrack: MusicTrack | null;
@@ -61,7 +62,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
   // Shared single HTMLAudioElement
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Load saved volume and favorites from localStorage
+  // Load saved volume and favorites from localStorage & server
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -79,6 +80,16 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       } catch (e) {
         console.warn("Error reading local storage preferences:", e);
       }
+
+      // Sync with user's saved favorites in MongoDB if logged in
+      musicService
+        .getUserFavorites()
+        .then((serverFavs) => {
+          if (serverFavs && serverFavs.length > 0) {
+            setFavorites((prev) => Array.from(new Set([...prev, ...serverFavs])));
+          }
+        })
+        .catch(() => {});
     }
   }, []);
 
@@ -320,6 +331,9 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       }
       return updated;
     });
+
+    // Persist to user's MongoDB account
+    musicService.toggleUserFavorite(trackId).catch(() => {});
   }, []);
 
   const isFavorite = useCallback(
