@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "build:cloudflare": "opennextjs-cloudflare build"
+    
   },
   "dependencies": {
     "clsx": "^2.1.1",
