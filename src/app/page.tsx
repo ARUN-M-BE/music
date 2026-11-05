@@ -49,13 +49,98 @@ export default function MusicHomePage() {
   const recentTracks = tracks.slice(0, 10);
 
   const categories = [
-    { name: "Pop", color: "from-pink-600 to-rose-700" },
-    { name: "Rock", color: "from-orange-600 to-amber-700" },
-    { name: "Hip Hop", color: "from-purple-600 to-indigo-800" },
-    { name: "R&B", color: "from-blue-600 to-cyan-800" },
-    { name: "Electronic", color: "from-emerald-600 to-teal-800" },
-    { name: "Jazz", color: "from-yellow-600 to-orange-800" },
-  ];
+  // Mainstream
+  { name: "Pop", color: "from-pink-600 to-rose-700" },
+  { name: "Rock", color: "from-orange-600 to-amber-700" },
+  { name: "Hip Hop", color: "from-purple-600 to-indigo-800" },
+  { name: "R&B", color: "from-blue-600 to-cyan-800" },
+  { name: "Electronic", color: "from-emerald-600 to-teal-800" },
+  { name: "Dance", color: "from-fuchsia-600 to-purple-800" },
+
+  // Rock genres
+  { name: "Alternative Rock", color: "from-red-600 to-rose-800" },
+  { name: "Indie Rock", color: "from-orange-500 to-red-700" },
+  { name: "Hard Rock", color: "from-gray-600 to-slate-900" },
+  { name: "Heavy Metal", color: "from-zinc-700 to-black" },
+  { name: "Punk Rock", color: "from-rose-700 to-red-900" },
+  { name: "Progressive Rock", color: "from-indigo-600 to-blue-900" },
+  { name: "Grunge", color: "from-stone-600 to-neutral-900" },
+
+  // Hip Hop
+  { name: "Rap", color: "from-violet-600 to-purple-900" },
+  { name: "Trap", color: "from-purple-700 to-fuchsia-900" },
+  { name: "Drill", color: "from-slate-700 to-gray-950" },
+  { name: "Old School Hip Hop", color: "from-amber-600 to-orange-900" },
+  { name: "Conscious Hip Hop", color: "from-green-600 to-emerald-900" },
+  { name: "Lo-Fi Hip Hop", color: "from-indigo-500 to-violet-800" },
+
+  // Electronic
+  { name: "EDM", color: "from-cyan-500 to-blue-800" },
+  { name: "House", color: "from-teal-500 to-emerald-800" },
+  { name: "Techno", color: "from-blue-700 to-indigo-950" },
+  { name: "Trance", color: "from-violet-600 to-indigo-900" },
+  { name: "Dubstep", color: "from-lime-600 to-green-900" },
+  { name: "Drum and Bass", color: "from-sky-600 to-blue-950" },
+  { name: "Ambient", color: "from-cyan-600 to-teal-900" },
+  { name: "Synthwave", color: "from-fuchsia-600 to-indigo-900" },
+  { name: "Disco", color: "from-pink-500 to-purple-800" },
+
+  // R&B and Soul
+  { name: "Contemporary R&B", color: "from-blue-600 to-indigo-900" },
+  { name: "Neo Soul", color: "from-amber-600 to-yellow-900" },
+  { name: "Soul", color: "from-orange-600 to-red-900" },
+  { name: "Funk", color: "from-yellow-600 to-orange-900" },
+  { name: "Motown", color: "from-rose-600 to-pink-900" },
+
+  // Jazz and Blues
+  { name: "Jazz", color: "from-yellow-600 to-orange-800" },
+  { name: "Smooth Jazz", color: "from-sky-600 to-indigo-800" },
+  { name: "Bebop", color: "from-purple-600 to-blue-900" },
+  { name: "Blues", color: "from-blue-800 to-slate-950" },
+  { name: "Soul Jazz", color: "from-amber-700 to-red-900" },
+  { name: "Swing", color: "from-orange-500 to-amber-900" },
+
+  // Indian genres
+  { name: "Indian Classical", color: "from-orange-600 to-amber-900" },
+  { name: "Carnatic", color: "from-orange-500 to-red-800" },
+  { name: "Hindustani Classical", color: "from-yellow-600 to-orange-900" },
+  { name: "Tamil Film Songs", color: "from-rose-600 to-pink-900" },
+  { name: "Tamil Indie", color: "from-purple-600 to-violet-900" },
+  { name: "Bollywood", color: "from-pink-600 to-red-900" },
+  { name: "Indian Pop", color: "from-fuchsia-600 to-purple-900" },
+  { name: "Bhangra", color: "from-yellow-500 to-orange-800" },
+  { name: "Punjabi", color: "from-orange-500 to-red-800" },
+  { name: "Telugu Songs", color: "from-red-600 to-orange-900" },
+  { name: "Malayalam Songs", color: "from-green-600 to-teal-900" },
+  { name: "Kannada Songs", color: "from-amber-600 to-yellow-900" },
+  { name: "Devotional", color: "from-yellow-500 to-orange-800" },
+  { name: "Ghazal", color: "from-indigo-600 to-purple-900" },
+  { name: "Qawwali", color: "from-emerald-600 to-green-900" },
+  { name: "Melody", color: "from-emerald-600 to-green-900" },
+
+  // Other world genres
+  { name: "Country", color: "from-amber-700 to-yellow-950" },
+  { name: "Folk", color: "from-green-600 to-lime-900" },
+  { name: "Reggae", color: "from-green-500 to-yellow-800" },
+  { name: "Latin", color: "from-red-600 to-orange-800" },
+  { name: "Afrobeats", color: "from-yellow-600 to-green-900" },
+  { name: "K-Pop", color: "from-pink-500 to-violet-900" },
+  { name: "J-Pop", color: "from-rose-500 to-pink-900" },
+  { name: "Gospel", color: "from-blue-600 to-indigo-900" },
+  { name: "Opera", color: "from-purple-700 to-slate-950" },
+  { name: "Classical", color: "from-stone-500 to-zinc-900" },
+
+  // Mood and listening styles
+  { name: "Acoustic", color: "from-lime-600 to-green-900" },
+  { name: "Instrumental", color: "from-teal-600 to-cyan-900" },
+  { name: "Lo-Fi", color: "from-indigo-500 to-purple-900" },
+  { name: "Chillout", color: "from-cyan-500 to-blue-900" },
+  { name: "Meditation", color: "from-emerald-500 to-teal-900" },
+  { name: "Soundtracks", color: "from-violet-600 to-indigo-950" },
+  { name: "Anime", color: "from-pink-600 to-purple-900" },
+  { name: "Christmas", color: "from-red-600 to-green-900" },
+  { name: "Kids Music", color: "from-yellow-500 to-pink-800" },
+];
 
   return (
     <div className="space-y-10">
