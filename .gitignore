@@ -10,3 +10,10 @@ tsconfig.tsbuildinfo
 coverage/
 *.log
 .DS_Store
+
+# Local tooling artefacts (never commit audit/scan output)
+.audit*.json
+.eslint.json
+.env.example.local
+.dev.vars
+.wrangler/

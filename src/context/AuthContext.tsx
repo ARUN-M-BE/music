@@ -8,171 +8,133 @@ interface AuthContextType {
   isLoading: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  login: (userData: Partial<MusicUser>) => Promise<MusicUser>;
-  loginWithGoogle: (googleUser: {
-    name: string;
-    email: string;
-    imageURL?: string;
-    user_id?: string;
-    email_verified?: boolean;
-  }) => Promise<MusicUser>;
+  /** Exchanges a Firebase ID token for an HttpOnly session cookie. */
+  loginWithGoogle: (idToken: string) => Promise<MusicUser>;
+  /** Read-only demo session issued by the server. */
+  loginAsGuest: () => Promise<MusicUser>;
+  /** @deprecated Alias of loginAsGuest, kept for backwards compatibility. */
+  login: (userData?: Partial<MusicUser>) => Promise<MusicUser>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_EMAIL = "arunm102301@gmail.com";
+const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<MusicUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Initialize session from localStorage or cookie
+  /**
+   * The session lives in an HttpOnly cookie and is verified by the server.
+   * Nothing security relevant is read from localStorage any more.
+   */
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("music_user");
-      if (stored) {
-        const parsed: MusicUser = JSON.parse(stored);
-        // Ensure role is superadmin if matches admin email
-        if (
-          parsed.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
-          parsed.email?.toLowerCase() === "arun102301@gmail.com"
-        ) {
-          parsed.role = "superadmin";
+    let cancelled = false;
+
+    const loadSession = async () => {
+      try {
+        const response = await fetch("/api/auth/session", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          if (!cancelled) setUser(null);
+          return;
         }
-        setUser(parsed);
+        const data = await response.json();
+        if (!cancelled && data?.user) {
+          setUser(data.user as MusicUser);
+        }
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-    } catch (e) {
-      console.warn("Failed to read stored user session:", e);
+    };
+
+    void loadSession();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loginWithGoogle = useCallback(async (idToken: string): Promise<MusicUser> => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.user) {
+        throw new Error(data?.message || "Sign-in failed");
+      }
+
+      const authenticated = data.user as MusicUser;
+      setUser(authenticated);
+      return authenticated;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Sync user with backend database
-  const syncWithBackend = async (userData: Partial<MusicUser>): Promise<MusicUser> => {
-    const email = userData.email || "demouser.listener@gmail.com";
-    const userId = userData.user_id || `uid_${Date.now()}`;
-    const isSuperAdminUser =
-      email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
-      email.toLowerCase() === "arun102301@gmail.com" ||
-      email.toLowerCase() === "arunm102301@gmail.com";
-
-    try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: userData.name || "User",
-          email,
-          imageURL: userData.imageURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-          user_id: userId,
-          email_verified: userData.email_verified ?? true,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) {
-          const syncedUser: MusicUser = {
-            ...data.user,
-            role: isSuperAdminUser ? "superadmin" : data.user.role || "member",
-          };
-          return syncedUser;
-        }
-      }
-    } catch (err) {
-      console.warn("Could not sync user with backend, using client session:", err);
-    }
-
-    // Client fallback if network offline
-    return {
-      _id: userData._id || `user_${Date.now()}`,
-      name: userData.name || "User",
-      email,
-      imageURL: userData.imageURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-      user_id: userId,
-      email_verified: userData.email_verified ?? true,
-      role: isSuperAdminUser ? "superadmin" : userData.role || "member",
-      auth_time: new Date().toISOString(),
-    };
-  };
-
-  const saveSession = (completeUser: MusicUser) => {
-    setUser(completeUser);
-    localStorage.setItem("music_user", JSON.stringify(completeUser));
-    document.cookie = `music_auth_session=${encodeURIComponent(
-      JSON.stringify(completeUser)
-    )}; path=/; max-age=2592000; SameSite=Lax`;
-  };
-
-  const login = useCallback(async (userData: Partial<MusicUser>): Promise<MusicUser> => {
+  const loginAsGuest = useCallback(async (): Promise<MusicUser> => {
     setIsLoading(true);
-    const completeUser = await syncWithBackend(userData);
-    saveSession(completeUser);
-    setIsLoading(false);
-    return completeUser;
+    try {
+      const response = await fetch("/api/auth/guest", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.user) {
+        throw new Error(data?.message || "Guest access is unavailable");
+      }
+      const guest = data.user as MusicUser;
+      setUser(guest);
+      return guest;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const loginWithGoogle = useCallback(
-    async (googleUser: {
-      name: string;
-      email: string;
-      imageURL?: string;
-      user_id?: string;
-      email_verified?: boolean;
-    }): Promise<MusicUser> => {
-      setIsLoading(true);
-      const isSuperAdminUser =
-        googleUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
-        googleUser.email.toLowerCase() === "arun102301@gmail.com" ||
-        googleUser.email.toLowerCase() === "arunm102301@gmail.com";
-
-      const completeUser = await syncWithBackend({
-        name: googleUser.name,
-        email: googleUser.email,
-        imageURL: googleUser.imageURL,
-        user_id: googleUser.user_id || `google_${Date.now()}`,
-        email_verified: googleUser.email_verified ?? true,
-        role: isSuperAdminUser ? "superadmin" : "member",
-      });
-      saveSession(completeUser);
-      setIsLoading(false);
-      return completeUser;
-    },
-    []
+  const login = useCallback(
+    async (_userData?: Partial<MusicUser>): Promise<MusicUser> => loginAsGuest(),
+    [loginAsGuest]
   );
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem("music_user");
-    document.cookie = "music_auth_session=; path=/; max-age=0";
+    void fetch("/api/auth/session", {
+      method: "DELETE",
+      credentials: "same-origin",
+      keepalive: true,
+    }).catch(() => undefined);
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (!user) return;
     try {
-      const res = await fetch("/api/users");
-      if (res.ok) {
-        const data = await res.json();
-        const found = (data.users || data.data || []).find(
-          (u: MusicUser) => u.user_id === user.user_id || u.email === user.email
-        );
-        if (found) {
-          saveSession(found);
-        }
+      const response = await fetch("/api/auth/session", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (response.status === 401) {
+        setUser(null);
+        return;
       }
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data?.user) setUser(data.user as MusicUser);
     } catch {
-      // Ignore background refresh failure
+      // Network hiccup: keep the current state.
     }
-  }, [user]);
+  }, []);
 
-  const isSuperAdmin =
-    user?.role === "superadmin" ||
-    user?.email?.toLowerCase() === "arunm102301@gmail.com" ||
-    user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-
+  const isSuperAdmin = user?.role === "superadmin";
   const isAdmin = isSuperAdmin || user?.role === "admin";
 
   return (
@@ -182,8 +144,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAdmin,
         isSuperAdmin,
-        login,
         loginWithGoogle,
+        loginAsGuest,
+        login,
         logout,
         refreshUser,
       }}
@@ -200,3 +163,5 @@ export function useAuth() {
   }
   return context;
 }
+
+export { DEFAULT_AVATAR };

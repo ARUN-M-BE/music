@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cleanDistDir: false,
   reactStrictMode: true,
+  // Hardening: no framework fingerprint, no source maps shipped to browsers.
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [
       {

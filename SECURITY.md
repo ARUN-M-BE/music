@@ -1,21 +1,37 @@
 # Security Policy
 
-## Supported Versions
+## Reporting a vulnerability
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Report privately via GitHub *Security → Report a vulnerability*, or email the maintainer listed in
+the repository profile. Please do not open a public issue.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+Expect an acknowledgement within 72 hours. Confirmed issues are fixed on the default branch and,
+where applicable, a CVE or advisory is published afterwards.
 
-## Reporting a Vulnerability
+## Baseline controls in this project
 
-Use this section to tell people how to report a vulnerability.
+| Control | Implementation |
+| --- | --- |
+| Sessions | HMAC-SHA256 signed, `HttpOnly` + `SameSite=Lax` cookie (`Secure` in production), 7-day TTL; bump `SESSION_VERSION` to invalidate every session |
+| Authorization | `requireUser` / `requireApprovedUser` / `requireAdmin` / `requireSuperAdmin`; privileged routes re-check the authoritative role and status in MongoDB so demotions apply within 30 seconds |
+| Admin area | Middleware redirects `/admin` to `/login` unless the signed cookie carries an admin role |
+| Input handling | Zod strict schemas, ObjectId validation, allow-lists, `escapeRegex` for `$regex`, `$set` whitelists |
+| Rate limiting | Per-scope/per-identity buckets on Upstash, in-memory fallback |
+| CSRF / CORS | `SameSite=Lax` cookies plus an Origin allow-list (`ALLOWED_ORIGINS`) on state-changing `/api` calls |
+| Headers | CSP with `report-uri /api/security/csp-report`, HSTS (2 years, preload), `nosniff`, `X-Frame-Options: DENY`, Referrer-Policy, Permissions-Policy, COOP/CORP |
+| Secrets | Server-only `serverEnv` module; `.env` is git-ignored; production refuses to start without a ≥32-character `AUTH_SECRET` |
+| Uploads | Admin-only, MIME allow-list, 25 MB audio / 5 MB image caps, server-side ImageKit authorization |
+| Audit trail | `securityEvent` collection with hashed IPs, 90-day TTL, admin-only `/api/security/logs` |
+| Health | `/api/health` (public, booleans only) and `/api/integrations/health?probe=1` (admin) |
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+## If you suspect a credential leak
+
+1. Rotate the credential at the provider first — rotation, not history editing, is what ends the exposure.
+2. Update the environment and redeploy.
+3. Bump `SESSION_VERSION` to invalidate outstanding sessions.
+4. Record what was exposed and for how long.
+
+## Full audit
+
+See [SECURITY-REPORT.md](SECURITY-REPORT.md) for the complete audit, integration details, verified
+test results and outstanding action items.

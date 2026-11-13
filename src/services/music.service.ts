@@ -29,24 +29,9 @@ class MusicService {
     this.artistsCache = null;
   }
 
-  private getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("music_user");
-        if (stored) {
-          const user = JSON.parse(stored);
-          if (user.email) {
-            headers["Authorization"] = `Bearer ${user.email}`;
-            headers["x-user-email"] = user.email;
-          }
-        }
-      } catch {}
-    }
-    return headers;
-  }
+  private readonly jsonHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
 
   // ================= SONGS =================
   async getSongs(options?: FilterOptions): Promise<MusicTrack[]> {
@@ -89,7 +74,7 @@ class MusicService {
       const res = await fetch(`${this.baseUrl}/songs/${id}`);
       if (!res.ok) return null;
       const data = await res.json();
-      return data.song || data.data || null;
+      return data.song || data.data;
     } catch (err) {
       console.error("MusicService.getSongById error:", err);
       return null;
@@ -252,9 +237,10 @@ class MusicService {
   }
 
   async updateUserRole(userId: string, role: "admin" | "member" | "superadmin"): Promise<boolean> {
-    const res = await fetch(`${this.baseUrl}/users/${userId}/role`, {
+    const res = await fetch(`${this.baseUrl}/users/${encodeURIComponent(userId)}/role`, {
       method: "PUT",
-      headers: this.getHeaders(),
+      headers: this.jsonHeaders,
+      credentials: "same-origin",
       body: JSON.stringify({ role }),
     });
     if (!res.ok) {
@@ -265,9 +251,10 @@ class MusicService {
   }
 
   async updateUserStatus(userId: string, status: "approved" | "pending"): Promise<boolean> {
-    const res = await fetch(`${this.baseUrl}/users/${userId}/status`, {
+    const res = await fetch(`${this.baseUrl}/users/${encodeURIComponent(userId)}/status`, {
       method: "PUT",
-      headers: this.getHeaders(),
+      headers: this.jsonHeaders,
+      credentials: "same-origin",
       body: JSON.stringify({ status }),
     });
     if (!res.ok) {
@@ -278,9 +265,9 @@ class MusicService {
   }
 
   async deleteUser(userId: string): Promise<boolean> {
-    const res = await fetch(`${this.baseUrl}/users/${userId}`, {
+    const res = await fetch(`${this.baseUrl}/users/${encodeURIComponent(userId)}`, {
       method: "DELETE",
-      headers: this.getHeaders(),
+      credentials: "same-origin",
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -293,7 +280,7 @@ class MusicService {
   async getUserFavorites(): Promise<string[]> {
     try {
       const res = await fetch(`${this.baseUrl}/users/favorites`, {
-        headers: this.getHeaders(),
+        credentials: "same-origin",
       });
       if (!res.ok) return [];
       const data = await res.json();
@@ -307,7 +294,8 @@ class MusicService {
     try {
       const res = await fetch(`${this.baseUrl}/users/favorites`, {
         method: "POST",
-        headers: this.getHeaders(),
+        headers: this.jsonHeaders,
+        credentials: "same-origin",
         body: JSON.stringify({ songId }),
       });
       if (!res.ok) return [];
@@ -355,8 +343,9 @@ class MusicService {
   async deleteMedia(fileId: string): Promise<boolean> {
     if (!fileId) return false;
     try {
-      const res = await fetch(`${this.baseUrl}/media/delete/${fileId}`, {
+      const res = await fetch(`${this.baseUrl}/media/delete/${encodeURIComponent(fileId)}`, {
         method: "DELETE",
+        credentials: "same-origin",
       });
       return res.ok;
     } catch {
@@ -470,7 +459,7 @@ class MusicService {
       const params = new URLSearchParams();
       if (userId) params.set("userId", userId);
       const res = await fetch(`${this.baseUrl}/music/playlists?${params.toString()}`, {
-        headers: this.getHeaders(),
+        credentials: "same-origin",
       });
       if (!res.ok) return [];
       const data = await res.json();
@@ -491,7 +480,8 @@ class MusicService {
     try {
       const res = await fetch(`${this.baseUrl}/music/playlists`, {
         method: "POST",
-        headers: this.getHeaders(),
+        headers: this.jsonHeaders,
+        credentials: "same-origin",
         body: JSON.stringify(data),
       });
       if (!res.ok) return null;
@@ -507,7 +497,8 @@ class MusicService {
     try {
       const res = await fetch(`${this.baseUrl}/music/playlists`, {
         method: "PUT",
-        headers: this.getHeaders(),
+        headers: this.jsonHeaders,
+        credentials: "same-origin",
         body: JSON.stringify({ id, ...updates }),
       });
       if (!res.ok) return null;
@@ -521,9 +512,9 @@ class MusicService {
 
   async deletePlaylist(id: string): Promise<boolean> {
     try {
-      const res = await fetch(`${this.baseUrl}/music/playlists?id=${id}`, {
+      const res = await fetch(`${this.baseUrl}/music/playlists?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
-        headers: this.getHeaders(),
+        credentials: "same-origin",
       });
       return res.ok;
     } catch {

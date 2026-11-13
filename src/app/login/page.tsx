@@ -21,7 +21,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loginWithGoogle, login, logout, isAdmin } = useAuth();
+  const { user, loginWithGoogle, loginAsGuest, logout, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [alertInfo, setAlertInfo] = useState<{
     isOpen: boolean;
@@ -36,14 +36,9 @@ export default function LoginPage() {
     try {
       const userCred = await signInWithPopup(firebaseAuth, googleProvider);
       if (userCred && userCred.user) {
-        const fbUser = userCred.user;
-        const loggedUser = await loginWithGoogle({
-          name: fbUser.displayName || fbUser.email?.split("@")[0] || "User",
-          email: fbUser.email || "",
-          imageURL: fbUser.photoURL || undefined,
-          user_id: fbUser.uid,
-          email_verified: fbUser.emailVerified,
-        });
+        // The ID token is verified server-side before a session is issued.
+        const idToken = await userCred.user.getIdToken();
+        const loggedUser = await loginWithGoogle(idToken);
 
         if (loggedUser.role === "admin" || loggedUser.role === "superadmin") {
           router.push("/admin");
@@ -70,14 +65,8 @@ export default function LoginPage() {
   const handleDemoListenerAccess = async () => {
     setLoading(true);
     try {
-      await login({
-        name: "Demo Listener",
-        email: "demouser.listener@gmail.com",
-        imageURL: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80",
-        user_id: "demo_guest_listener",
-        email_verified: true,
-        role: "member",
-      });
+      // Server-issued, non-privileged demo session (no client supplied identity).
+      await loginAsGuest();
 
       router.push("/");
     } catch (err: any) {

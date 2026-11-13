@@ -4,8 +4,9 @@
  */
 
 import { UnifiedSong, UnifiedArtist, UnifiedAlbum } from "@/types/music";
-import { connectToDatabase, SongModel, ArtistModel, AlbumModel } from "./mongodb";
+import { connectToDatabase, SongModel } from "./mongodb";
 import { DEFAULT_COVER_URL } from "./mediaOptimization";
+import { escapeRegex } from "./rate-limit";
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -184,7 +185,9 @@ export async function searchLocalCatalog(query?: string): Promise<UnifiedSong[]>
     const filter: Record<string, any> = {};
 
     if (query && query.trim()) {
-      const q = query.trim();
+      // User input is escaped before it reaches $regex: prevents ReDoS and
+      // lets a caller search for literal characters such as "(" or "$".
+      const q = escapeRegex(query.trim().slice(0, 120));
       filter.$or = [
         { name: { $regex: q, $options: "i" } },
         { artist: { $regex: q, $options: "i" } },

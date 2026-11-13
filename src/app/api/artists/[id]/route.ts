@@ -1,115 +1,102 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { withDb, ArtistModel } from "@/lib/mongodb";
 import { deleteFromImageKit } from "@/lib/imagekit";
-import { getUserFromRequest } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/auth";
+import { route, jsonOk, notFound } from "@/lib/http";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { assertObjectId, updateArtistSchema } from "@/lib/validation";
+import { logSecurityEvent } from "@/lib/audit";
+import { runAfter } from "@/lib/background";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+type Params = { params: Promise<{ id: string }> };
+
 // GET /api/artists/[id]
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const artist = await withDb(() => ArtistModel.findById(id).lean());
+export const GET = route("artists.getOne", async (req: NextRequest, { params }: Params) => {
+  await enforceRateLimit(req, { scope: "artists:read", limit: 120, windowSeconds: 60 });
 
-    if (!artist) {
-      return NextResponse.json({ success: false, message: "Artist not found" }, { status: 404 });
-    }
+  const { id } = await params;
+  assertObjectId(id, "artist id");
 
-    return NextResponse.json({ success: true, artist, data: artist });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: "Error fetching artist", error: error.message },
-      { status: 500 }
-    );
+  const artist = await withDb(() => ArtistModel.findById(id).lean());
+  if (!artist) throw notFound("Artist not found");
+
+  return jsonOk({ artist, data: artist });
+});
+
+// PUT /api/artists/[id] - superadmin only
+export const PUT = route("artists.update", async (req: NextRequest, { params }: Params) => {
+  const session = await requireSuperAdmin(req);
+  await enforceRateLimit(req, {
+    scope: "artists:update",
+    identifier: session.user.id,
+    limit: 60,
+    windowSeconds: 60,
+  });
+
+  const { id } = await params;
+  assertObjectId(id, "artist id");
+
+  const body = await req.json().catch(() => null);
+  const validated = updateArtistSchema.parse(body);
+
+  const existing = await withDb(() => ArtistModel.findById(id));
+  if (!existing) throw notFound("Artist not found");
+
+  // When the artwork is replaced, remove the previous file from ImageKit.
+  if (validated.fileId && existing.fileId && validated.fileId !== existing.fileId) {
+    await deleteFromImageKit(existing.fileId).catch(console.warn);
   }
-}
 
-// PUT /api/artists/[id] - Update Artist
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
+  const updated = await withDb(() =>
+    ArtistModel.findByIdAndUpdate(id, { $set: validated }, { new: true, runValidators: true }).lean()
+  );
+  if (!updated) throw notFound("Artist not found");
 
-    const existingArtist = await withDb(() => ArtistModel.findById(id));
-    if (!existingArtist) {
-      return NextResponse.json({ success: false, message: "Artist not found" }, { status: 404 });
-    }
+  runAfter(() =>
+    logSecurityEvent({
+      type: "artists.update",
+      actorEmail: session.user.email,
+      request: req,
+      meta: { artistId: id },
+    })
+  );
 
-    // If photo fileId is replaced, clean up old file from ImageKit
-    if (body.fileId && existingArtist.fileId && body.fileId !== existingArtist.fileId) {
-      await deleteFromImageKit(existingArtist.fileId).catch(console.warn);
-    }
+  return jsonOk({ artist: updated });
+});
 
-    const updated = await withDb(() =>
-      ArtistModel.findByIdAndUpdate(
-        id,
-        {
-          name: body.name ?? existingArtist.name,
-          imageURL: body.imageURL ?? existingArtist.imageURL,
-          instagram: body.instagram ?? existingArtist.instagram,
-          twetter: body.twetter !== undefined ? body.twetter : existingArtist.twetter,
-          fileId: body.fileId ?? existingArtist.fileId,
-        },
-        { new: true }
-      ).lean()
-    );
+// DELETE /api/artists/[id] - superadmin only
+export const DELETE = route("artists.delete", async (req: NextRequest, { params }: Params) => {
+  const session = await requireSuperAdmin(req);
+  await enforceRateLimit(req, {
+    scope: "artists:delete",
+    identifier: session.user.id,
+    limit: 30,
+    windowSeconds: 60,
+  });
 
-    return NextResponse.json({
-      success: true,
-      message: "Artist updated successfully",
-      artist: updated,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: "Error updating artist", error: error.message },
-      { status: 500 }
-    );
+  const { id } = await params;
+  assertObjectId(id, "artist id");
+
+  const existing = await withDb(() => ArtistModel.findById(id));
+  if (!existing) throw notFound("Artist not found");
+
+  if (existing.fileId) {
+    await deleteFromImageKit(existing.fileId).catch(console.warn);
   }
-}
+  await withDb(() => ArtistModel.findByIdAndDelete(id));
 
-// DELETE /api/artists/[id] - Delete Artist
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getUserFromRequest(req);
-    if (session && session.user.role !== "superadmin") {
-      return NextResponse.json(
-        { success: false, message: "Superadmin privileges required to delete artists" },
-        { status: 403 }
-      );
-    }
+  runAfter(() =>
+    logSecurityEvent({
+      type: "artists.delete",
+      severity: "warning",
+      actorEmail: session.user.email,
+      request: req,
+      meta: { artistId: id, name: existing.name },
+    })
+  );
 
-    const { id } = await params;
-
-    const artist = await withDb(() => ArtistModel.findById(id));
-    if (!artist) {
-      return NextResponse.json({ success: false, message: "Artist not found" }, { status: 404 });
-    }
-
-    if (artist.fileId) {
-      await deleteFromImageKit(artist.fileId).catch(console.warn);
-    }
-
-    await withDb(() => ArtistModel.findByIdAndDelete(id));
-
-    return NextResponse.json({
-      success: true,
-      message: "Artist deleted successfully",
-      dataOne: artist,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: "Error deleting artist", error: error.message },
-      { status: 500 }
-    );
-  }
-}
+  return jsonOk({ message: "Artist deleted successfully", dataOne: existing });
+});

@@ -1,8 +1,11 @@
-import * as XLSX from "xlsx";
+// v9 only exposes sub-path entry points; the browser build reads `File`/`Blob`.
+import { readSheet } from "read-excel-file/browser";
 import { DEFAULT_COVER_URL } from "./mediaOptimization";
 
 export type BulkEntityType = "songs" | "artists" | "albums";
-export type BulkFormatType = "xlsx" | "csv" | "json";
+// Excel generation was dropped together with the vulnerable `xlsx` package:
+// CSV and JSON are exported instead and Excel opens both natively.
+export type BulkFormatType = "csv" | "json";
 
 export interface ValidationResult<T> {
   item: T;
@@ -101,17 +104,92 @@ export function downloadSampleTemplate(entity: BulkEntityType, format: BulkForma
     const jsonStr = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonStr], { type: "application/json" });
     triggerBlobDownload(blob, fileName);
-  } else if (format === "csv") {
-    const ws = XLSX.utils.json_to_sheet(data);
-    const csvStr = XLSX.utils.sheet_to_csv(ws);
-    const blob = new Blob([csvStr], { type: "text/csv;charset=utf-8;" });
+  } else {
+    const blob = new Blob([toCsv(data)], { type: "text/csv;charset=utf-8;" });
     triggerBlobDownload(blob, fileName);
-  } else if (format === "xlsx") {
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, fileName);
   }
+}
+
+/** Serialises records to CSV (RFC 4180 quoting) without any dependency. */
+function toCsv(records: Array<Record<string, unknown>>): string {
+  if (records.length === 0) return "";
+  const headers = Array.from(
+    records.reduce<Set<string>>((set, record) => {
+      Object.keys(record).forEach((key) => set.add(key));
+      return set;
+    }, new Set<string>())
+  );
+
+  const escape = (value: unknown): string => {
+    const text = value === null || value === undefined ? "" : String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+
+  const lines = [headers.join(",")];
+  for (const record of records) {
+    lines.push(headers.map((header) => escape(record[header])).join(","));
+  }
+  return lines.join("\r\n");
+}
+
+/** Minimal RFC 4180 parser: quotes, escaped quotes, CRLF and a BOM. */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  const input = text.replace(/^\uFEFF/, "");
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if (inQuotes) {
+      if (char === '"') {
+        if (input[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+    } else if (char === "\n" || char === "\r") {
+      if (char === "\r" && input[i + 1] === "\n") i++;
+      row.push(field);
+      if (row.some((value) => value.trim() !== "")) rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += char;
+    }
+  }
+
+  row.push(field);
+  if (row.some((value) => value.trim() !== "")) rows.push(row);
+  return rows;
+}
+
+/** Maps a header row plus data rows into plain objects. */
+function rowsToRecords(rows: Array<Array<unknown>>): Array<Record<string, unknown>> {
+  if (rows.length === 0) return [];
+  const headers = (rows[0] ?? []).map((header) => String(header ?? "").trim());
+  return rows.slice(1).map((row) => {
+    const record: Record<string, unknown> = {};
+    headers.forEach((header, index) => {
+      if (!header) return;
+      const value = row[index];
+      record[header] = value === null || value === undefined ? "" : value;
+    });
+    return record;
+  });
 }
 
 /**
@@ -129,10 +207,19 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 }
 
 /**
- * Parses uploaded File (Excel, CSV, or JSON) into array of plain objects
+ * Parses an uploaded File (.xlsx, .csv or .json) into plain objects.
+ *
+ * `.xlsx` is read with `read-excel-file` (MIT, actively maintained, no known
+ * CVEs) because the `xlsx` package bundled an unpatched prototype-pollution /
+ * ReDoS advisory. Legacy binary `.xls` files must be re-saved as .xlsx/.csv.
  */
 export async function parseBulkFile(file: File): Promise<any[]> {
   const ext = file.name.split(".").pop()?.toLowerCase();
+
+  // Guard the parser against absurd inputs before doing any work.
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error("File is larger than 10 MB. Split it into smaller batches.");
+  }
 
   if (ext === "json") {
     const text = await file.text();
@@ -145,15 +232,24 @@ export async function parseBulkFile(file: File): Promise<any[]> {
     throw new Error("JSON file must contain an array of records");
   }
 
-  // Handle Excel (.xlsx, .xls) and CSV
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: "array" });
-  const firstSheet = workbook.SheetNames[0];
-  if (!firstSheet) throw new Error("Spreadsheet contains no sheets");
+  if (ext === "csv") {
+    const text = await file.text();
+    return rowsToRecords(parseCsv(text));
+  }
 
-  const worksheet = workbook.Sheets[firstSheet];
-  const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-  return rows;
+  if (ext === "xlsx" || ext === "xlsm") {
+    // `readSheet` returns the first worksheet as a matrix of cell values.
+    const rows = await readSheet(file);
+    return rowsToRecords(rows as Array<Array<unknown>>);
+  }
+
+  if (ext === "xls") {
+    throw new Error(
+      "Legacy .xls files are not supported. Re-save the file as .xlsx or .csv and try again."
+    );
+  }
+
+  throw new Error("Unsupported file type. Upload a .xlsx, .csv or .json file.");
 }
 
 /**

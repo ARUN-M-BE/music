@@ -1,51 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withDb, AlbumModel } from "@/lib/mongodb";
-import { z } from "zod";
+import { requireAdmin } from "@/lib/auth";
+import { route, jsonOk } from "@/lib/http";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { createAlbumSchema } from "@/lib/validation";
+import { logSecurityEvent } from "@/lib/audit";
+import { runAfter } from "@/lib/background";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const CreateAlbumSchema = z.object({
-  name: z.string().min(1, "Album name is required"),
-  imageURL: z.string().url("Valid image URL is required"),
-  fileId: z.string().min(1, "fileId is required"),
+// GET /api/albums - public catalogue
+export const GET = route("albums.get", async (req: NextRequest) => {
+  await enforceRateLimit(req, { scope: "albums:list", limit: 120, windowSeconds: 60 });
+
+  const albums = await withDb(() => AlbumModel.find({}).sort({ createdAt: -1 }).limit(500).lean());
+
+  return NextResponse.json(
+    { success: true, data: albums, albums },
+    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+  );
 });
 
-// GET /api/albums
-export async function GET(req: NextRequest) {
-  try {
-    const albums = await withDb(() =>
-      AlbumModel.find({}).sort({ createdAt: -1 }).lean()
-    );
-    return NextResponse.json(
-      { success: true, data: albums, albums },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
-        },
-      }
-    );
-  } catch (error: any) {
-    console.error("GET /api/albums error:", error);
-    return NextResponse.json(
-      { success: false, data: [], albums: [], message: "Failed to fetch albums" },
-      { status: 200 }
-    );
-  }
-}
+// POST /api/albums - admin only
+export const POST = route("albums.post", async (req: NextRequest) => {
+  const session = await requireAdmin(req);
+  await enforceRateLimit(req, {
+    scope: "albums:create",
+    identifier: session.user.id,
+    limit: 60,
+    windowSeconds: 60,
+  });
 
-// POST /api/albums
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const validated = CreateAlbumSchema.parse(body);
+  const body = await req.json().catch(() => null);
+  const validated = createAlbumSchema.parse(body);
 
-    const newAlbum = await withDb(() => AlbumModel.create(validated));
-    return NextResponse.json({ success: true, album: newAlbum }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message || "Failed to create album" },
-      { status: 400 }
-    );
-  }
-}
+  const newAlbum = await withDb(() => AlbumModel.create(validated));
+
+  runAfter(() =>
+    logSecurityEvent({
+      type: "albums.create",
+      actorEmail: session.user.email,
+      request: req,
+      meta: { albumId: String(newAlbum._id), name: validated.name },
+    })
+  );
+
+  return jsonOk({ album: newAlbum }, { status: 201 });
+});

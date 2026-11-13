@@ -1,153 +1,147 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { withDb, PlaylistModel } from "@/lib/mongodb";
-import { getUserFromRequest } from "@/lib/auth";
+import { isPrivileged, requireApprovedUser } from "@/lib/auth";
+import { route, jsonOk, badRequest, forbidden, notFound } from "@/lib/http";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { assertObjectId, createPlaylistSchema, updatePlaylistSchema } from "@/lib/validation";
+import { logSecurityEvent } from "@/lib/audit";
+import { runAfter } from "@/lib/background";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// GET /api/music/playlists?userId=...
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    let userId = searchParams.get("userId");
-
-    if (!userId) {
-      const session = await getUserFromRequest(req);
-      if (session?.user) {
-        userId = session.user.id || session.user.email;
-      }
-    }
-
-    if (!userId) {
-      return NextResponse.json({ success: true, playlists: [] });
-    }
-
-    const playlists = await withDb(() =>
-      PlaylistModel.find({ userId }).sort({ createdAt: -1 }).lean()
-    );
-
-    return NextResponse.json({ success: true, playlists });
-  } catch (error: any) {
-    console.error("Playlists GET error:", error);
-    return NextResponse.json(
-      { success: false, playlists: [], error: error.message || "Failed to fetch playlists" },
-      { status: 200 }
-    );
-  }
+/** Legacy playlists may have been stored under the provider uid or the email. */
+function ownerKeys(session: { user: { id: string; uid: string; email: string } }): string[] {
+  return Array.from(
+    new Set([session.user.id, session.user.uid, session.user.email.toLowerCase()].filter(Boolean))
+  );
 }
+
+// GET /api/music/playlists - always scoped to the authenticated user
+export const GET = route("playlists.get", async (req: NextRequest) => {
+  const session = await requireApprovedUser(req);
+  await enforceRateLimit(req, {
+    scope: "playlists:get",
+    identifier: session.user.id,
+    limit: 120,
+    windowSeconds: 60,
+  });
+
+  const { searchParams } = new URL(req.url);
+  const requestedUserId = searchParams.get("userId");
+
+  let keys = ownerKeys(session);
+  if (requestedUserId && !keys.includes(requestedUserId)) {
+    // Only administrators may read somebody else's playlists.
+    if (!isPrivileged(session.user.role)) throw forbidden();
+    keys = [requestedUserId];
+  }
+
+  const playlists = await withDb(() =>
+    PlaylistModel.find({ userId: { $in: keys } })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean()
+  );
+
+  return jsonOk({ playlists }, { headers: { "Cache-Control": "no-store" } });
+});
 
 // POST /api/music/playlists
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getUserFromRequest(req);
-    const body = await req.json();
+export const POST = route("playlists.post", async (req: NextRequest) => {
+  const session = await requireApprovedUser(req);
+  await enforceRateLimit(req, {
+    scope: "playlists:create",
+    identifier: session.user.id,
+    limit: 30,
+    windowSeconds: 60,
+  });
 
-    const userId = body.userId || (session?.user ? (session.user.id || session.user.email) : undefined);
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Authentication or userId required to create playlist" },
-        { status: 401 }
-      );
-    }
+  const body = await req.json().catch(() => null);
+  const parsed = createPlaylistSchema.safeParse(body);
+  if (!parsed.success) throw badRequest("Invalid playlist payload");
 
-    if (!body.name || !body.name.trim()) {
-      return NextResponse.json(
-        { success: false, error: "Playlist name is required" },
-        { status: 400 }
-      );
-    }
+  const playlist = await withDb(() =>
+    PlaylistModel.create({
+      name: parsed.data.name,
+      description: parsed.data.description ?? "",
+      coverImage: parsed.data.coverImage ?? "",
+      userId: session.user.id,
+      songs: parsed.data.songs ?? [],
+    })
+  );
 
-    const playlist = await withDb(() =>
-      PlaylistModel.create({
-        name: body.name.trim(),
-        description: body.description?.trim() || "",
-        coverImage: body.coverImage || "",
-        userId,
-        songs: Array.isArray(body.songs) ? body.songs : [],
-      })
-    );
+  return jsonOk({ playlist }, { status: 201 });
+});
 
-    return NextResponse.json({ success: true, playlist }, { status: 201 });
-  } catch (error: any) {
-    console.error("Playlists POST error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to create playlist" },
-      { status: 400 }
-    );
+// PUT /api/music/playlists - owner (or admin) only
+export const PUT = route("playlists.update", async (req: NextRequest) => {
+  const session = await requireApprovedUser(req);
+  await enforceRateLimit(req, {
+    scope: "playlists:update",
+    identifier: session.user.id,
+    limit: 60,
+    windowSeconds: 60,
+  });
+
+  const body = await req.json().catch(() => null);
+  const parsed = updatePlaylistSchema.safeParse(body);
+  if (!parsed.success) throw badRequest("Invalid playlist payload");
+
+  const { id, ...updates } = parsed.data;
+
+  const playlist = await withDb(() => PlaylistModel.findById(id).lean());
+  if (!playlist) throw notFound("Playlist not found");
+
+  if (!ownerKeys(session).includes(String(playlist.userId)) && !isPrivileged(session.user.role)) {
+    throw forbidden("You can only modify your own playlists");
   }
-}
 
-// PUT /api/music/playlists (update name, songs, etc.)
-export async function PUT(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { id, name, description, coverImage, songs } = body;
+  const updateData: Record<string, unknown> = {};
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.description !== undefined) updateData.description = updates.description;
+  if (updates.coverImage !== undefined) updateData.coverImage = updates.coverImage;
+  if (updates.songs !== undefined) updateData.songs = updates.songs;
 
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: "Playlist ID is required" },
-        { status: 400 }
-      );
-    }
+  if (Object.keys(updateData).length === 0) throw badRequest("Nothing to update");
 
-    const updateData: Record<string, any> = {};
-    if (name !== undefined) updateData.name = name.trim();
-    if (description !== undefined) updateData.description = description.trim();
-    if (coverImage !== undefined) updateData.coverImage = coverImage;
-    if (songs !== undefined) updateData.songs = songs;
+  const updated = await withDb(() =>
+    PlaylistModel.findByIdAndUpdate(id, { $set: updateData }, { new: true }).lean()
+  );
 
-    const playlist = await withDb(() =>
-      PlaylistModel.findByIdAndUpdate(
-        id,
-        { $set: updateData },
-        { new: true }
-      ).lean()
-    );
+  return jsonOk({ playlist: updated });
+});
 
-    if (!playlist) {
-      return NextResponse.json(
-        { success: false, error: "Playlist not found" },
-        { status: 404 }
-      );
-    }
+// DELETE /api/music/playlists?id=... - owner (or admin) only
+export const DELETE = route("playlists.delete", async (req: NextRequest) => {
+  const session = await requireApprovedUser(req);
+  await enforceRateLimit(req, {
+    scope: "playlists:delete",
+    identifier: session.user.id,
+    limit: 60,
+    windowSeconds: 60,
+  });
 
-    return NextResponse.json({ success: true, playlist });
-  } catch (error: any) {
-    console.error("Playlists PUT error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to update playlist" },
-      { status: 400 }
-    );
+  const { searchParams } = new URL(req.url);
+  const id = assertObjectId(searchParams.get("id") ?? "", "playlist id");
+
+  const playlist = await withDb(() => PlaylistModel.findById(id).lean());
+  if (!playlist) throw notFound("Playlist not found");
+
+  if (!ownerKeys(session).includes(String(playlist.userId)) && !isPrivileged(session.user.role)) {
+    throw forbidden("You can only delete your own playlists");
   }
-}
 
-// DELETE /api/music/playlists?id=...
-export async function DELETE(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
+  await withDb(() => PlaylistModel.findByIdAndDelete(id));
 
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: "Playlist ID is required" },
-        { status: 400 }
-      );
-    }
+  runAfter(() =>
+    logSecurityEvent({
+      type: "playlists.delete",
+      actorEmail: session.user.email,
+      request: req,
+      meta: { playlistId: id },
+    })
+  );
 
-    const deleted = await withDb(() => PlaylistModel.findByIdAndDelete(id));
-    if (!deleted) {
-      return NextResponse.json(
-        { success: false, error: "Playlist not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true, message: "Playlist deleted" });
-  } catch (error: any) {
-    console.error("Playlists DELETE error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to delete playlist" },
-      { status: 400 }
-    );
-  }
-}
+  return jsonOk({ message: "Playlist deleted" });
+});

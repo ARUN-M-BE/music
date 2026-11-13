@@ -1,0 +1,15 @@
+DESCRIPTION >
+  Play analytics ingested from the Good Music app via POST /v0/events?name=music_plays
+
+SCHEMA >
+  `event` String `json:$.event`,
+  `ts` DateTime64(3) `json:$.ts`,
+  `actor_id` String `json:$.actor_id`,
+  `song_id` String `json:$.song_id`,
+  `language` String `json:$.language`,
+  `provider` String `json:$.provider`,
+  `meta` String `json:$.meta`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(ts)"
+ENGINE_SORTING_KEY "ts, event, song_id"

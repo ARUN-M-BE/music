@@ -1,72 +1,83 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 import { withDb, AlbumModel } from "@/lib/mongodb";
-import { getUserFromRequest } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { DEFAULT_COVER_URL } from "@/lib/mediaOptimization";
+import { route, jsonOk, badRequest } from "@/lib/http";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { httpsUrlSchema } from "@/lib/validation";
+import { logSecurityEvent } from "@/lib/audit";
+import { runAfter } from "@/lib/background";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// POST /api/albums/bulk - Batch import albums
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getUserFromRequest(req);
-    if (!session || (session.user.role !== "admin" && session.user.role !== "superadmin")) {
-      return NextResponse.json(
-        { success: false, message: "Admin privileges required for bulk import" },
-        { status: 403 }
-      );
+const MAX_ROWS = 500;
+
+const bulkAlbumSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  imageURL: httpsUrlSchema.optional(),
+  fileId: z.string().trim().max(200).optional(),
+});
+
+// POST /api/albums/bulk - admin only batch import
+export const POST = route("albums.bulk", async (req: NextRequest) => {
+  const session = await requireAdmin(req);
+  await enforceRateLimit(req, {
+    scope: "albums:bulk",
+    identifier: session.user.id,
+    limit: 10,
+    windowSeconds: 60,
+  });
+
+  const body = await req.json().catch(() => null);
+  const albums = (body as { albums?: unknown } | null)?.albums;
+
+  if (!Array.isArray(albums) || albums.length === 0) {
+    throw badRequest("No albums provided for bulk import");
+  }
+  if (albums.length > MAX_ROWS) {
+    throw badRequest(`A maximum of ${MAX_ROWS} rows can be imported at once`);
+  }
+
+  const validAlbums: Record<string, unknown>[] = [];
+  const errors: Array<{ row: number; message: string }> = [];
+
+  albums.forEach((raw, index) => {
+    const parsed = bulkAlbumSchema.safeParse(raw);
+    if (!parsed.success) {
+      errors.push({ row: index + 1, message: parsed.error.issues[0]?.message ?? "Invalid row" });
+      return;
     }
-
-    const body = await req.json();
-    const albums = body.albums;
-
-    if (!Array.isArray(albums) || albums.length === 0) {
-      return NextResponse.json(
-        { success: false, message: "No albums provided for bulk import" },
-        { status: 400 }
-      );
-    }
-
-    const validAlbums: any[] = [];
-    const errors: any[] = [];
-
-    for (let i = 0; i < albums.length; i++) {
-      const a = albums[i];
-      if (!a.name || typeof a.name !== "string" || !a.name.trim()) {
-        errors.push({ row: i + 1, message: "Missing album title" });
-        continue;
-      }
-
-      validAlbums.push({
-        name: a.name.trim(),
-        imageURL: a.imageURL?.trim() || DEFAULT_COVER_URL,
-        fileId: a.fileId?.trim() || `alb_bulk_${Date.now()}_${i}`,
-      });
-    }
-
-    if (validAlbums.length === 0) {
-      return NextResponse.json(
-        { success: false, message: "All records failed validation", errors },
-        { status: 400 }
-      );
-    }
-
-    const inserted = await withDb(() =>
-      AlbumModel.insertMany(validAlbums, { ordered: false })
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: `Successfully imported ${inserted.length} albums`,
-      count: inserted.length,
-      errorsCount: errors.length,
-      errors,
+    validAlbums.push({
+      name: parsed.data.name,
+      imageURL: parsed.data.imageURL || DEFAULT_COVER_URL,
+      fileId: parsed.data.fileId || `img_bulk_${Date.now()}_${index}`,
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: "Bulk import failed", error: error.message },
-      { status: 500 }
+  });
+
+  if (validAlbums.length === 0) {
+    return jsonOk(
+      { message: "All records failed validation", count: 0, errorsCount: errors.length, errors },
+      { status: 400 }
     );
   }
-}
 
+  const inserted = await withDb(() => AlbumModel.insertMany(validAlbums, { ordered: false }));
+
+  runAfter(() =>
+    logSecurityEvent({
+      type: "albums.bulk_import",
+      actorEmail: session.user.email,
+      request: req,
+      meta: { imported: inserted.length, rejected: errors.length },
+    })
+  );
+
+  return jsonOk({
+    message: `Successfully imported ${inserted.length} albums`,
+    count: inserted.length,
+    errorsCount: errors.length,
+    errors,
+  });
+});

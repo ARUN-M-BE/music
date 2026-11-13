@@ -110,14 +110,8 @@ export default function FavoritesPage() {
     try {
       const userCred = await signInWithPopup(firebaseAuth, googleProvider);
       if (userCred && userCred.user) {
-        const fbUser = userCred.user;
-        await loginWithGoogle({
-          name: fbUser.displayName || fbUser.email?.split("@")[0] || "User",
-          email: fbUser.email || "",
-          imageURL: fbUser.photoURL || undefined,
-          user_id: fbUser.uid,
-          email_verified: fbUser.emailVerified,
-        });
+        const idToken = await userCred.user.getIdToken();
+        await loginWithGoogle(idToken);
       }
     } catch (err: any) {
       console.error("Google sign in error:", err);

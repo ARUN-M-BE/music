@@ -1,34 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAlbumData } from "@/lib/musicProviders";
+import { route, badRequest, notFound } from "@/lib/http";
+import { enforceRateLimit, sanitizeText } from "@/lib/rate-limit";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+const ALBUM_CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+};
+
+// GET /api/music/album/[id] - public, rate limited
+export const GET = route(
+  "music.album",
+  async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    await enforceRateLimit(req, { scope: "music:album", limit: 90, windowSeconds: 60 });
+
     const { id } = await params;
-    if (!id) {
-      return NextResponse.json({ success: false, error: "Album ID is required" }, { status: 400 });
+    let decoded = "";
+    try {
+      decoded = decodeURIComponent(id ?? "");
+    } catch {
+      throw badRequest("Malformed album identifier");
     }
 
-    const data = await getAlbumData(id);
+    const cleanTitle = sanitizeText(decoded, 120);
+    if (!cleanTitle) throw badRequest("Album ID is required");
 
-    return NextResponse.json(
-      { success: true, ...data },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-        },
-      }
-    );
-  } catch (error: any) {
-    console.error("Album API error:", error);
-    return NextResponse.json(
-      { success: false, album: null, songs: [], error: error.message || "Failed to fetch album" },
-      { status: 200 }
-    );
+    const data = await getAlbumData(cleanTitle);
+    if (!data.album) throw notFound("Album not found");
+
+    return NextResponse.json({ success: true, ...data }, { headers: ALBUM_CACHE_HEADERS });
   }
-}
-
+);

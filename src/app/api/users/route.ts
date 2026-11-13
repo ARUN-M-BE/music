@@ -1,100 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withDb, UserModel } from "@/lib/mongodb";
+import { isSuperAdminEmail, requireAdmin } from "@/lib/auth";
+import { route, jsonOk } from "@/lib/http";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// GET /api/users - Get all users for admin
-export async function GET(req: NextRequest) {
-  try {
-    const users = await withDb(() =>
-      UserModel.find({}).sort({ createdAt: -1 }).lean()
-    );
+// GET /api/users - admin only. Never exposes password hashes (none exist) and
+// is the only endpoint that can list account metadata.
+export const GET = route("users.get", async (req: NextRequest) => {
+  const session = await requireAdmin(req);
+  await enforceRateLimit(req, {
+    scope: "users:list",
+    identifier: session.user.id,
+    limit: 60,
+    windowSeconds: 60,
+  });
 
-    const superAdminEmails = [
-      "arunm102301@gmail.com",
-      "arun102301@gmail.com",
-      (process.env.ADMIN_EMAIL || "arunm102301@gmail.com").toLowerCase(),
-    ];
+  const users = await withDb(() =>
+    UserModel.find({})
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .lean()
+  );
 
-    const mapped = users.map((u: any) => ({
-      ...u,
-      role: superAdminEmails.includes(u.email?.toLowerCase())
-        ? "superadmin"
-        : u.role || "member",
-      status: u.status || (superAdminEmails.includes(u.email?.toLowerCase()) ? "approved" : "pending"),
-    }));
-
-    return NextResponse.json({ success: true, data: mapped, users: mapped });
-  } catch (error: any) {
-    console.error("GET /api/users error:", error);
-    return NextResponse.json(
-      { success: false, data: [], users: [], message: "Failed to fetch users" },
-      { status: 200 }
-    );
-  }
-}
-
-// POST /api/users - Login or Upsert user
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-
-    const { email, name, imageURL, user_id, email_verified } = body;
-    if (!email || !user_id) {
-      return NextResponse.json(
-        { success: false, message: "Email and user_id are required" },
-        { status: 400 }
-      );
-    }
-
-    const adminEmail = process.env.ADMIN_EMAIL || "arunm102301@gmail.com";
-    const isSuperAdmin =
-      email.toLowerCase() === adminEmail.toLowerCase() ||
-      email.toLowerCase() === "arunm102301@gmail.com" ||
-      email.toLowerCase() === "arun102301@gmail.com";
-
-    const updateFields: any = {
-      name: name || "User",
-      email: email.toLowerCase(),
-      imageURL: imageURL || "",
-      user_id,
-      email_verified: !!email_verified,
-      auth_time: new Date().toISOString(),
+  const mapped = users.map((user: Record<string, unknown>) => {
+    const email = String(user.email ?? "").toLowerCase();
+    const isAdminEmail = isSuperAdminEmail(email);
+    return {
+      ...user,
+      role: isAdminEmail ? "superadmin" : user.role === "superadmin" ? "member" : user.role || "member",
+      status: isAdminEmail ? "approved" : user.status || "pending",
     };
+  });
 
-    if (isSuperAdmin) {
-      updateFields.role = "superadmin";
-      updateFields.status = "approved";
-    }
+  return NextResponse.json(
+    { success: true, data: mapped, users: mapped },
+    { headers: { "Cache-Control": "no-store" } }
+  );
+});
 
-    const user = await withDb(() =>
-      UserModel.findOneAndUpdate(
-        { $or: [{ user_id }, { email: email.toLowerCase() }] },
-        {
-          ...updateFields,
-          $setOnInsert: {
-            role: isSuperAdmin ? "superadmin" : "member",
-            status: isSuperAdmin ? "approved" : "pending",
-          },
-        },
-        { upsert: true, new: true }
-      ).lean()
-    );
-
-    const finalRole = isSuperAdmin ? "superadmin" : (user?.role || "member");
-    const finalStatus = isSuperAdmin ? "approved" : (user?.status || "pending");
-
-    return NextResponse.json({
-      success: true,
-      user: { ...user, role: finalRole, status: finalStatus },
-    });
-  } catch (error: any) {
-    console.error("POST /api/users error:", error);
-    return NextResponse.json(
-      { success: false, message: "Auth failed", error: error.message },
-      { status: 400 }
-    );
-  }
-}
-
+/**
+ * POST /api/users used to be an unauthenticated "login/upsert" endpoint that let
+ * anyone claim any email address (including the owner account). Identity is now
+ * established exclusively through POST /api/auth/session.
+ */
+export const POST = route("users.post", async () =>
+  jsonOk(
+    {
+      message:
+        "This endpoint no longer accepts identity data. Authenticate via POST /api/auth/session.",
+    },
+    { status: 405, headers: { Allow: "GET" } }
+  )
+);

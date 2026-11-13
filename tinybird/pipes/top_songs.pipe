@@ -1,0 +1,18 @@
+DESCRIPTION >
+  Top played songs in the last N days. Read by admins only on the free tier
+  (1 API request per dashboard load, well under the 1,000/day limit).
+
+NODE top_songs
+SQL >
+  SELECT
+    song_id,
+    count() AS plays,
+    count(DISTINCT actor_id) AS listeners
+  FROM music_plays
+  WHERE song_id != ''
+    AND ts >= now() - INTERVAL {{Int32(days, 7)}} DAY
+  GROUP BY song_id
+  ORDER BY plays DESC
+  LIMIT {{Int32(limit, 20)}}
+
+TYPE endpoint

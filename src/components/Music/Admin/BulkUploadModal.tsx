@@ -36,7 +36,7 @@ interface BulkUploadModalProps {
 
 export function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUploadModalProps) {
   const [entity, setEntity] = useState<BulkEntityType>("songs");
-  const [sampleFormat, setSampleFormat] = useState<BulkFormatType>("xlsx");
+  const [sampleFormat, setSampleFormat] = useState<BulkFormatType>("csv");
 
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
@@ -242,7 +242,6 @@ export function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUploadModalP
                   onChange={(e) => setSampleFormat(e.target.value as BulkFormatType)}
                   className="h-8 px-2.5 rounded-lg bg-[#282828] border border-[#383838] text-xs text-white outline-none cursor-pointer"
                 >
-                  <option value="xlsx">Excel (.xlsx)</option>
                   <option value="csv">CSV (.csv)</option>
                   <option value="json">JSON (.json)</option>
                 </select>
@@ -268,7 +267,7 @@ export function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUploadModalP
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls,.csv,.json"
+              accept=".xlsx,.csv,.json"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -282,7 +281,7 @@ export function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUploadModalP
                 {file ? file.name : "Click to select or drag and drop spreadsheet / JSON file"}
               </span>
               <span className="text-[10px] text-[#727272] mt-1">
-                Supports .xlsx, .xls, .csv, and .json formats
+                Supports .xlsx, .csv, and .json formats
               </span>
               {isParsing && (
                 <div className="flex items-center gap-2 mt-3 text-xs text-[#1db954] font-medium">

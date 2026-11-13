@@ -1,113 +1,94 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { withDb, AlbumModel } from "@/lib/mongodb";
 import { deleteFromImageKit } from "@/lib/imagekit";
-import { getUserFromRequest } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/auth";
+import { route, jsonOk, notFound } from "@/lib/http";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { assertObjectId, updateAlbumSchema } from "@/lib/validation";
+import { logSecurityEvent } from "@/lib/audit";
+import { runAfter } from "@/lib/background";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+type Params = { params: Promise<{ id: string }> };
+
 // GET /api/albums/[id]
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const album = await withDb(() => AlbumModel.findById(id).lean());
+export const GET = route("albums.getOne", async (req: NextRequest, { params }: Params) => {
+  await enforceRateLimit(req, { scope: "albums:read", limit: 120, windowSeconds: 60 });
 
-    if (!album) {
-      return NextResponse.json({ success: false, message: "Album not found" }, { status: 404 });
-    }
+  const { id } = await params;
+  assertObjectId(id, "album id");
 
-    return NextResponse.json({ success: true, album, data: album });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: "Error fetching album", error: error.message },
-      { status: 500 }
-    );
+  const album = await withDb(() => AlbumModel.findById(id).lean());
+  if (!album) throw notFound("Album not found");
+
+  return jsonOk({ album, data: album });
+});
+
+// PUT /api/albums/[id] - superadmin only
+export const PUT = route("albums.update", async (req: NextRequest, { params }: Params) => {
+  const session = await requireSuperAdmin(req);
+  await enforceRateLimit(req, {
+    scope: "albums:update",
+    identifier: session.user.id,
+    limit: 60,
+    windowSeconds: 60,
+  });
+
+  const { id } = await params;
+  assertObjectId(id, "album id");
+
+  const body = await req.json().catch(() => null);
+  const validated = updateAlbumSchema.parse(body);
+
+  const updated = await withDb(() =>
+    AlbumModel.findByIdAndUpdate(id, { $set: validated }, { new: true, runValidators: true }).lean()
+  );
+  if (!updated) throw notFound("Album not found");
+
+  runAfter(() =>
+    logSecurityEvent({
+      type: "albums.update",
+      actorEmail: session.user.email,
+      request: req,
+      meta: { albumId: id },
+    })
+  );
+
+  return jsonOk({ album: updated });
+});
+
+// DELETE /api/albums/[id] - superadmin only
+export const DELETE = route("albums.delete", async (req: NextRequest, { params }: Params) => {
+  const session = await requireSuperAdmin(req);
+  await enforceRateLimit(req, {
+    scope: "albums:delete",
+    identifier: session.user.id,
+    limit: 30,
+    windowSeconds: 60,
+  });
+
+  const { id } = await params;
+  assertObjectId(id, "album id");
+
+  const existing = await withDb(() => AlbumModel.findById(id));
+  if (!existing) throw notFound("Album not found");
+
+  if (existing.fileId) {
+    await deleteFromImageKit(existing.fileId).catch(console.warn);
   }
-}
+  await withDb(() => AlbumModel.findByIdAndDelete(id));
 
-// PUT /api/albums/[id] - Update Album
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
+  runAfter(() =>
+    logSecurityEvent({
+      type: "albums.delete",
+      severity: "warning",
+      actorEmail: session.user.email,
+      request: req,
+      meta: { albumId: id, name: existing.name },
+    })
+  );
 
-    const existingAlbum = await withDb(() => AlbumModel.findById(id));
-    if (!existingAlbum) {
-      return NextResponse.json({ success: false, message: "Album not found" }, { status: 404 });
-    }
-
-    // If artwork fileId is being replaced, clean up old file from ImageKit
-    if (body.fileId && existingAlbum.fileId && body.fileId !== existingAlbum.fileId) {
-      await deleteFromImageKit(existingAlbum.fileId).catch(console.warn);
-    }
-
-    const updated = await withDb(() =>
-      AlbumModel.findByIdAndUpdate(
-        id,
-        {
-          name: body.name ?? existingAlbum.name,
-          imageURL: body.imageURL ?? existingAlbum.imageURL,
-          fileId: body.fileId ?? existingAlbum.fileId,
-        },
-        { new: true }
-      ).lean()
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: "Album updated successfully",
-      album: updated,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: "Error updating album", error: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE /api/albums/[id] - Delete Album
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getUserFromRequest(req);
-    if (session && session.user.role !== "superadmin") {
-      return NextResponse.json(
-        { success: false, message: "Superadmin privileges required to delete albums" },
-        { status: 403 }
-      );
-    }
-
-    const { id } = await params;
-
-    const album = await withDb(() => AlbumModel.findById(id));
-    if (!album) {
-      return NextResponse.json({ success: false, message: "Album not found" }, { status: 404 });
-    }
-
-    if (album.fileId) {
-      await deleteFromImageKit(album.fileId).catch(console.warn);
-    }
-
-    await withDb(() => AlbumModel.findByIdAndDelete(id));
-
-    return NextResponse.json({
-      success: true,
-      message: "Album deleted successfully",
-      dataOne: album,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: "Error deleting album", error: error.message },
-      { status: 500 }
-    );
-  }
-}
+  return jsonOk({ message: "Album deleted successfully", dataOne: existing });
+});

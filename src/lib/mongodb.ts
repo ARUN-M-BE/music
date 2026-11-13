@@ -147,125 +147,188 @@ export const Artist: Model<IArtist> = models.artist || model<IArtist>("artist", 
 export const User: Model<IUser> = models.user || model<IUser>("user", userSchema);
 export const Playlist: Model<IPlaylist> = models.playlist || model<IPlaylist>("playlist", playlistSchema);
 
-// Direct replica set URI avoids DNS SRV lookup hangs and socket timeouts in serverless / Cloudflare isolates
-const DIRECT_REPLICA_SET_URI =
-  "mongodb://arunm:1Gm6yMeD4zOOYguX@cluster0-shard-00-00.lmxpr.mongodb.net:27017,cluster0-shard-00-01.lmxpr.mongodb.net:27017,cluster0-shard-00-02.lmxpr.mongodb.net:27017/test?ssl=true&replicaSet=atlas-11187l-shard-0&authSource=admin&retryWrites=true&w=majority";
+// ------------------------------------------------------------------
+// Security & analytics event storage (bounded, auto-expiring)
+// ------------------------------------------------------------------
+const securityEventSchema = new Schema(
+  {
+    type: { type: String, required: true, index: true },
+    severity: { type: String, enum: ["info", "warning", "critical"], default: "info" },
+    actorEmail: { type: String, default: "" },
+    ipHash: { type: String, default: "" },
+    country: { type: String, default: "" },
+    path: { type: String, default: "" },
+    userAgent: { type: String, default: "" },
+    meta: { type: Schema.Types.Mixed, default: {} },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { versionKey: false }
+);
+securityEventSchema.index({ createdAt: -1 });
+// Retention: security logs self-delete after 90 days.
+securityEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 90 });
 
+const analyticsEventSchema = new Schema(
+  {
+    name: { type: String, required: true, index: true },
+    actorId: { type: String, default: "" },
+    songId: { type: String, default: "" },
+    language: { type: String, default: "" },
+    provider: { type: String, default: "" },
+    meta: { type: Schema.Types.Mixed, default: {} },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { versionKey: false }
+);
+analyticsEventSchema.index({ createdAt: -1 });
+// Retention: analytics fallback self-deletes after 30 days.
+analyticsEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 });
+
+export const SecurityEvent: Model<any> =
+  models.securityEvent || model("securityEvent", securityEventSchema);
+export const AnalyticsEvent: Model<any> =
+  models.analyticsEvent || model("analyticsEvent", analyticsEventSchema);
+
+/**
+ * Connection string is read exclusively from the environment.
+ * Credentials are never bundled into the repository.
+ */
 function getResolvedMongoUri(): string {
   const envUri = process.env.MONGODB_URI || process.env.DATABASE_STRING;
-  if (!envUri) return DIRECT_REPLICA_SET_URI;
-  if (envUri.includes("cluster0.lmxpr.mongodb.net")) {
-    return DIRECT_REPLICA_SET_URI;
+  if (!envUri || !envUri.trim()) {
+    throw new Error(
+      "MONGODB_URI is not configured. Set it in your environment before starting the server."
+    );
   }
-  return envUri;
+  return envUri.trim();
 }
 
-interface MongooseCache {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
+function getDatabaseName(uri: string): string {
+  if (process.env.MONGODB_DB?.trim()) return process.env.MONGODB_DB.trim();
+  try {
+    const withoutScheme = uri.replace(/^mongodb(\+srv)?:\/\//, "");
+    const withoutCredentials = withoutScheme.includes("@")
+      ? withoutScheme.slice(withoutScheme.indexOf("@") + 1)
+      : withoutScheme;
+    const path = withoutCredentials.split("/")[1] ?? "";
+    const name = path.split("?")[0]?.trim();
+    return name || "music";
+  } catch {
+    return "music";
+  }
 }
 
-declare global {
-  // eslint-disable-next-line no-var
-  var mongooseCache: MongooseCache | undefined;
-}
+// Track active DB operations and the single in-flight connect attempt.
+let activeDbOperations = 0;
+let connecting: Promise<typeof mongoose> | null = null;
+let idleDisconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-const cached: MongooseCache = globalThis.mongooseCache || (globalThis.mongooseCache = { conn: null, promise: null });
+/** Idle sockets are closed after this delay (keeps Worker isolates healthy). */
+const IDLE_DISCONNECT_MS = 30_000;
 
-// Attach permanent error and disconnect listeners once to prevent unhandled socket reset events
-// from crashing the Cloudflare Worker isolate (Error 1101)
+// Catch background connection events safely so unhandled errors never crash the isolate
 if (typeof mongoose !== "undefined" && mongoose.connection) {
   if (!mongoose.connection.listenerCount("error")) {
     mongoose.connection.on("error", (err) => {
       console.warn("MongoDB connection background warning:", err?.message || err);
-      cached.conn = null;
-      cached.promise = null;
-    });
-  }
-  if (!mongoose.connection.listenerCount("disconnected")) {
-    mongoose.connection.on("disconnected", () => {
-      cached.conn = null;
-      cached.promise = null;
-    });
-  }
-  if (!mongoose.connection.listenerCount("close")) {
-    mongoose.connection.on("close", () => {
-      cached.conn = null;
-      cached.promise = null;
     });
   }
 }
 
-export async function connectToDatabase(): Promise<typeof mongoose> {
-  const uri = getResolvedMongoUri();
-
-  // If already connected, verify vitality with ping so severed/frozen sockets are refreshed
-  if (cached.conn && mongoose.connection.readyState === 1) {
-    try {
-      await mongoose.connection.db?.command({ ping: 1 });
-      return cached.conn;
-    } catch {
-      console.warn("Cached connection was severed or frozen, reconnecting...");
-      try {
-        await mongoose.disconnect();
-      } catch {}
-      cached.conn = null;
-      cached.promise = null;
-    }
-  }
-
-  if (!cached.promise) {
-    const opts: mongoose.ConnectOptions = {
-      bufferCommands: false,
-      dbName: "test",
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
-      socketTimeoutMS: 20000,
-      maxPoolSize: 2,
-      minPoolSize: 0,
-      maxIdleTimeMS: 5000,
-    };
-
-    cached.promise = mongoose
-      .connect(uri, opts)
-      .then((m) => {
-        return m;
-      })
-      .catch((err) => {
-        cached.promise = null;
-        cached.conn = null;
-        console.error("MongoDB Atlas Connection Error:", err?.message || err);
-        throw err;
-      });
-  }
-
-  try {
-    cached.conn = await cached.promise;
-    return cached.conn;
-  } catch (err) {
-    cached.promise = null;
-    cached.conn = null;
-    throw err;
-  }
+function connectOptions(uri: string): mongoose.ConnectOptions {
+  return {
+    bufferCommands: false,
+    dbName: getDatabaseName(uri),
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 8000,
+    socketTimeoutMS: 15000,
+    maxPoolSize: 5,
+    minPoolSize: 0,
+    maxIdleTimeMS: 30_000,
+  };
 }
 
 /**
- * Execute a database operation with automatic single-retry if the connection
- * was dropped or severed during serverless isolate freeze/thaw.
+ * Returns a live connection, de-duplicating concurrent connect attempts so a
+ * burst of requests never opens several sockets (which previously caused
+ * "Client must be connected before running operations").
+ */
+export async function connectToDatabase(): Promise<typeof mongoose> {
+  if (mongoose.connection.readyState === 1) return mongoose;
+
+  if (!connecting) {
+    const uri = getResolvedMongoUri();
+    connecting = mongoose
+      .connect(uri, connectOptions(uri))
+      .finally(() => {
+        connecting = null;
+      });
+  }
+
+  return connecting;
+}
+
+function isConnectionError(error: unknown): boolean {
+  const name = (error as { name?: string })?.name ?? "";
+  const message = (error as { message?: string })?.message ?? "";
+  return (
+    name === "MongoNotConnectedError" ||
+    name === "MongooseServerSelectionError" ||
+    /Client must be connected|connection .*closed|topology is closed|ECONNRESET|ETIMEDOUT/i.test(
+      message
+    )
+  );
+}
+
+async function resetConnection(): Promise<void> {
+  try {
+    await mongoose.disconnect();
+  } catch {
+    // The socket is already gone; nothing else to do.
+  }
+}
+
+function scheduleIdleDisconnect(): void {
+  if (idleDisconnectTimer) clearTimeout(idleDisconnectTimer);
+  idleDisconnectTimer = setTimeout(() => {
+    idleDisconnectTimer = null;
+    if (activeDbOperations > 0) return;
+    void resetConnection();
+  }, IDLE_DISCONNECT_MS);
+  // Never keep a Node process (or a test runner) alive just for this timer.
+  (idleDisconnectTimer as { unref?: () => void }).unref?.();
+}
+
+/**
+ * Runs a database operation on a shared connection.
+ *
+ * The connection is kept open for the whole isolate and closed only after an
+ * idle period, so concurrent requests and background tasks (audit logging,
+ * analytics) can safely overlap.
  */
 export async function withDb<T>(operation: () => Promise<T>): Promise<T> {
+  activeDbOperations++;
+  if (idleDisconnectTimer) {
+    clearTimeout(idleDisconnectTimer);
+    idleDisconnectTimer = null;
+  }
+
   try {
     await connectToDatabase();
     return await operation();
-  } catch (err: any) {
-    console.warn("Database operation encountered error, resetting connection and retrying:", err?.message || err);
-    try {
-      await mongoose.disconnect();
-    } catch {}
-    cached.conn = null;
-    cached.promise = null;
+  } catch (error) {
+    if (!isConnectionError(error)) throw error;
+
+    console.warn("[mongodb] reconnecting after connectivity error");
+    await resetConnection();
     await connectToDatabase();
     return await operation();
+  } finally {
+    activeDbOperations--;
+    if (activeDbOperations <= 0) {
+      activeDbOperations = 0;
+      scheduleIdleDisconnect();
+    }
   }
 }
 

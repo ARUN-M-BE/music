@@ -1,71 +1,58 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import mongoose from "mongoose";
 import { withDb, UserModel } from "@/lib/mongodb";
-import { getUserFromRequest } from "@/lib/auth";
+import { isSuperAdminEmail, requireSuperAdmin } from "@/lib/auth";
+import { route, jsonOk, badRequest, notFound } from "@/lib/http";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { logSecurityEvent } from "@/lib/audit";
+import { runAfter } from "@/lib/background";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const SUPERADMIN_EMAILS = [
-  "arunm102301@gmail.com",
-  "arun102301@gmail.com",
-  (process.env.ADMIN_EMAIL || "arunm102301@gmail.com").toLowerCase(),
-];
+type Params = { params: Promise<{ id: string }> };
 
-// DELETE /api/users/[id] - Only Superadmin can delete users from database
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getUserFromRequest(req);
-    const xEmail = req.headers.get("x-user-email")?.trim().toLowerCase();
-    const isSuper =
-      session?.user?.role === "superadmin" ||
-      (xEmail && SUPERADMIN_EMAILS.includes(xEmail)) ||
-      (session?.user?.email && SUPERADMIN_EMAILS.includes(session.user.email.toLowerCase()));
+// DELETE /api/users/[id] - superadmin only
+export const DELETE = route("users.delete", async (req: NextRequest, { params }: Params) => {
+  const session = await requireSuperAdmin(req);
+  await enforceRateLimit(req, {
+    scope: "users:delete",
+    identifier: session.user.id,
+    limit: 20,
+    windowSeconds: 60,
+  });
 
-    if (!isSuper) {
-      return NextResponse.json(
-        { success: false, message: "Superadmin access required to delete users" },
-        { status: 403 }
-      );
-    }
+  const { id } = await params;
 
-    const { id } = await params;
+  const query = mongoose.Types.ObjectId.isValid(id)
+    ? { $or: [{ _id: id }, { user_id: id }] }
+    : { user_id: id };
 
-    // Check if id is valid ObjectId or user_id string
-    const query = mongoose.Types.ObjectId.isValid(id)
-      ? { $or: [{ _id: id }, { user_id: id }] }
-      : { user_id: id };
+  const userToDelete = await withDb(() => UserModel.findOne(query).lean());
+  if (!userToDelete) throw notFound("User not found in database");
 
-    const userToDelete = await withDb(() => UserModel.findOne(query).lean());
-    if (!userToDelete) {
-      return NextResponse.json({ success: false, message: "User not found in database" }, { status: 404 });
-    }
+  const targetEmail = String(userToDelete.email ?? "").toLowerCase();
 
-    // Protect primary Superadmin account
-    if (
-      SUPERADMIN_EMAILS.includes((userToDelete as any).email?.toLowerCase()) ||
-      (userToDelete as any).role === "superadmin"
-    ) {
-      return NextResponse.json(
-        { success: false, message: "Cannot delete the Superadmin account" },
-        { status: 400 }
-      );
-    }
-
-    await withDb(() => UserModel.deleteOne({ _id: (userToDelete as any)._id }));
-
-    return NextResponse.json({
-      success: true,
-      message: `User ${(userToDelete as any).name || (userToDelete as any).email} permanently deleted from database`,
-    });
-  } catch (error: any) {
-    console.error("DELETE /api/users/[id] error:", error);
-    return NextResponse.json(
-      { success: false, message: error?.message || "User deletion failed" },
-      { status: 400 }
-    );
+  if (isSuperAdminEmail(targetEmail) || userToDelete.role === "superadmin") {
+    throw badRequest("Cannot delete a superadmin account");
   }
-}
+  if (targetEmail === session.user.email.toLowerCase()) {
+    throw badRequest("You cannot delete your own account");
+  }
+
+  await withDb(() => UserModel.deleteOne({ _id: userToDelete._id }));
+
+  runAfter(() =>
+    logSecurityEvent({
+      type: "users.delete",
+      severity: "warning",
+      actorEmail: session.user.email,
+      request: req,
+      meta: { targetEmail },
+    })
+  );
+
+  return jsonOk({
+    message: `User ${userToDelete.name || targetEmail} permanently deleted from database`,
+  });
+});

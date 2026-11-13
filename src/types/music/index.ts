@@ -8,7 +8,7 @@ export interface UnifiedSong {
   artist: string;
   album: string;
   artwork: string;
-  duration: number; // in seconds
+  duration: number; 
   language: string;
   releaseYear: string | number;
   previewUrl: string;

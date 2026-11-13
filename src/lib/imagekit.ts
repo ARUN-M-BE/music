@@ -1,24 +1,40 @@
 import crypto from "crypto";
+import { serverEnv } from "./env";
 
-const publicKey =
-  process.env.IMAGEKIT_PUBLIC_KEY ||
-  process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY ||
-  "public_VNd03RHffcl71KVGTGbiiVxGMlg=";
+/**
+ * ImageKit credentials come exclusively from the environment.
+ * Nothing is hardcoded and the private key is never imported by client code.
+ */
+function requirePrivateKey(): string {
+  if (!serverEnv.imagekitPrivateKey) {
+    throw new Error("ImageKit is not configured (IMAGEKIT_PRIVATE_KEY missing).");
+  }
+  return serverEnv.imagekitPrivateKey;
+}
 
-const privateKey =
-  process.env.IMAGEKIT_PRIVATE_KEY ||
-  "private_DOt/nHS24bVQxjdNjvFp2uOAdAA=";
+function requirePublicKey(): string {
+  if (!serverEnv.imagekitPublicKey) {
+    throw new Error("ImageKit is not configured (IMAGEKIT_PUBLIC_KEY missing).");
+  }
+  return serverEnv.imagekitPublicKey;
+}
 
-const urlEndpoint =
-  process.env.IMAGEKIT_URL_ENDPOINT ||
-  process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT ||
-  "https://ik.imagekit.io/gmusic";
+function requireUrlEndpoint(): string {
+  if (!serverEnv.imagekitUrlEndpoint) {
+    throw new Error("ImageKit is not configured (IMAGEKIT_URL_ENDPOINT missing).");
+  }
+  return serverEnv.imagekitUrlEndpoint;
+}
+
+export function isImageKitConfigured(): boolean {
+  return Boolean(serverEnv.imagekitPrivateKey && serverEnv.imagekitPublicKey);
+}
 
 export function getImageKitAuth() {
   const token = crypto.randomUUID();
   const expire = Math.floor(Date.now() / 1000) + 1800; // 30 mins
   const signature = crypto
-    .createHmac("sha1", privateKey)
+    .createHmac("sha1", requirePrivateKey())
     .update(token + expire)
     .digest("hex");
 
@@ -26,7 +42,7 @@ export function getImageKitAuth() {
     token,
     expire,
     signature,
-    publicKey,
+    publicKey: requirePublicKey(),
   };
 }
 
@@ -35,7 +51,9 @@ export async function uploadToImageKit(
   fileName: string,
   folder: string = "/music"
 ) {
-  const authHeader = "Basic " + Buffer.from(privateKey + ":").toString("base64");
+  const authHeader =
+    "Basic " + Buffer.from(requirePrivateKey() + ":").toString("base64");
+  requireUrlEndpoint();
 
   const formData = new FormData();
   if (typeof fileBuffer === "string") {
@@ -45,8 +63,11 @@ export async function uploadToImageKit(
     const blob = new Blob([uint8]);
     formData.append("file", blob, fileName);
   }
-  formData.append("fileName", fileName);
+  formData.append("fileName", sanitizeFileName(fileName));
   formData.append("folder", folder);
+  formData.append("useUniqueFileName", "true");
+  // Reject SVG/HTML-ish assets server side as well (defence in depth).
+  formData.append("overwriteFile", "false");
 
   const res = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
     method: "POST",
@@ -54,11 +75,13 @@ export async function uploadToImageKit(
       Authorization: authHeader,
     },
     body: formData,
+    signal: AbortSignal.timeout(30000),
   });
 
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `ImageKit upload failed with HTTP ${res.status}`);
+    // Do not surface upstream payloads to the client.
+    console.error(`ImageKit upload failed with HTTP ${res.status}`);
+    throw new Error("Upload provider rejected the file");
   }
 
   const data = await res.json();
@@ -71,7 +94,8 @@ export async function uploadToImageKit(
 
 export async function deleteFromImageKit(fileId: string): Promise<boolean> {
   if (!fileId) return false;
-  const authHeader = "Basic " + Buffer.from(privateKey + ":").toString("base64");
+  const authHeader =
+    "Basic " + Buffer.from(requirePrivateKey() + ":").toString("base64");
 
   try {
     const res = await fetch(`https://api.imagekit.io/v1/files/${fileId}`, {
@@ -79,6 +103,7 @@ export async function deleteFromImageKit(fileId: string): Promise<boolean> {
       headers: {
         Authorization: authHeader,
       },
+      signal: AbortSignal.timeout(15000),
     });
 
     return res.ok || res.status === 404;
@@ -88,9 +113,23 @@ export async function deleteFromImageKit(fileId: string): Promise<boolean> {
   }
 }
 
+/** Removes path traversal / control characters from user supplied file names. */
+export function sanitizeFileName(name: string): string {
+  return (name || "upload")
+    .replace(/[\\/]+/g, "_")
+    .replace(/[^\w.\- ]+/g, "_")
+    .replace(/\.{2,}/g, ".")
+    .slice(0, 120)
+    .trim() || "upload";
+}
+
 export const imagekit = {
-  publicKey,
-  urlEndpoint,
+  get publicKey() {
+    return serverEnv.imagekitPublicKey;
+  },
+  get urlEndpoint() {
+    return serverEnv.imagekitUrlEndpoint;
+  },
   getImageKitAuth,
   uploadToImageKit,
   deleteFromImageKit,
