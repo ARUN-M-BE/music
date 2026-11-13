@@ -10,6 +10,11 @@ export default [
     ignores: [
       ".next/**",
       ".open-next/**",
+      ".wrangler/**",
+      // `wrangler dev`/`deploy` write their bundled output here; linting it
+      // produced thousands of errors from generated code.
+      "tmp/**",
+      ".dryrun/**",
       "node_modules/**",
       "out/**",
       "next-env.d.ts",

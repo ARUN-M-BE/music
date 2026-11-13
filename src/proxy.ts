@@ -3,7 +3,7 @@ import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { serverEnv } from "@/lib/env";
 
 /**
- * Edge middleware:
+ * Request proxy (formerly `middleware`, the name Next 16 deprecated):
  *  1. Strict security headers (CSP, HSTS, nosniff, frame-ancestors, ...)
  *  2. Origin allow-listing for /api (CORS / CSRF defence)
  *  3. Server-side gate for /admin (the client check is only cosmetic)
@@ -14,6 +14,9 @@ import { serverEnv } from "@/lib/env";
  * by inspecting the built HTML: 14 script tags, 0 nonces). Inline scripts are
  * therefore allowed while the remaining directives stay strict, and violations
  * are reported to /api/security/csp-report for early detection of injection.
+ *
+ * Note: a proxy always runs on the Node.js runtime, so do NOT add `runtime` to
+ * the exported `config` - Next rejects that combination at build time.
  */
 
 const ADMIN_PATH = /^\/admin(?:\/|$)/;
@@ -107,7 +110,7 @@ function corsGuard(request: NextRequest): NextResponse | null {
   );
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const isDev = process.env.NODE_ENV !== "production";
   const { pathname } = request.nextUrl;
 

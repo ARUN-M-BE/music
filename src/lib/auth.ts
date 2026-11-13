@@ -182,7 +182,12 @@ type IdentityToolkitResponse = {
  */
 export async function verifyFirebaseIdToken(idToken: string): Promise<VerifiedFirebaseUser> {
   if (!serverEnv.firebaseApiKey) {
-    throw unauthorized("Google sign-in is not configured on this deployment");
+    // Deliberately explicit: this is a deployment misconfiguration, and the
+    // variable names are public (`NEXT_PUBLIC_*`), so naming the missing one
+    // saves debugging time without disclosing a secret.
+    throw unauthorized(
+      "Google sign-in is not configured on this deployment: set NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_PROJECT_ID, then rebuild (public variables are baked in at build time)"
+    );
   }
   if (!idToken || idToken.length > 8192) {
     throw unauthorized("Missing or malformed identity token");

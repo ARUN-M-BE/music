@@ -17,3 +17,6 @@ coverage/
 .env.example.local
 .dev.vars
 .wrangler/
+# Wrangler scratch output (`wrangler dev`, `deploy --dry-run`)
+tmp/
+.dryrun/

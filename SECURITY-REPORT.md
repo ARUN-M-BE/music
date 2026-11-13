@@ -204,7 +204,7 @@ never write rows, so checking status costs nothing.
    carry a per-request nonce. Such a policy would block every script. CSP now uses
    `script-src 'self' 'unsafe-inline'` plus the exact Google/Firebase origins, with
    `report-uri /api/security/csp-report` collecting violations in production. The reasoning is
-   documented in [`middleware.ts`](file:///d:/music/src/middleware.ts).
+   documented in [`proxy.ts`](file:///d:/music/src/proxy.ts).
 7. **MongoDB connection race (fixed).** Connect-then-disconnect per operation caused
    `MongoNotConnectedError` under concurrent requests (`GET /api/auth/session` → 500). Replaced with a
    single de-duplicated connect promise, a ref-counted active-operation counter, retry-once on
@@ -212,6 +212,25 @@ never write rows, so checking status costs nothing.
 8. **`xlsx` supply-chain risk (removed).** `npm audit` reported unpatched prototype-pollution/ReDoS
    advisories with no fixed version. Replaced with `read-excel-file` for reading and a
    dependency-free CSV/JSON path for export; `.xls` is now rejected with a clear message.
+9. **Google sign-in was broken on every deployment (fixed, proven).** The browser completed the
+   popup but the server answered *"Google sign-in is not configured on this deployment"*.
+   [`env.ts`](file:///d:/music/src/lib/env.ts) read the value through `readEnv("NEXT_PUBLIC_…")`, i.e.
+   `process.env[name]` with a **dynamic** key. A bundler can only inline the *literal* form
+   `process.env.NEXT_PUBLIC_X`, so the server bundle kept the lookup and resolved it to nothing at
+   runtime, while the client (a literal read in `firebase.ts`) had the key and opened the popup fine.
+   `NEXT_PUBLIC_*` values are now read as literal constants and fall back to their server-side
+   equivalents. Proof: with `NEXT_PUBLIC_FIREBASE_API_KEY` and `…_PROJECT_ID` **blanked in the
+   process environment** at runtime, `/api/health` still reports `googleSignIn: true` (the value is
+   baked in), a bogus-but-schema-valid token now reaches Google and returns *"Identity token was
+   rejected"* instead of the config error, and the key appears in the server chunks
+   (`/.next/server/chunks/7783.js`, `.open-next/…/handler.mjs`) rather than as an unresolved lookup.
+10. **Live MongoDB credential committed in plaintext (removed from the tree; rotation still required).**
+    [`wrangler.jsonc`](file:///d:/music/wrangler.jsonc) shipped a full Atlas connection string — with the
+    password — twice, inside `vars`, and that file is tracked and pushed to `origin/next-ts`. The
+    repository is public-facing, so this is a live credential exposure regardless of remediation.
+    The entry is now removed (only the non-secret `ADMIN_EMAIL` remains) with a comment pointing at
+    `npx wrangler secret put MONGODB_URI`. **The password must be rotated — see R-1.** The same value
+    also sits in the gitignored `.env`, so the rotation has to update that file too.
 
 ---
 
@@ -236,6 +255,10 @@ never write rows, so checking status costs nothing.
 | Resend | `GET /audiences` | **`400 API key is invalid`** |
 | Tinybird | `GET /v0/datasources` | `200`, `{"datasources":[]}` |
 | Evolution webhook | `POST /api/integrations/whatsapp/webhook` | `503` fail-closed |
+| Build (Workers) | `npm run build` (`opennextjs-cloudflare build`) | **pass** — `Bundling Node.js middleware…`, worker written to `.open-next/worker.js` |
+| Headers on Workers | `wrangler dev` + `GET /login` | full set present: CSP, HSTS, COOP/CORP, Permissions-Policy, `nosniff`, `DENY` |
+| Worker gate | `wrangler dev` + `GET /admin` / `GET /api/health` | `307` → `/login`, and `200` with `checks.googleSignIn: true` |
+| Public-key inlining | scan of `.next/` and `.open-next/` for the `.env` value | present in server chunks; `AUTH_SECRET` present in **0** client files |
 
 The 25 smoke assertions cover: five unauthenticated `401`s, admin redirect, guest session creation,
 cookie `HttpOnly`/`SameSite`/signature, authenticated session read, member `403` on three admin
@@ -249,7 +272,7 @@ routes, forged-cookie rejection, header impersonation (`x-user-email`, `Bearer <
 
 | ID | Severity | Issue | Action |
 | --- | --- | --- | --- |
-| R-1 | **High** | MongoDB credentials, ImageKit private key and Firebase API key are readable in Git history (Mongo: `847ff41`, `e89866d`, `11457dd`, `6e00818`, `3961495`, `fd67f8f`, `ba530d1`, `8db8a06`; ImageKit: 5 commits; Firebase: 5 commits) | Rotate all three (§9). History rewriting only removes the copy; it does not un-leak |
+| R-1 | **High** | MongoDB credentials, ImageKit private key and Firebase API key are readable in Git history (Mongo: `847ff41`, `e89866d`, `11457dd`, `6e00818`, `3961495`, `fd67f8f`, `ba530d1`, `8db8a06`; ImageKit: 5 commits; Firebase: 5 commits). The current tree leaked the Mongo URI in `wrangler.jsonc` until it was removed in this pass — that commit is on `origin/next-ts` | Rotate all three (§9). History rewriting only removes the copy; it does not un-leak |
 | R-2 | **High** | Resend API key is rejected by the provider, so transactional email silently fails | Rotate the key (§9) |
 | R-3 | Medium | `onboarding@resend.dev` only delivers to your own account address; `RESEND_AUDIENCE_ID` unset | Verify a domain, set the sender, create an audience |
 | R-4 | Medium | Tinybird datasource not deployed — analytics lands in MongoDB | `tb push tinybird/` (§2.3) |
@@ -257,9 +280,11 @@ routes, forged-cookie rejection, header impersonation (`x-user-email`, `Bearer <
 | R-6 | Medium | `AUTH_SECRET` is 49 chars with only 22 unique characters and the literal word "secret"; the same value is duplicated in `NEXTAUTH_SECRET`. Verified **not** present in Git history, so it is weak-looking rather than leaked | Rotate to a random 48-byte value (§9); the health warning is this heuristic |
 | R-7 | Low | 9 moderate advisories remain in `@typescript-eslint`/`glob`/`minimatch` (build and lint only, no runtime exposure) | Re-check after upstream releases |
 | R-8 | Low | The `/admin` middleware gate trusts the cookie claim, so a just-demoted admin can still render the page shell (all its API calls now return `403`) | Optionally verify the role in the page's server component |
-| R-9 | Low | `middleware.ts` is deprecated in Next 16 in favour of `proxy.ts` | Run `npx @next/codemod@canary middleware-to-proxy .` |
+| R-9 | Resolved | `middleware.ts` (deprecated in Next 16) migrated to `proxy.ts` | Keep the exported name `proxy` and never add `runtime` to its `config` — a proxy is Node-runtime only |
 | R-10 | Low | Evolution API is unconfigured, so the WhatsApp feature is inert | Self-host the container and set `EVOLUTION_*` |
 | R-11 | Info | `IPSTACK_API_KEY` and `MONKEYTYPE_APE_KEY` are set but unused | Delete them |
+| R-12 | Low | On Cloudflare, `proxy.ts` relies on OpenNext's **experimental** Node.js middleware support (`WARN Node.js middleware support is experimental…`). Verified working today via `wrangler dev`, but it is not covered by OpenNext's maintenance | Re-run the header/gate checks after upgrading `@opennextjs/cloudflare`; the same checks are in the test table above |
+| R-13 | Low | `opennextjs-cloudflare build` copies `.env` into `.open-next/server-functions/default/.env`, so the deploy **directory** holds every secret. `handler.mjs` does not reference it, so Wrangler does not upload it, and `.open-next/` is gitignored | Never publish `.open-next/` as a raw artifact or zip; build in CI with injected environment variables instead of a `.env` file |
 
 ---
 
@@ -306,6 +331,8 @@ MAX_AUDIO_UPLOAD_BYTES , MAX_IMAGE_UPLOAD_BYTES , MONGODB_DB
 #    MongoDB Atlas -> Database Access -> Edit user -> new password -> update MONGODB_URI
 #    ImageKit dashboard -> regenerate key pair -> update IMAGEKIT_PRIVATE_KEY / IMAGEKIT_PUBLIC_KEY
 #    Google Cloud Console -> API key -> restrict by HTTP referrer + rotate -> update NEXT_PUBLIC_FIREBASE_API_KEY
+#    After rotating the database password, update .env AND the deploy target:
+#    npx wrangler secret put MONGODB_URI     (wrangler.jsonc is committed - never a secret home)
 
 # 2. Rotate the Resend key (current one returns 400 "API key is invalid")
 #    resend.com/api-keys -> create -> then verify as admin:
@@ -322,6 +349,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 # 5. Verify everything
 npm run verify ; npm run audit:security ; npm run build:next
 powershell -File .\scripts\smoke-test.ps1 -Base http://localhost:3000
+#    and confirm the deployment is correctly wired:
+#    curl https://your-domain/api/health -> checks.googleSignIn must be true
 ```
 
 If the repository is public, also purge the historical blobs:
@@ -332,18 +361,46 @@ If the repository is public, also purge the historical blobs:
 ## 10. Deployment
 
 **Vercel (recommended, free tier).** Set the variables from §8 in *Project → Settings →
-Environment Variables*. Vercel sets `x-forwarded-proto: https`, which the middleware requires.
-No other configuration is needed.
+Environment Variables*. Vercel sets `x-forwarded-proto: https`, which the proxy requires.
+No other configuration is needed. `vercel.json` is intentionally `{}`: it previously held a
+catch-all rewrite to `/index.html`, which does not exist in an App Router build and would have
+broken every route.
+
+> Any change to a `NEXT_PUBLIC_*` variable requires a **new build** — those values are compiled into
+the bundle. Editing the environment on a running deployment changes nothing, which is exactly how
+the Google sign-in outage happened.
 
 **Cloudflare Workers (`wrangler.jsonc`, `open-next.config.ts` are already present).**
 
 ```powershell
-npx wrangler secret put AUTH_SECRET   # repeat per secret; never put them in wrangler.jsonc
+# Secrets are never written to wrangler.jsonc - only non-secret values live there.
+npx wrangler secret put AUTH_SECRET
+npx wrangler secret put MONGODB_URI
+npx wrangler secret put IMAGEKIT_PRIVATE_KEY
+npx wrangler secret put UPSTASH_REDIS_REST_URL     # repeat per secret
 npm run build        # opennextjs-cloudflare build
 npm run deploy
 ```
 
-Note: I validated the Node runtime only. The `opennextjs-cloudflare` build path was not executed here.
+Both build targets were executed. `npm run build` reaches `OpenNext build complete` and writes
+`.open-next/worker.js`; the worker was then run locally with `npx wrangler dev`, where the full
+header set, the `/admin` → `/login` gate and `/api/health` all behaved exactly as under `next start`.
+The only caveat is OpenNext's own warning that Node.js middleware support on Workers is
+experimental — recorded as R-12, with the checks to re-run after an upgrade.
+
+**Workers Builds specifics (learned from a failed CI deploy).**
+
+- `name` in [`wrangler.jsonc`](file:///d:/music/wrangler.jsonc) must equal the Worker the Builds
+  project is connected to (`music`). When they differ the CI silently overrides the name and the
+  version upload failed with `code: 10013` on `/workers/scripts/music/versions`. It is now aligned.
+- Upload size is well inside the free plan: **9,707.94 KiB raw / 1,913.61 KiB gzip** against a 3 MiB
+  compressed limit, measured with `npx wrangler deploy --dry-run`. Size is therefore *not* the cause
+  of a `10013`; that code is an API-side 500 during the versions/assets session, so a re-run is the
+  first response and a config check the second.
+- `--dry-run` validates the whole config without touching the account — run it before any deploy.
+- `wrangler dev` and `deploy --dry-run` write scratch output to `tmp/` / the `--outdir`; both are now
+  git-ignored and excluded from ESLint (`ignores`), because linting generated bundles produced ~9.5k
+  bogus problems.
 
 **Local production check (gotcha):** `npm run build:next; npm run start -p 3400` then send
 `x-forwarded-proto: https`, otherwise every request 308-redirects to `https://localhost:3400`, which
@@ -361,5 +418,8 @@ has no TLS listener. On a real host the proxy sets that header for you.
 - **Tinybird happy path not exercised** — the datasource does not exist yet. Only the MongoDB fallback
   is proven.
 - **Evolution API not exercised** — no instance is running; only the fail-closed `503` is proven.
-- **Cloudflare Workers runtime untested**; all runtime evidence is from `next start` and `next dev`.
+- **Cloudflare Workers runtime verified locally, not deployed.** The build succeeds and `wrangler dev`
+  reproduces the Node behaviour (headers, admin gate, health), but no real deploy was performed, so
+  edge-specific behaviour (streaming, cache, cold starts) is still unproven. OpenNext flags Node
+  middleware on Workers as experimental (R-12).
 - **Resend audience contact add not exercised** (needs a valid key and `RESEND_AUDIENCE_ID`).

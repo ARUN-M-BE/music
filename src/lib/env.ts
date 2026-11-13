@@ -12,12 +12,36 @@
 
 const isProduction = process.env.NODE_ENV === "production";
 
-function readEnv(name: string): string | undefined {
-  const value = process.env[name];
+function normalize(value: string | undefined): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
+
+/**
+ * Runtime lookup for server-only values (secrets, connection strings, flags).
+ * Every platform injects those into `process.env` at runtime, so a dynamic key
+ * is correct here.
+ */
+function readEnv(name: string): string | undefined {
+  return normalize(process.env[name]);
+}
+
+/**
+ * `NEXT_PUBLIC_*` values must be read through a LITERAL `process.env.X`
+ * expression. The bundler only rewrites those literals to the build-time value;
+ * a dynamic `process.env[name]` lookup is left untouched and is `undefined` at
+ * runtime on worker/edge targets, where build-time public variables are not
+ * bound to the runtime environment.
+ *
+ * This caused a real outage: the browser could complete the Google popup (the
+ * key was inlined in the client bundle) while the server answered
+ * "Google sign-in is not configured on this deployment".
+ */
+const PUBLIC_FIREBASE_API_KEY = normalize(process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+const PUBLIC_FIREBASE_PROJECT_ID = normalize(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+const PUBLIC_IMAGEKIT_KEY = normalize(process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY);
+const PUBLIC_IMAGEKIT_ENDPOINT = normalize(process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT);
 
 function readList(name: string): string[] {
   const raw = readEnv(name);
@@ -81,17 +105,13 @@ export const serverEnv = {
   mongodbDbName: readEnv("MONGODB_DB"),
 
   // ---------------------------------------------------------------- firebase
-  firebaseApiKey:
-    readEnv("FIREBASE_WEB_API_KEY") ?? readEnv("NEXT_PUBLIC_FIREBASE_API_KEY") ?? "",
-  firebaseProjectId:
-    readEnv("FIREBASE_PROJECT_ID") ?? readEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID") ?? "",
+  firebaseApiKey: readEnv("FIREBASE_WEB_API_KEY") ?? PUBLIC_FIREBASE_API_KEY ?? "",
+  firebaseProjectId: readEnv("FIREBASE_PROJECT_ID") ?? PUBLIC_FIREBASE_PROJECT_ID ?? "",
 
   // ---------------------------------------------------------------- imagekit
   imagekitPrivateKey: readEnv("IMAGEKIT_PRIVATE_KEY") ?? "",
-  imagekitPublicKey:
-    readEnv("IMAGEKIT_PUBLIC_KEY") ?? readEnv("NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY") ?? "",
-  imagekitUrlEndpoint:
-    readEnv("IMAGEKIT_URL_ENDPOINT") ?? readEnv("NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT") ?? "",
+  imagekitPublicKey: readEnv("IMAGEKIT_PUBLIC_KEY") ?? PUBLIC_IMAGEKIT_KEY ?? "",
+  imagekitUrlEndpoint: readEnv("IMAGEKIT_URL_ENDPOINT") ?? PUBLIC_IMAGEKIT_ENDPOINT ?? "",
 
   // ---------------------------------------------------------------- upstash
   upstashRestUrl: readEnv("UPSTASH_REDIS_REST_URL") ?? "",

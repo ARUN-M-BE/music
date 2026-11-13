@@ -1,6 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "music-next",
+  // Must match the Worker that Workers Builds is connected to. A mismatch makes
+  // the CI override the name at deploy time and can fail the version upload.
+  "name": "music",
   "main": ".open-next/worker.js",
   "compatibility_date": "2024-12-30",
   "compatibility_flags": [
@@ -11,10 +13,12 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Only non-secret configuration belongs in `vars`: this file is committed, so
+  // anything written here is public. The MongoDB connection string previously
+  // lived here in plaintext and is now a Wrangler secret instead:
+  //   npx wrangler secret put MONGODB_URI
+  // Secrets are injected at runtime and never appear in the repository.
   "vars": {
-    "MONGODB_URI": "mongodb://arunm:1Gm6yMeD4zOOYguX@cluster0-shard-00-00.lmxpr.mongodb.net:27017,cluster0-shard-00-01.lmxpr.mongodb.net:27017,cluster0-shard-00-02.lmxpr.mongodb.net:27017/test?ssl=true&replicaSet=atlas-11187l-shard-0&authSource=admin&retryWrites=true&w=majority",
-    "DATABASE_STRING": "mongodb://arunm:1Gm6yMeD4zOOYguX@cluster0-shard-00-00.lmxpr.mongodb.net:27017,cluster0-shard-00-01.lmxpr.mongodb.net:27017,cluster0-shard-00-02.lmxpr.mongodb.net:27017/test?ssl=true&replicaSet=atlas-11187l-shard-0&authSource=admin&retryWrites=true&w=majority",
     "ADMIN_EMAIL": "arunm102301@gmail.com"
   }
 }
-

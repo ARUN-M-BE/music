@@ -45,6 +45,12 @@ export const GET = route("health.get", async (req: NextRequest) => {
         database,
         authSecret: Boolean(serverEnv.authSecret),
         adminAccounts: serverEnv.adminEmails.length,
+        // Server-side Google sign-in needs the web API key and project id. Both
+        // are `NEXT_PUBLIC_*`, so they are baked in at build time and a missing
+        // one here means the deployment was built without them.
+        googleSignIn:
+          Boolean(serverEnv.firebaseApiKey) && Boolean(serverEnv.firebaseProjectId),
+        imagekit: Boolean(serverEnv.imagekitUrlEndpoint),
       },
       integrations: getIntegrationHealth().map((item) => ({
         name: item.name,
