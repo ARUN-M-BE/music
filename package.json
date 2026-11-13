@@ -11,7 +11,15 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run lint",
-    "audit:security": "npm audit --audit-level=high"
+    "audit:security": "npm audit --audit-level=high",
+    "secrets:keygen": "node scripts/secrets.mjs keygen",
+    "secrets:seal": "node scripts/secrets.mjs seal",
+    "secrets:rekey": "node scripts/secrets.mjs rekey",
+    "secrets:doctor": "node scripts/secrets.mjs doctor",
+    "secrets:verify": "node scripts/secrets.mjs verify",
+    "secrets:scan": "node scripts/secrets.mjs scan",
+    "secrets:scan:history": "node scripts/secrets.mjs scan --history",
+    "secrets:test": "node scripts/secrets.mjs test"
   },
   "dependencies": {
     "clsx": "^2.1.1",

@@ -10,6 +10,17 @@
  * This module must never be imported from a "use client" component.
  */
 
+import {
+  MASTER_KEY_ENV,
+  PREVIOUS_MASTER_KEY_ENV,
+  STRICT_ENV,
+  getSecretsReport,
+  hasSecret,
+  readSecret,
+  readSecretSafe,
+  scanSealableSecrets,
+} from "./secrets";
+
 const isProduction = process.env.NODE_ENV === "production";
 
 function normalize(value: string | undefined): string | undefined {
@@ -75,7 +86,10 @@ export const serverEnv = {
 
   // ---------------------------------------------------------------- core auth
   get authSecret(): string {
-    const secret = readEnv("AUTH_SECRET") ?? readEnv("NEXTAUTH_SECRET");
+    // Secrets may be sealed (`enc:v1:...`); `readSecret` opens them or throws
+    // with the variable name. Plaintext is still accepted unless
+    // SECRETS_STRICT=true.
+    const secret = readSecret("AUTH_SECRET") ?? readSecret("NEXTAUTH_SECRET");
     if (secret && secret.length >= 32) return secret;
     if (!isProduction) return secret ?? DEV_AUTH_SECRET;
     // In production a missing/short secret is a fatal misconfiguration.
@@ -96,7 +110,7 @@ export const serverEnv = {
 
   // ---------------------------------------------------------------- database
   get mongodbUri(): string {
-    const uri = readEnv("MONGODB_URI") ?? readEnv("DATABASE_STRING");
+    const uri = readSecret("MONGODB_URI") ?? readSecret("DATABASE_STRING");
     if (!uri) {
       throw new Error("MONGODB_URI (or DATABASE_STRING) is not configured.");
     }
@@ -105,20 +119,22 @@ export const serverEnv = {
   mongodbDbName: readEnv("MONGODB_DB"),
 
   // ---------------------------------------------------------------- firebase
-  firebaseApiKey: readEnv("FIREBASE_WEB_API_KEY") ?? PUBLIC_FIREBASE_API_KEY ?? "",
+  // The web API key is public by design, but the server copy is still treated
+  // as a secret: it is the value that gets rotated when the leaked one is fixed.
+  firebaseApiKey: readSecret("FIREBASE_WEB_API_KEY") ?? PUBLIC_FIREBASE_API_KEY ?? "",
   firebaseProjectId: readEnv("FIREBASE_PROJECT_ID") ?? PUBLIC_FIREBASE_PROJECT_ID ?? "",
 
   // ---------------------------------------------------------------- imagekit
-  imagekitPrivateKey: readEnv("IMAGEKIT_PRIVATE_KEY") ?? "",
+  imagekitPrivateKey: readSecret("IMAGEKIT_PRIVATE_KEY") ?? "",
   imagekitPublicKey: readEnv("IMAGEKIT_PUBLIC_KEY") ?? PUBLIC_IMAGEKIT_KEY ?? "",
   imagekitUrlEndpoint: readEnv("IMAGEKIT_URL_ENDPOINT") ?? PUBLIC_IMAGEKIT_ENDPOINT ?? "",
 
   // ---------------------------------------------------------------- upstash
   upstashRestUrl: readEnv("UPSTASH_REDIS_REST_URL") ?? "",
-  upstashRestToken: readEnv("UPSTASH_REDIS_REST_TOKEN") ?? "",
+  upstashRestToken: readSecret("UPSTASH_REDIS_REST_TOKEN") ?? "",
 
   // ---------------------------------------------------------------- resend
-  resendApiKey: readEnv("RESEND_API_KEY") ?? "",
+  resendApiKey: readSecret("RESEND_API_KEY") ?? "",
   // `RESEND_FROM_EMAIL` is accepted for backwards compatibility with existing
   // .env files; without it the configured sender name was silently ignored.
   resendFrom:
@@ -129,17 +145,17 @@ export const serverEnv = {
   resendAdminNotifyEmail: readEnv("RESEND_ADMIN_NOTIFY_EMAIL") ?? "",
 
   // ---------------------------------------------------------------- tinybird
-  tinybirdToken: readEnv("TINYBIRD_TOKEN") ?? "",
+  tinybirdToken: readSecret("TINYBIRD_TOKEN") ?? "",
   // `TINYBIRD_URL` is accepted for backwards compatibility with existing .env files.
   tinybirdHost: readEnv("TINYBIRD_HOST") ?? readEnv("TINYBIRD_URL") ?? "https://api.tinybird.co",
   tinybirdPlaysDatasource: readEnv("TINYBIRD_PLAYS_DATASOURCE") ?? "music_plays",
 
   // ---------------------------------------------------------------- evolution (self-hosted WhatsApp)
   evolutionApiUrl: readEnv("EVOLUTION_API_URL") ?? "",
-  evolutionApiKey: readEnv("EVOLUTION_API_KEY") ?? "",
+  evolutionApiKey: readSecret("EVOLUTION_API_KEY") ?? "",
   evolutionInstance: readEnv("EVOLUTION_INSTANCE") ?? "",
   evolutionAdminNumber: readEnv("EVOLUTION_ADMIN_NUMBER") ?? "",
-  evolutionWebhookSecret: readEnv("EVOLUTION_WEBHOOK_SECRET") ?? "",
+  evolutionWebhookSecret: readSecret("EVOLUTION_WEBHOOK_SECRET") ?? "",
 
   // ---------------------------------------------------------------- geo ip
   // IPstack's free tier is HTTP-only (HTTPS is a paid feature) so a free,
@@ -165,26 +181,26 @@ export function getIntegrationHealth(): IntegrationHealth[] {
   return [
     {
       name: "upstash-redis",
-      configured: Boolean(serverEnv.upstashRestUrl && serverEnv.upstashRestToken),
+      configured: Boolean(serverEnv.upstashRestUrl) && hasSecret("UPSTASH_REDIS_REST_TOKEN"),
       freeTier: "10,000 commands/day, 256 MB, no card required",
       requiredEnv: ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
     },
     {
       name: "resend-audiences",
-      configured: Boolean(serverEnv.resendApiKey),
+      configured: hasSecret("RESEND_API_KEY"),
       freeTier: "3,000 emails/month, 100/day; audiences included",
       requiredEnv: ["RESEND_API_KEY", "RESEND_FROM"],
     },
     {
       name: "tinybird",
-      configured: Boolean(serverEnv.tinybirdToken),
+      configured: hasSecret("TINYBIRD_TOKEN"),
       freeTier: "Free developer workspace (1,000 API requests/day)",
       requiredEnv: ["TINYBIRD_TOKEN", "TINYBIRD_HOST"],
     },
     {
       name: "evolution-api",
       configured: Boolean(
-        serverEnv.evolutionApiUrl && serverEnv.evolutionApiKey && serverEnv.evolutionInstance
+        serverEnv.evolutionApiUrl && hasSecret("EVOLUTION_API_KEY") && serverEnv.evolutionInstance
       ),
       freeTier: "Open source (Apache-2.0), self-hosted at zero licence cost",
       requiredEnv: ["EVOLUTION_API_URL", "EVOLUTION_API_KEY", "EVOLUTION_INSTANCE"],
@@ -209,25 +225,33 @@ export function validateServerEnv(): { errors: string[]; warnings: string[] } {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  const secret = readEnv("AUTH_SECRET") ?? readEnv("NEXTAUTH_SECRET");
+  const secret = readSecretSafe("AUTH_SECRET") ?? readSecretSafe("NEXTAUTH_SECRET");
   if (!secret) {
-    errors.push("AUTH_SECRET is not set.");
+    // Distinguish "missing" from "present but unreadable": the second one is a
+    // wrong master key, which otherwise looks like a mystery outage.
+    errors.push(
+      hasSecret("AUTH_SECRET") || hasSecret("NEXTAUTH_SECRET")
+        ? `AUTH_SECRET is set but could not be decrypted: check ${MASTER_KEY_ENV}.`
+        : "AUTH_SECRET is not set."
+    );
   } else if (secret.length < 32) {
     errors.push("AUTH_SECRET must be at least 32 characters long.");
   } else if (/music-secret-jwt|changeme|secret/i.test(secret) && isProduction) {
     warnings.push("AUTH_SECRET looks like a placeholder value. Rotate it.");
   }
 
-  if (!readEnv("MONGODB_URI") && !readEnv("DATABASE_STRING")) {
+  if (!hasSecret("MONGODB_URI") && !hasSecret("DATABASE_STRING")) {
     errors.push("MONGODB_URI is not set.");
   }
-  if (!serverEnv.imagekitPrivateKey) {
+  if (!hasSecret("IMAGEKIT_PRIVATE_KEY")) {
     warnings.push("IMAGEKIT_PRIVATE_KEY is not set: uploads are disabled.");
   }
-  if (!serverEnv.firebaseApiKey) {
+  // `hasSecret` instead of the getter: a sealed value with a wrong master key
+  // must be reported by the `secrets.failed` check below, not thrown here.
+  if (!hasSecret("FIREBASE_WEB_API_KEY") && !PUBLIC_FIREBASE_API_KEY) {
     warnings.push("FIREBASE_WEB_API_KEY is not set: Google sign-in verification is disabled.");
   }
-  if (!serverEnv.upstashRestUrl || !serverEnv.upstashRestToken) {
+  if (!hasSecret("UPSTASH_REDIS_REST_TOKEN") || !serverEnv.upstashRestUrl) {
     warnings.push(
       "Upstash REST credentials missing: falling back to per-instance in-memory rate limiting."
     );
@@ -237,6 +261,50 @@ export function validateServerEnv(): { errors: string[]; warnings: string[] } {
   }
   if (serverEnv.mongodbDbName) {
     warnings.push("MONGODB_DB overrides the database name from the connection string.");
+  }
+
+  // ------------------------------------------------------------ secrets at rest
+  // Reading every sealable variable makes the report complete even when a
+  // request only touched one of them. Failures are collected, never thrown.
+  scanSealableSecrets();
+  const secrets = getSecretsReport();
+
+  if (secrets.failedSecretNames.length > 0) {
+    errors.push(
+      `Encrypted secret(s) could not be opened: ${secrets.failedSecretNames.join(
+        ", "
+      )}. Check ${MASTER_KEY_ENV} (and ${PREVIOUS_MASTER_KEY_ENV} during a rotation).`
+    );
+  }
+
+  if (!secrets.masterKeyConfigured) {
+    warnings.push(
+      `At-rest encryption is OFF (${MASTER_KEY_ENV} is not set): server secrets are stored in plaintext. Run \`npm run secrets:keygen\` then \`npm run secrets:seal\`.`
+    );
+  } else if (!secrets.selfTest) {
+    errors.push(
+      `${MASTER_KEY_ENV} is set but the encrypt/decrypt self-test failed on this runtime: secrets sealed here cannot be read back.`
+    );
+  }
+
+  if (secrets.masterKeyConfigured && secrets.plaintextSecretNames.length > 0) {
+    const message = `${secrets.plaintextSecretNames.length} server secret(s) are still plaintext: ${secrets.plaintextSecretNames.join(", ")}. Run \`npm run secrets:seal\`.`;
+    if (secrets.strict) errors.push(`${message} ${STRICT_ENV}=true refuses plaintext.`);
+    else warnings.push(message);
+  }
+
+  // ------------------------------------------------------------ resend delivery
+  const resendKey = readSecretSafe("RESEND_API_KEY");
+  if (resendKey) {
+    if (!/^re_[A-Za-z0-9_-]{8,}$/.test(resendKey)) {
+      warnings.push(
+        "RESEND_API_KEY does not look like a Resend key (expected `re_...`): transactional email will fail."
+      );
+    } else if (/@resend\.dev\b/i.test(serverEnv.resendFrom)) {
+      warnings.push(
+        "RESEND_FROM uses the resend.dev sandbox sender: only the Resend account owner can receive mail. Verify a domain to email real users."
+      );
+    }
   }
 
   return { errors, warnings };

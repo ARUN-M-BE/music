@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, models, Model } from "mongoose";
+import { serverEnv } from "./env";
 
 export interface ISong {
   _id: string;
@@ -190,17 +191,12 @@ export const AnalyticsEvent: Model<any> =
   models.analyticsEvent || model("analyticsEvent", analyticsEventSchema);
 
 /**
- * Connection string is read exclusively from the environment.
+ * The connection string is read exclusively from the environment, through
+ * `serverEnv` so a sealed (`enc:v1:...`) value is decrypted first.
  * Credentials are never bundled into the repository.
  */
 function getResolvedMongoUri(): string {
-  const envUri = process.env.MONGODB_URI || process.env.DATABASE_STRING;
-  if (!envUri || !envUri.trim()) {
-    throw new Error(
-      "MONGODB_URI is not configured. Set it in your environment before starting the server."
-    );
-  }
-  return envUri.trim();
+  return serverEnv.mongodbUri;
 }
 
 function getDatabaseName(uri: string): string {

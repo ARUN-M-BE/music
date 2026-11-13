@@ -6,12 +6,74 @@ import { serverEnv } from "../env";
  * Free tier: 3,000 emails/month, 100/day, audiences and contacts included.
  * No paid feature is used: no broadcast campaigns, no dedicated IPs.
  *
- * All calls are best-effort: an email outage must never fail a sign-in or an
- * admin action.
+ * Delivery stays best-effort (an email outage must never fail a sign-in), but it
+ * is no longer SILENT: a rejected key is logged as an error at most every five
+ * minutes, the last failure is exposed for `/api/integrations/health`, and
+ * `checkResendKey()` performs a read-only probe so a bad key is visible before a
+ * user reports a missing welcome email.
  */
 
 export function resendConfigured(): boolean {
   return Boolean(serverEnv.resendApiKey);
+}
+
+/**
+ * Resend keys are `re_` followed by an opaque body that may itself contain `_`
+ * or `-` (verified against the live key format: `re_e3ZPhtW4_F4kvz1...`).
+ * A stricter pattern produced a false "malformed key" diagnosis.
+ */
+export function resendKeyFormatValid(): boolean {
+  return /^re_[A-Za-z0-9_-]{8,}$/.test(serverEnv.resendApiKey);
+}
+
+/** `resend.dev` is Resend's shared sandbox sender: it only reaches the account owner. */
+export function resendSenderIsSandbox(): boolean {
+  return /@resend\.dev\b/i.test(serverEnv.resendFrom);
+}
+
+export type ResendErrorCode =
+  | "not_configured"
+  | "invalid_recipient"
+  | "unauthorized"
+  | "rate_limited"
+  | "provider_error"
+  | "network";
+
+export interface ResendFailure {
+  code: ResendErrorCode;
+  status?: number;
+  /** Operator-facing explanation. Never contains the key or the message body. */
+  message: string;
+}
+
+export type ResendResult = { ok: true } | { ok: false; error: ResendFailure };
+
+let lastFailure: (ResendFailure & { at: number }) | null = null;
+let lastRejectionLogAt = 0;
+const REJECTION_LOG_INTERVAL_MS = 5 * 60_000;
+
+/** Last delivery failure (no credentials inside), for diagnostics. */
+export function getResendFailure(): (ResendFailure & { at: number }) | null {
+  return lastFailure;
+}
+
+function fail(failure: ResendFailure): ResendResult {
+  lastFailure = { ...failure, at: Date.now() };
+
+  if (failure.code === "unauthorized") {
+    // A rejected key is a configuration outage, so it is logged as an error and
+    // throttled: a sign-up storm must not flood the log with the same line.
+    if (Date.now() - lastRejectionLogAt > REJECTION_LOG_INTERVAL_MS) {
+      lastRejectionLogAt = Date.now();
+      console.error(
+        `[resend] ${failure.message} Transactional email is DOWN: rotate RESEND_API_KEY, then verify with GET /api/integrations/health?probe=1`
+      );
+    }
+  } else if (failure.code !== "not_configured") {
+    console.warn(`[resend] ${failure.message}`);
+  }
+
+  return { ok: false, error: failure };
 }
 
 function escapeHtml(value: string): string {
@@ -31,18 +93,29 @@ interface SendEmailInput {
   replyTo?: string;
 }
 
-export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean }> {
-  if (!resendConfigured()) return { ok: false };
+export async function sendEmail(input: SendEmailInput): Promise<ResendResult> {
+  if (!resendConfigured()) {
+    return { ok: false, error: { code: "not_configured", message: "RESEND_API_KEY is not set." } };
+  }
+  if (!resendKeyFormatValid()) {
+    return fail({
+      code: "unauthorized",
+      message: "RESEND_API_KEY does not look like a Resend key (expected `re_...`).",
+    });
+  }
 
   const recipients = (Array.isArray(input.to) ? input.to : [input.to])
     .map((address) => address.trim().toLowerCase())
     .filter((address) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address))
     .slice(0, 5);
 
-  if (recipients.length === 0) return { ok: false };
+  if (recipients.length === 0) {
+    return { ok: false, error: { code: "invalid_recipient", message: "No valid recipient address." } };
+  }
 
+  let response: Response;
   try {
-    const response = await fetch("https://api.resend.com/emails", {
+    response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${serverEnv.resendApiKey}`,
@@ -58,16 +131,108 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean }>
       }),
       signal: AbortSignal.timeout(8000),
     });
-
-    if (!response.ok) {
-      console.warn(`[resend] email rejected with HTTP ${response.status}`);
-      return { ok: false };
-    }
-    return { ok: true };
   } catch (error) {
-    console.warn("[resend] email send failed:", (error as Error)?.message);
-    return { ok: false };
+    return fail({
+      code: "network",
+      message: `Resend is unreachable (${(error as Error)?.name ?? "error"}).`,
+    });
   }
+
+  if (response.ok) return { ok: true };
+
+  if (response.status === 401 || response.status === 403) {
+    return fail({
+      code: "unauthorized",
+      status: response.status,
+      message: `Resend rejected the API key (HTTP ${response.status}). Rotate RESEND_API_KEY.`,
+    });
+  }
+  if (response.status === 429) {
+    return fail({
+      code: "rate_limited",
+      status: 429,
+      message: "Resend free-tier limit reached (100 emails/day).",
+    });
+  }
+
+  // Resend explains 4xx bodies, but they can echo the recipient address, so the
+  // payload is only inspected for a hint and never logged or forwarded.
+  const detail = await response.text().catch(() => "");
+  const hint = /domain|from/i.test(detail)
+    ? " The sender domain is not verified in Resend."
+    : "";
+  return fail({
+    code: "provider_error",
+    status: response.status,
+    message: `Resend rejected the message (HTTP ${response.status}).${hint}`,
+  });
+}
+
+let keyProbeCache: { at: number; result: { reachable: boolean; note: string } } | null = null;
+const KEY_PROBE_TTL_MS = 60_000;
+
+/**
+ * Read-only credential probe (`GET /domains`: no email sent, no quota used).
+ * Cached briefly so the admin health page cannot burn free-tier requests.
+ */
+export async function checkResendKey(
+  force = false
+): Promise<{ reachable: boolean; note: string }> {
+  if (!resendConfigured()) return { reachable: false, note: "RESEND_API_KEY is not set." };
+  if (!resendKeyFormatValid()) {
+    return { reachable: false, note: "RESEND_API_KEY is malformed (expected `re_...`): rotate it." };
+  }
+  if (!force && keyProbeCache && Date.now() - keyProbeCache.at < KEY_PROBE_TTL_MS) {
+    return keyProbeCache.result;
+  }
+
+  let result: { reachable: boolean; note: string };
+  try {
+    const response = await fetch("https://api.resend.com/domains", {
+      headers: { Authorization: `Bearer ${serverEnv.resendApiKey}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (response.ok) {
+      result = {
+        reachable: true,
+        note: resendSenderIsSandbox()
+          ? "API key accepted, but the sender uses the resend.dev sandbox: only the account owner can receive mail."
+          : "API key accepted.",
+      };
+    } else if (response.status === 401 || response.status === 403) {
+      result = {
+        reachable: false,
+        note: `API key rejected (HTTP ${response.status}): rotate RESEND_API_KEY.`,
+      };
+      lastFailure = {
+        code: "unauthorized",
+        status: response.status,
+        message: result.note,
+        at: Date.now(),
+      };
+    } else {
+      result = { reachable: false, note: `Provider returned HTTP ${response.status}.` };
+    }
+  } catch {
+    result = { reachable: false, note: "Provider unreachable from this host." };
+  }
+
+  keyProbeCache = { at: Date.now(), result };
+  if (!result.reachable) console.warn(`[resend] key probe: ${result.note}`);
+  return result;
+}
+
+/** Configuration diagnosis for `/api/health`; contains no key material. */
+export function getResendDiagnostics() {
+  return {
+    configured: resendConfigured(),
+    keyFormatValid: resendKeyFormatValid(),
+    sandboxSender: resendSenderIsSandbox(),
+    lastFailure: lastFailure
+      ? { code: lastFailure.code, status: lastFailure.status ?? null, at: lastFailure.at }
+      : null,
+  };
 }
 
 /** Adds a listener to the free-tier Resend audience (double opt-in friendly). */

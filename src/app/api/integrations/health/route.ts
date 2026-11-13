@@ -6,6 +6,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { redisCommand } from "@/lib/integrations/upstash";
 import { getEvolutionConnectionState } from "@/lib/integrations/evolution";
 import { getTypingBenchmark } from "@/lib/integrations/monkeytype";
+import { checkResendKey, getResendDiagnostics } from "@/lib/integrations/resend";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,25 +79,11 @@ export const GET = route("integrations.health", async (req: NextRequest) => {
       }
 
       if (item.name === "resend-audiences") {
-        // GET /domains is read-only: no email is sent and no quota is used.
-        try {
-          const response = await fetch("https://api.resend.com/domains", {
-            headers: { Authorization: `Bearer ${serverEnv.resendApiKey}` },
-            cache: "no-store",
-            signal: AbortSignal.timeout(8000),
-          });
-          if (response.ok) return { ...base, reachable: true, note: "API key accepted." };
-          return {
-            ...base,
-            reachable: false,
-            note:
-              response.status === 401 || response.status === 403
-                ? `API key rejected (HTTP ${response.status}): rotate RESEND_API_KEY.`
-                : `Provider returned HTTP ${response.status}.`,
-          };
-        } catch {
-          return { ...base, reachable: false, note: "Provider unreachable from this host." };
-        }
+        // `GET /domains` is read-only: no email is sent and no quota is used.
+        // `force` bypasses the 60 s cache so an operator who just rotated the key
+        // sees the new result immediately.
+        const probe = await checkResendKey(true);
+        return { ...base, reachable: probe.reachable, note: probe.note };
       }
 
       if (item.name === "tinybird") {
@@ -145,7 +132,11 @@ export const GET = route("integrations.health", async (req: NextRequest) => {
   );
 
   return jsonOk(
-    { integrations: probes },
+    {
+      integrations: probes,
+      // No key material: format flag, sandbox-sender flag and the last failure.
+      resend: getResendDiagnostics(),
+    },
     { headers: { "Cache-Control": "no-store" } }
   );
 });

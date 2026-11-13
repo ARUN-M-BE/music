@@ -11,3 +11,6 @@
 2026-09-20 | HTTP 505 error status in `auth.js` | Return standard HTTP 401/500 status codes for authentication errors | Server/Express
 2026-09-20 | Vercel build failure on missing `./DashboardUsers copy` | Export valid component files and untrack `node_modules` from git repository | Build/Vercel
 2026-09-20 | Vercel 404 NOT_FOUND on page refresh | Add SPA rewrites `source: "/(.*)", destination: "/index.html"` in `vercel.json` | Deployment/SPA
+2026-11-13 | Server secrets were stored as plaintext in `.env`, `render.yaml` and `wrangler.jsonc` | Seal every credential (`enc:v1:` via `npm run secrets:seal`), keep only `SECRETS_MASTER_KEY` in the platform store, and never write a secret into a tracked file | Security/Secrets
+2026-11-13 | A rejected Resend key only produced a `console.warn` and a discarded `false`, so email died unnoticed | Integration failures must be typed, logged at error level (throttled) and surfaced on a health endpoint; best-effort never means silent | Integrations/Resend
+2026-11-13 | Git history held `.env`, `render.yaml` and a Google service-account key from the pre-Next layout | Run `npm run secrets:scan` (and `:history` after a layout change) before pushing; a CI scan is the only reliable guard | Security/Git

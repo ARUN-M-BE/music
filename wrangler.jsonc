@@ -17,6 +17,7 @@
   // anything written here is public. The MongoDB connection string previously
   // lived here in plaintext and is now a Wrangler secret instead:
   //   npx wrangler secret put MONGODB_URI
+  //   npx wrangler secret put SECRETS_MASTER_KEY   (enables sealed env values)
   // Secrets are injected at runtime and never appear in the repository.
   "vars": {
     "ADMIN_EMAIL": "arunm102301@gmail.com"

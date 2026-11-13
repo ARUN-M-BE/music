@@ -20,3 +20,8 @@ coverage/
 # Wrangler scratch output (`wrangler dev`, `deploy --dry-run`)
 tmp/
 .dryrun/
+
+# `npm run secrets:seal` / `rekey` output and backups: never commit env material
+*.sealed
+*.rekeyed
+.env.bak.*
