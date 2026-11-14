@@ -161,16 +161,29 @@ export const serverEnv = {
   firebaseAppId: readEnv("FIREBASE_APP_ID") ?? readEnv("NEXT_PUBLIC_FIREBASE_APP_ID") ?? "",
 
   // ---------------------------------------------------------------- imagekit
-  imagekitPrivateKey: readSecret("IMAGEKIT_PRIVATE_KEY") ?? "",
+  //
+  // Every secret below is a *getter*, never a value computed while this module
+  // is being imported. A sealed value cannot be opened without
+  // SECRETS_MASTER_KEY, and an eager read therefore crashed the import of every
+  // route - including /api/health, which exists to explain exactly that - with
+  // an HTML 500. Deferring the read keeps module evaluation side-effect free and
+  // turns the problem into one clear 503 per request that needs the value.
+  get imagekitPrivateKey(): string {
+    return readSecret("IMAGEKIT_PRIVATE_KEY") ?? "";
+  },
   imagekitPublicKey: readEnv("IMAGEKIT_PUBLIC_KEY") ?? PUBLIC_IMAGEKIT_KEY ?? "",
   imagekitUrlEndpoint: readEnv("IMAGEKIT_URL_ENDPOINT") ?? PUBLIC_IMAGEKIT_ENDPOINT ?? "",
 
   // ---------------------------------------------------------------- upstash
   upstashRestUrl: readEnv("UPSTASH_REDIS_REST_URL") ?? "",
-  upstashRestToken: readSecret("UPSTASH_REDIS_REST_TOKEN") ?? "",
+  get upstashRestToken(): string {
+    return readSecret("UPSTASH_REDIS_REST_TOKEN") ?? "";
+  },
 
   // ---------------------------------------------------------------- resend
-  resendApiKey: readSecret("RESEND_API_KEY") ?? "",
+  get resendApiKey(): string {
+    return readSecret("RESEND_API_KEY") ?? "";
+  },
   // `RESEND_FROM_EMAIL` is accepted for backwards compatibility with existing
   // .env files; without it the configured sender name was silently ignored.
   resendFrom:
@@ -181,17 +194,23 @@ export const serverEnv = {
   resendAdminNotifyEmail: readEnv("RESEND_ADMIN_NOTIFY_EMAIL") ?? "",
 
   // ---------------------------------------------------------------- tinybird
-  tinybirdToken: readSecret("TINYBIRD_TOKEN") ?? "",
+  get tinybirdToken(): string {
+    return readSecret("TINYBIRD_TOKEN") ?? "";
+  },
   // `TINYBIRD_URL` is accepted for backwards compatibility with existing .env files.
   tinybirdHost: readEnv("TINYBIRD_HOST") ?? readEnv("TINYBIRD_URL") ?? "https://api.tinybird.co",
   tinybirdPlaysDatasource: readEnv("TINYBIRD_PLAYS_DATASOURCE") ?? "music_plays",
 
   // ---------------------------------------------------------------- evolution (self-hosted WhatsApp)
   evolutionApiUrl: readEnv("EVOLUTION_API_URL") ?? "",
-  evolutionApiKey: readSecret("EVOLUTION_API_KEY") ?? "",
+  get evolutionApiKey(): string {
+    return readSecret("EVOLUTION_API_KEY") ?? "";
+  },
   evolutionInstance: readEnv("EVOLUTION_INSTANCE") ?? "",
   evolutionAdminNumber: readEnv("EVOLUTION_ADMIN_NUMBER") ?? "",
-  evolutionWebhookSecret: readSecret("EVOLUTION_WEBHOOK_SECRET") ?? "",
+  get evolutionWebhookSecret(): string {
+    return readSecret("EVOLUTION_WEBHOOK_SECRET") ?? "";
+  },
 
   // ---------------------------------------------------------------- geo ip
   // IPstack's free tier is HTTP-only (HTTPS is a paid feature) so a free,

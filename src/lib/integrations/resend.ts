@@ -13,8 +13,21 @@ import { serverEnv } from "../env";
  * user reports a missing welcome email.
  */
 
+/**
+ * Reads the key without throwing. `/api/health` is the endpoint that explains a
+ * broken deployment, so it must survive a sealed value that cannot be opened -
+ * otherwise the diagnostic itself is the first thing to return a 500.
+ */
+function readApiKey(): string {
+  try {
+    return serverEnv.resendApiKey;
+  } catch {
+    return "";
+  }
+}
+
 export function resendConfigured(): boolean {
-  return Boolean(serverEnv.resendApiKey);
+  return Boolean(readApiKey());
 }
 
 /**
@@ -23,7 +36,7 @@ export function resendConfigured(): boolean {
  * A stricter pattern produced a false "malformed key" diagnosis.
  */
 export function resendKeyFormatValid(): boolean {
-  return /^re_[A-Za-z0-9_-]{8,}$/.test(serverEnv.resendApiKey);
+  return /^re_[A-Za-z0-9_-]{8,}$/.test(readApiKey());
 }
 
 /** `resend.dev` is Resend's shared sandbox sender: it only reaches the account owner. */
@@ -94,7 +107,8 @@ interface SendEmailInput {
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<ResendResult> {
-  if (!resendConfigured()) {
+  const apiKey = readApiKey();
+  if (!apiKey) {
     return { ok: false, error: { code: "not_configured", message: "RESEND_API_KEY is not set." } };
   }
   if (!resendKeyFormatValid()) {
@@ -118,7 +132,7 @@ export async function sendEmail(input: SendEmailInput): Promise<ResendResult> {
     response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${serverEnv.resendApiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -189,7 +203,7 @@ export async function checkResendKey(
   let result: { reachable: boolean; note: string };
   try {
     const response = await fetch("https://api.resend.com/domains", {
-      headers: { Authorization: `Bearer ${serverEnv.resendApiKey}` },
+      headers: { Authorization: `Bearer ${readApiKey()}` },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
@@ -250,7 +264,7 @@ export async function addAudienceContact(input: {
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${serverEnv.resendApiKey}`,
+          Authorization: `Bearer ${readApiKey()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

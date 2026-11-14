@@ -57,6 +57,11 @@ export const SEALABLE_ENV_NAMES = [
   "MONGODB_URI",
   "DATABASE_STRING",
   "IMAGEKIT_PRIVATE_KEY",
+  // The ImageKit "public" key is only half of an upload credential (it is
+  // paired with a server-side signature), and it is generated from the same
+  // account. It never reaches the browser bundle, so keeping it sealed costs
+  // nothing and keeps `npm run secrets:scan` meaningful.
+  "IMAGEKIT_PUBLIC_KEY",
   "FIREBASE_WEB_API_KEY",
   "UPSTASH_REDIS_REST_TOKEN",
   "RESEND_API_KEY",

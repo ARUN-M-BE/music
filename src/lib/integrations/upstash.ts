@@ -8,20 +8,35 @@ import { serverEnv } from "../env";
  * both the Node.js and Edge runtimes.
  */
 
-export function upstashConfigured(): boolean {
-  return Boolean(serverEnv.upstashRestUrl && serverEnv.upstashRestToken);
-}
-
 type RedisResult<T> = { result: T } | { error: string };
 
+/**
+ * The token is a sealed secret, so opening it can fail (no SECRETS_MASTER_KEY,
+ * wrong key). Rate limiting is not critical infrastructure: an unreadable token
+ * means "no Redis" and the caller falls back to its in-memory bucket, instead of
+ * failing every request that happens to be rate limited.
+ */
+function readToken(): string | null {
+  try {
+    return serverEnv.upstashRestToken || null;
+  } catch {
+    return null;
+  }
+}
+
+export function upstashConfigured(): boolean {
+  return Boolean(serverEnv.upstashRestUrl && readToken());
+}
+
 async function request<T>(path: string, body: unknown): Promise<T | null> {
-  if (!upstashConfigured()) return null;
+  const token = readToken();
+  if (!token || !serverEnv.upstashRestUrl) return null;
 
   try {
     const response = await fetch(`${serverEnv.upstashRestUrl.replace(/\/$/, "")}${path}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${serverEnv.upstashRestToken}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),

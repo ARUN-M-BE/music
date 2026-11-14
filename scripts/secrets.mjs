@@ -8,6 +8,8 @@
  *                                                   seal the values in a `vars` block
  *   node scripts/secrets.mjs rekey  [--env .env]    re-seal with a new master key
  *   node scripts/secrets.mjs doctor [--env .env]    list every secret's state
+ *   node scripts/secrets.mjs sync   [--apply]       seal .env values into wrangler.jsonc
+ *   node scripts/secrets.mjs push   [--apply]       upload .env secrets to the Worker
  *   node scripts/secrets.mjs encrypt <value>        seal one value (stdout)
  *   node scripts/secrets.mjs decrypt <token>        open one value (stdout)
  *   node scripts/secrets.mjs scan   [--history]     find secrets in tracked files
@@ -22,6 +24,7 @@
  * recovery and warns on stderr.
  */
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { copyFile, readFile, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -52,10 +55,13 @@ const SKIP = "[SKIP]";
  */
 const SERVER_CONFIG_ENV_NAMES = [
   "UPSTASH_REDIS_REST_URL",
+  "IMAGEKIT_URL_ENDPOINT",
   "RESEND_FROM",
+  "RESEND_FROM_EMAIL",
   "RESEND_ADMIN_NOTIFY_EMAIL",
   "RESEND_AUDIENCE_ID",
   "TINYBIRD_HOST",
+  "TINYBIRD_URL",
   "TINYBIRD_PLAYS_DATASOURCE",
   "EVOLUTION_API_URL",
   "EVOLUTION_INSTANCE",
@@ -513,6 +519,24 @@ function runGit(args, cwd, maxBytes = 8 * 1024 * 1024) {
 }
 
 /**
+ * Names defined in the `vars` block of a Wrangler config, or `null` when the
+ * file is missing or not parseable (then nothing is skipped).
+ */
+async function readConfigVarNames(configFile) {
+  try {
+    const source = await readFile(configFile, "utf8");
+    const json = source
+      .split(/\r?\n/)
+      .filter((line) => !line.trim().startsWith("//"))
+      .join("\n");
+    const parsed = JSON.parse(json);
+    return new Set(Object.keys(parsed?.vars ?? {}));
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Uploads the server secrets from `.env` to the Worker (`wrangler secret bulk`).
  *
  * The values are normally sealed already, so the Worker only needs the same
@@ -524,7 +548,16 @@ async function cmdPush({ flags }) {
   const file = flags.env ?? ".env";
   const { entries } = await readEnvFile(file);
 
+  // A binding name belongs to the `vars` block OR to a secret, never both:
+  // Cloudflare rejects the upload of a secret that shadows a var
+  // ("Binding name 'X' already in use", code 10053). Values already shipped by
+  // `wrangler.jsonc` are therefore skipped - they only need SECRETS_MASTER_KEY.
+  const configVars = await readConfigVarNames(
+    typeof flags.file === "string" ? flags.file : "wrangler.jsonc"
+  );
+
   const payload = {};
+  const fromConfig = [];
   const candidates = [
     ...SEALABLE_ENV_NAMES,
     ...SERVER_CONFIG_ENV_NAMES,
@@ -533,7 +566,16 @@ async function cmdPush({ flags }) {
   ];
   for (const name of candidates) {
     const value = envValue(entries, name);
-    if (value) payload[name] = value;
+    if (!value) continue;
+    if (configVars?.has(name)) {
+      fromConfig.push(name);
+      continue;
+    }
+    payload[name] = value;
+  }
+
+  if (fromConfig.length > 0) {
+    console.log(`${SKIP} already provided by the vars block: ${fromConfig.join(", ")}`);
   }
 
   const names = Object.keys(payload);
@@ -561,14 +603,19 @@ async function cmdPush({ flags }) {
   await writeFile(tmpFile, JSON.stringify(payload), { encoding: "utf8", mode: 0o600 });
 
   try {
-    const args = ["wrangler", "secret", "bulk", tmpFile];
+    const args = ["secret", "bulk", tmpFile];
     if (typeof flags.worker === "string") args.push("--name", flags.worker);
-    console.log(`${OK} npx wrangler secret bulk <temporary file>`);
+    console.log(`${OK} wrangler ${args.join(" ")} <temporary file>`);
+
+    // Windows: spawning `npx.cmd` without a shell fails with EINVAL on Node 20+.
+    // Run the installed Wrangler bin with this Node instead, and only fall back
+    // to `npx` (through a shell) when wrangler is not installed locally.
+    const localBin = path.join(process.cwd(), "node_modules", "wrangler", "bin", "wrangler.js");
+    const command = existsSync(localBin) ? process.execPath : "npx";
+    const commandArgs = existsSync(localBin) ? [localBin, ...args] : ["-y", "wrangler", ...args];
 
     await new Promise((resolve, reject) => {
-      const child = spawn(process.platform === "win32" ? "npx.cmd" : "npx", args, {
-        stdio: "inherit",
-      });
+      const child = spawn(command, commandArgs, { stdio: "inherit", shell: command === "npx" });
       child.on("error", reject);
       child.on("exit", (code) =>
         code === 0 ? resolve() : reject(new Error(`wrangler exited with code ${code}`))
@@ -579,6 +626,120 @@ async function cmdPush({ flags }) {
   } finally {
     await unlink(tmpFile).catch(() => {});
   }
+}
+
+/**
+ * Copies the server secrets from `.env` into the `vars` block of a committed
+ * config file, sealed (`enc:v1:`).
+ *
+ * The point is a deployment that needs exactly one piece of external
+ * configuration: SECRETS_MASTER_KEY. Everything else travels with the code as
+ * ciphertext, so a Git-based build (Cloudflare Workers Builds, a CI runner) is
+ * fully configured without pasting values into a dashboard.
+ *
+ * The `vars` block is rewritten in a normalised form. Dry run by default;
+ * `--apply` rewrites the file after taking a backup.
+ */
+async function cmdSync({ flags }) {
+  const envFile = flags.env ?? ".env";
+  const configFile = typeof flags.file === "string" ? flags.file : "wrangler.jsonc";
+  const { entries } = await readEnvFile(envFile);
+  const ring = requireRing(
+    resolveRing(entries, flags, { previous: false }),
+    `Add --key <master key> if it is not in ${envFile}.`
+  );
+
+  const wanted = new Map();
+  for (const name of SEALABLE_ENV_NAMES) {
+    const value = envValue(entries, name);
+    if (!value) continue;
+    wanted.set(name, isEncryptedSecret(value) ? value : sealValue(value, ring));
+  }
+
+  // Non-secret server configuration travels as plaintext: it has to reach the
+  // Worker too (rate-limit URL, mail sender, session TTL, CORS allow-list).
+  for (const name of SERVER_CONFIG_ENV_NAMES) {
+    const value = envValue(entries, name);
+    if (value && !isEncryptedSecret(value)) wanted.set(name, value);
+  }
+
+  if (wanted.size === 0) {
+    console.log(`${WARN} nothing to sync: no sealable value is set in ${envFile}`);
+    return;
+  }
+
+  const source = await readFile(configFile, "utf8");
+  const lines = source.split(/\r?\n/);
+  const pairPattern = /^(\s*)"([A-Za-z_][A-Za-z0-9_]*)"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,?\s*(?:\/\/.*)?$/;
+
+  let inVars = false;
+  let depth = 0;
+  let openIndex = -1;
+  let closeIndex = -1;
+  let indent = "    ";
+  const existing = new Map();
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const text = lines[index];
+    if (!inVars) {
+      if (/^\s*"vars"\s*:\s*\{/.test(text)) {
+        inVars = true;
+        depth = 1;
+        openIndex = index;
+      }
+      continue;
+    }
+
+    const pair = pairPattern.exec(text);
+    if (pair) {
+      const [, lead, name, escaped] = pair;
+      existing.set(name, JSON.parse(`"${escaped}"`));
+      indent = lead || indent;
+    }
+
+    depth += braceDelta(text);
+    if (depth <= 0) {
+      inVars = false;
+      closeIndex = index;
+      break;
+    }
+  }
+
+  if (openIndex < 0 || closeIndex < 0) {
+    throw new Error(`could not find the "vars" block in ${configFile}`);
+  }
+
+  const updated = [];
+  const added = [];
+  for (const [name, token] of wanted) {
+    if (existing.has(name)) updated.push(name);
+    else added.push(name);
+    existing.set(name, token);
+  }
+
+  const body = [...existing].map(
+    ([name, value], index, all) =>
+      `${indent}"${name}": ${JSON.stringify(value)}${index === all.length - 1 ? "" : ","}`
+  );
+  const sealedCount = [...wanted.values()].filter((value) => isEncryptedSecret(value)).length;
+
+  console.log(
+    `${OK} ${updated.length} value(s) refreshed, ${added.length} added in ${configFile}: ${[...wanted.keys()].join(
+      ", "
+    )}`
+  );
+  console.log(`     ${sealedCount} sealed with key ${ring.currentId}, ${wanted.size - sealedCount} plaintext`);
+
+  if (!flags.apply) {
+    console.log(`${WARN} dry run: re-run with --apply to rewrite ${configFile}`);
+    return;
+  }
+
+  lines.splice(openIndex + 1, closeIndex - openIndex - 1, ...body);
+  await backupFile(configFile);
+  await writeFile(configFile, lines.join("\n"), "utf8");
+  console.log(`${OK} ${configFile} now carries the sealed values (key id: ${ring.currentId})`);
+  console.log(`     the Worker only needs one secret: ${MASTER_KEY_ENV}`);
 }
 
 async function cmdScan({ flags }, cwd) {
@@ -947,6 +1108,8 @@ function usage() {
   seal-wrangler [--file wrangler.jsonc] [--in-place] [--out FILE] [--all] [--key K]
   rekey  [--env .env] [--new-key K] [--in-place]
   doctor [--env .env] [--key K]
+  sync   [--env .env] [--file wrangler.jsonc] [--apply]
+                           copy sealed secrets from .env into the vars block
   push   [--env .env] [--apply] [--worker NAME]
                            upload the secrets from .env to the Worker
   encrypt <value> [--key K] (or --stdin)
@@ -981,6 +1144,8 @@ async function main() {
       return cmdDoctor({ flags });
     case "push":
       return cmdPush({ flags });
+    case "sync":
+      return cmdSync({ flags });
     case "verify":
       return cmdVerify({ flags });
     case "scan":

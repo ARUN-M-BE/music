@@ -54,6 +54,21 @@ export function toErrorResponse(error: unknown, scope: string): NextResponse {
     });
   }
 
+  // Deployment misconfiguration is not a bug in the request: a missing
+  // MONGODB_URI used to surface as "An unexpected error occurred" (500), which
+  // says nothing to whoever is deploying. These messages come from our own
+  // configuration layer, name the variable only and never contain a value, so
+  // they are safe to return as a 503.
+  const message = error instanceof Error ? error.message : "";
+  if (
+    /is not configured|could not be decrypted|is missing or shorter|is stored in plaintext|SECRETS_MASTER_KEY is not set|wrong master key/i.test(
+      message
+    )
+  ) {
+    console.error(`[api:${scope}]`, error);
+    return jsonFail(503, message, "server_misconfigured");
+  }
+
   console.error(`[api:${scope}]`, error);
   return jsonFail(500, "An unexpected error occurred", "internal_error");
 }

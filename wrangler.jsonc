@@ -13,31 +13,50 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  // Only non-secret configuration belongs in `vars`: this file is committed, so
-  // anything written here is public. The MongoDB connection string previously
-  // lived here in plaintext and is now a Wrangler secret instead:
-  //   npx wrangler secret put MONGODB_URI
-  //   npx wrangler secret put SECRETS_MASTER_KEY   (enables sealed env values)
-  // Secrets are injected at runtime and never appear in the repository.
+  // This file is committed, so it must never contain a readable secret. It
+  // carries the server environment in two forms instead:
   //
-  // A value that has to stay in this file can be stored as an `enc:v1:` token
-  // instead: the ciphertext is safe to commit and the Worker opens it with
-  // SECRETS_MASTER_KEY. Seal the whole block with
-  //   npm run secrets:seal:wrangler -- --in-place
-  // or produce one token at /admin/secret-box (runs in the browser, nothing is
-  // uploaded) and paste it here.
+  //   - `enc:v1:` tokens (AES-256-GCM): a credential the Worker opens at runtime
+  //     with SECRETS_MASTER_KEY. Ciphertext in a public file is harmless, and a
+  //     Git-based build therefore needs no dashboard configuration;
+  //   - public identifiers (`FIREBASE_*`, `ALLOWED_ORIGINS`, session limits).
   //
-  // The Firebase values below are *public identifiers*, not credentials: Google
-  // hands the same object to every visitor, the API key is restricted by domain
-  // in the Firebase console, and the browser only ever receives them through
-  // GET /api/config/firebase. They live here (instead of in NEXT_PUBLIC_*
-  // build variables) so a build made by Workers Builds needs no extra setup.
-  // The API key itself stays a secret (`npx wrangler secret put FIREBASE_WEB_API_KEY`)
-  // because a raw key in a committed file fails `npm run secrets:scan`.
+  // Refresh the block after editing `.env`:
+  //   npm run secrets:sync -- --apply
+  // Sealing is done for you; `npm run secrets:seal:wrangler -- --in-place` only
+  // touches values that are already here, and /admin/secret-box produces a
+  // single token in the browser (nothing is uploaded).
+  //
+  // The Worker needs exactly ONE secret:
+  //   npx wrangler secret put SECRETS_MASTER_KEY      (or Cloudflare dashboard)
+  // Prefer real Wrangler secrets instead? `npm run secrets:push -- --apply`
+  // uploads the same values from `.env` and then this block is redundant.
+  //
+  // The Firebase values are public by design: Google hands the same object to
+  // every visitor, the API key is restricted by domain in the Firebase console,
+  // and the browser only receives them through GET /api/config/firebase.
   "vars": {
-    "ADMIN_EMAIL": "arunm102301@gmail.com",
+    "ADMIN_EMAIL": "enc:v1:fTTLgmDW:vFMS9fOrAFhf5-GxifUEN7HQbQs_dOPyGMYl5EMXy7HkrHd6TrqCBVbMreIoHQYnQQ",
     "FIREBASE_AUTH_DOMAIN": "project-music-ap.firebaseapp.com",
     "FIREBASE_PROJECT_ID": "project-music-ap",
-    "FIREBASE_APP_ID": "1:874866748582:web:79324330fd5473a3b55867"
+    "FIREBASE_APP_ID": "1:874866748582:web:79324330fd5473a3b55867",
+    "AUTH_SECRET": "enc:v1:fTTLgmDW:HdWDDCYJKsLDFG0R7uu6mosk4zmnnbJkFVvnC5od02O3cak5GcGTJ3TAPHqSgvbx8zQP0Rcydroh3LCYPIK7XEpSWob2WgRS041YW9ACQq3zri6m11qIWRMNX9A",
+    "NEXTAUTH_SECRET": "enc:v1:fTTLgmDW:-O7iLBDOUyXD_IGRKBZGozyCWo9Y2F9cZ-Pu30ZieIxkB91nyfs6kHA9tB8xLQdc6LlFGVxb8l63DElH3NjIbJOR4BJUThuXwqX5edtoEoB0Z1ZMsa_BVDcOaw8",
+    "MONGODB_URI": "enc:v1:fTTLgmDW:yVcbhcAYsZWLx-3ixff5WNC8Ko-uhn1QviR-rcSQs0GKDdw-2TvNNOhQyA6lbk-znDTR-3KxHkukRevm7CdWD9pwMTGNW7cIxGGns_T9WYmtvr5Tkfxs-eGt8-XEHKA8U3gGiaFvbLSbPPLSBG1fhV9RA2D9Qve36k-hTg_h99QzJl6EF_AOTAw-9GKl",
+    "DATABASE_STRING": "enc:v1:fTTLgmDW:gsj4gl8slKAzMKs1AvNtWv1COWKdatRoubnXgwSGgUxacW9al60NJBlIlKqzKk22dlnAULv9jaF2bC6A-Ey6fb84qIMN6HS3VstC3YmJwrwYgG9IZ6JDxjptgHTudC1tRrFCeeLNdV6aRP7qst4WBs1Esv2qLVJE7rE8XzmJE2YutzywmU8pid5qB3gb",
+    "IMAGEKIT_PRIVATE_KEY": "enc:v1:fTTLgmDW:3puTxd2HkBLQ8-koYp2IjDrDsCRSjqYpUObfla050Xpk_tDN8Rwh1JOtANBtrvVSlaLk98zbMU8rIY3hhjpBDw",
+    "FIREBASE_WEB_API_KEY": "enc:v1:fTTLgmDW:7Ju9vRS6GCfcu6oRQKIdN7tiIy-mh_-KpjOs64AH78my2rjyB7tGtKpAsEk-XUXLNBgpDgGr2GoNN9WdKQ8Me3T4TA",
+    "UPSTASH_REDIS_REST_TOKEN": "enc:v1:fTTLgmDW:s7bw8Qe2syp9sEvWYcDIerRw_aMXJkjkGnDkVMOPKTsEzquVxhOb9q4at7AJ_Wkq-J5En-N_MI5JH4jY4pe_ooEk79VdchshKYBwDQTRBiQ1e0QLDXW0FbwO",
+    "RESEND_API_KEY": "enc:v1:fTTLgmDW:FHBx0a59meyvUkcGU0FfIZNFE5Jyzj6yH0nhLl7BQPRr_vOR2xe7HKhwoF69sVlxXJ7Wes0X5wiAHRFlXg1nYA",
+    "TINYBIRD_TOKEN": "enc:v1:fTTLgmDW:7uyS_fYUQoEWJnVA4MyttI7MgVGn3Zyou388wR_z3TidwiowAuMiVhGSzUqIJ0PzeUpMRxWrgD6vHvUZhGnzu3SRJ8lRWGscB7vuwE7l7BZL7kS4V9jWHFCzh0-4Jui00SqEOeYY0cruJFH1b4xjSmzN2nr-dOYbPg45gYBq4itq3Qr-GUXaeC1Gcrh9QQYz5FlfKdsvGJDjQzm_xVvKxrUoqXicoCinnDG_Juttffk6jk2NW2XKk59FGV2qexKGnymIlfnCTjNedWcrhQjrui6K1OK_DuViftdcNJQO8CilHuaXGTyMuAE",
+    "UPSTASH_REDIS_REST_URL": "https://divine-quail-200838.upstash.io",
+    "SESSION_VERSION": "1",
+    "SESSION_TTL_SECONDS": "604800",
+    "ALLOW_GUEST_SESSIONS": "true",
+    "ALLOWED_ORIGINS": "https://music.arun-m.in,https://www.music.arun-m.in,https://localhost:3000,",
+    "IMAGEKIT_PUBLIC_KEY": "enc:v1:fTTLgmDW:D3VXUSTyRFYBQXh9o5wSevReY2bP91CTHlI1AjdivyC7P7t4ho9yITjD8IVOO9wU7L8vIDrg5kOEwU8fn_kg",
+    "IMAGEKIT_URL_ENDPOINT": "https://ik.imagekit.io/gmusic",
+    "RESEND_FROM_EMAIL": "Arun M <onboarding@resend.dev>",
+    "TINYBIRD_URL": "https://api.europe-west2.gcp.tinybird.co"
   }
 }
