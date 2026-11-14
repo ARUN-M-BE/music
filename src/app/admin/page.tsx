@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { useAuth } from "@/context/AuthContext";
-import { AdminDashboard } from "@/components/Music/Admin/AdminDashboard";
+import { useAuth } from "@/features/auth";
+import { AdminDashboard } from "@/features/admin";
 import { ShieldAlert, LogIn } from "lucide-react";
 import Link from "next/link";
 
@@ -11,7 +11,7 @@ export default function AdminPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24 text-[#b3b3b3]">
+      <div className="flex items-center justify-center py-24 text-muted-foreground">
         <p className="text-sm">Authenticating admin privileges...</p>
       </div>
     );
@@ -20,16 +20,16 @@ export default function AdminPage() {
   if (!user || !isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center max-w-md mx-auto space-y-4">
-        <div className="size-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
+        <div className="size-16 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive">
           <ShieldAlert className="size-8" />
         </div>
-        <h2 className="text-xl font-bold text-white">Administrator Access Required</h2>
-        <p className="text-xs text-[#b3b3b3] leading-relaxed">
+        <h2 className="text-xl font-bold text-foreground">Administrator Access Required</h2>
+        <p className="text-xs text-muted-foreground leading-relaxed">
           You must be logged in as an authorized system administrator to manage tracks, audio assets, and user permissions.
         </p>
         <Link
           href="/login"
-          className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-black font-bold text-xs hover:scale-105 transition-transform"
+          className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-bold text-xs hover:scale-105 transition-transform"
         >
           <LogIn className="size-4" />
           <span>Sign In as Admin</span>

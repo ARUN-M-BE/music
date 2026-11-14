@@ -24,6 +24,30 @@ export default [
   ...next,
   ...nextTypeScript,
   {
+    // Module boundaries (micro-frontend style): a feature is addressable only
+    // through its public barrel. Reaching into `components/`, `context/` or
+    // `hooks/` of another feature is a contract violation and fails lint.
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@/features/*/components/*",
+                "@/features/*/context/*",
+                "@/features/*/hooks/*",
+              ],
+              message:
+                "Import through the feature barrel instead: `@/features/<name>`.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     rules: {
       // Existing UI code uses `any` in a few places; surface it as a warning
       // instead of failing the build while the codebase is migrated.

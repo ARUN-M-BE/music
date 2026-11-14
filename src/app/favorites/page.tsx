@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { useMusicPlayer } from "@/context/MusicPlayerContext";
+import { useAuth } from "@/features/auth";
+import { useMusicPlayer } from "@/features/player";
 import { musicService } from "@/services/music.service";
 import { MusicTrack } from "@/types/music";
 import { signInWithGoogle } from "@/lib/firebase";
+import { errorMessage } from "@/lib/errors";
 import {
   Heart,
   Play,
@@ -16,19 +16,19 @@ import {
   Search,
   Music2,
   Clock,
-  Sparkles,
   Loader2,
   ArrowRight,
-  Disc3,
-  LogIn,
 } from "lucide-react";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Badge } from "@/shared/ui/badge";
+import { TrackListSkeleton } from "@/shared/skeletons";
+import { Reveal } from "@/shared/motion";
 
 export default function FavoritesPage() {
-  const router = useRouter();
   const { user, loginWithGoogle, isLoading: authLoading } = useAuth();
   const {
     favorites,
-    isFavorite,
     toggleFavorite,
     playTrack,
     currentTrack,
@@ -110,9 +110,9 @@ export default function FavoritesPage() {
     try {
       const idToken = await signInWithGoogle();
       await loginWithGoogle(idToken);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Google sign in error:", err);
-      setGoogleError(err?.message || "Failed to sign in with Google.");
+      setGoogleError(errorMessage(err, "Failed to sign in with Google."));
     } finally {
       setGoogleLoading(false);
     }
@@ -128,68 +128,73 @@ export default function FavoritesPage() {
     return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
 
-  // 1. Guard: If not signed in with Google, show Spotify-style login banner
+  // 1. Guard: signed-out visitors get a focused sign-in card.
   if (!user && !authLoading) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4">
-        <div className="w-full max-w-lg p-8 sm:p-10 rounded-3xl bg-gradient-to-b from-[#251538] to-[#121212] border border-purple-500/20 shadow-2xl text-center space-y-6">
-          <div className="size-20 rounded-2xl bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-600 mx-auto flex items-center justify-center text-white shadow-xl shadow-purple-600/30">
-            <Heart className="size-10 fill-white" />
-          </div>
+      <div className="flex min-h-[70vh] items-center justify-center p-4">
+        <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-border bg-card p-8 text-center shadow-2xl shadow-scrim/5 sm:p-10">
+          <div className="brand-glow pointer-events-none absolute inset-0" aria-hidden />
 
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Songs You Love
-            </h1>
-            <p className="text-sm text-[#b3b3b3] mt-2 max-w-sm mx-auto">
-              Sign in with your Google account to save your favorite songs and stream your personal
-              curated collection anytime.
-            </p>
-          </div>
+          <div className="relative space-y-6">
+            <div className="mx-auto flex size-20 items-center justify-center rounded-2xl bg-gradient-to-br from-chart-4 via-primary to-chart-5 text-scrim-foreground shadow-xl shadow-primary/25">
+              <Heart className="size-10 fill-current" />
+            </div>
 
-          <div className="space-y-3 pt-2">
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="w-full h-12 rounded-full bg-white hover:bg-gray-100 text-black font-extrabold text-sm flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] active:scale-[0.98] shadow-xl"
-            >
-              {googleLoading ? (
-                <Loader2 className="size-5 animate-spin text-black" />
-              ) : (
-                <>
-                  <svg className="size-5 shrink-0" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    />
-                  </svg>
-                  <span>Sign In with Google</span>
-                </>
+            <div className="space-y-2">
+              <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+                Songs you love
+              </h1>
+              <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+                Sign in with your Google account to save favorite songs and stream your personal
+                collection anywhere.
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              <Button
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading}
+                size="lg"
+                className="h-12 w-full gap-3 rounded-full bg-foreground text-sm font-bold text-background hover:bg-foreground/90"
+              >
+                {googleLoading ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : (
+                  <>
+                    <svg className="size-5 shrink-0" viewBox="0 0 24 24" aria-hidden>
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                    <span>Sign in with Google</span>
+                  </>
+                )}
+              </Button>
+
+              {googleError && (
+                <p className="text-[11px] leading-relaxed text-destructive">{googleError}</p>
               )}
-            </button>
 
-            {googleError && (
-              <p className="text-[11px] text-red-300 leading-relaxed">{googleError}</p>
-            )}
-
-            <Link
-              href="/"
-              className="inline-block text-xs font-semibold text-[#b3b3b3] hover:text-white transition-colors pt-2"
-            >
-              Explore Public Music First &rarr;
-            </Link>
+              <Button asChild variant="link" size="sm" className="text-xs text-muted-foreground">
+                <Link href="/">
+                  Explore public music first
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -197,116 +202,106 @@ export default function FavoritesPage() {
   }
 
   return (
-    <div className="w-full space-y-6 pb-24">
-      {/* 2. Hero Header - Spotify Liked Songs style */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-purple-900/90 via-indigo-950/70 to-[#121212] p-6 sm:p-8 border border-purple-500/20 shadow-2xl">
-        <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 sm:gap-8">
-          {/* Big Playlist Artwork */}
-          <div className="relative size-40 sm:size-48 rounded-2xl bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-500 flex items-center justify-center shadow-2xl shadow-purple-900/50 shrink-0">
-            <Heart className="size-20 text-white fill-white drop-shadow-md" />
+    <div className="mx-auto w-full max-w-[1400px] space-y-6 pb-24">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-card">
+        <div className="brand-glow absolute inset-0" aria-hidden />
+        <div className="relative flex flex-col items-center gap-6 p-6 sm:flex-row sm:items-end sm:gap-8 sm:p-8">
+          <div className="relative flex size-40 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-chart-4 via-primary to-chart-5 text-scrim-foreground shadow-2xl shadow-primary/20 sm:size-48">
+            <Heart className="size-20 fill-current drop-shadow-md" />
           </div>
 
-          {/* Playlist Info */}
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-2">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-purple-300">
-              PLAYLIST &bull; PERSONAL LIBRARY
+          <div className="flex flex-col items-center space-y-2 text-center sm:items-start sm:text-left">
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+              Playlist &middot; Personal library
             </span>
-            <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-              Liked Songs
+            <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-5xl">
+              Liked songs
             </h1>
-            <div className="flex items-center gap-2 pt-1 text-xs text-[#b3b3b3]">
-              {user?.imageURL && (
-                <div className="relative size-5 rounded-full overflow-hidden bg-[#242424]">
-                  <Image
-                    src={user.imageURL}
-                    alt={user.name}
-                    fill
-                    sizes="20px"
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-              )}
-              <span className="font-bold text-white">{user?.name || "Member"}</span>
+            <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
+              <div className="relative size-5 overflow-hidden rounded-full bg-muted">
+                <Image
+                  src={user?.imageURL || "/default-avatar.png"}
+                  alt={user?.name || "Member"}
+                  fill
+                  sizes="20px"
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+              <span className="font-semibold text-foreground">{user?.name || "Member"}</span>
               <span>&bull;</span>
-              <span className="font-medium text-white">{favoriteTracks.length} songs</span>
+              <span className="font-medium text-foreground">{favoriteTracks.length} songs</span>
               <span>&bull;</span>
-              <span className="text-purple-300 font-mono">Google Synced</span>
+              <span className="font-mono text-primary">Google synced</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 3. Action Bar: Big Play Button + Search */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
+      {/* Actions */}
+      <div className="flex flex-col items-center justify-between gap-4 px-1 sm:flex-row">
         <div className="flex items-center gap-4">
-          <button
+          <Button
+            size="icon-lg"
             onClick={handlePlayAllFavorites}
             disabled={favoriteTracks.length === 0}
-            className={`size-14 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-xl ${
-              favoriteTracks.length === 0
-                ? "bg-[#282828] text-[#727272] cursor-not-allowed"
-                : "bg-[#1db954] hover:bg-[#1ed760] text-black shadow-[#1db954]/30"
-            }`}
-            title={isFavoritesPlaying ? "Pause Favorites" : "Play All Favorites"}
+            aria-label={isFavoritesPlaying ? "Pause favorites" : "Play all favorites"}
+            className="size-14 rounded-full shadow-xl shadow-primary/30"
           >
             {isFavoritesPlaying ? (
-              <Pause className="size-6 fill-black" />
+              <Pause className="size-6 fill-current" />
             ) : (
-              <Play className="size-6 fill-black translate-x-0.5" />
+              <Play className="size-6 translate-x-0.5 fill-current" />
             )}
-          </button>
+          </Button>
 
-          <span className="text-xs font-semibold text-[#b3b3b3]">
-            {isFavoritesPlaying ? "Streaming Favorites Queue" : "Play All Liked Songs"}
+          <span className="text-xs font-medium text-muted-foreground">
+            {isFavoritesPlaying ? "Streaming favorites queue" : "Play all liked songs"}
           </span>
         </div>
 
-        {/* Quick Search */}
         {favoriteTracks.length > 0 && (
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#b3b3b3]" />
-            <input
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
               type="text"
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
-              placeholder="Search in Liked Songs..."
-              className="w-full h-9 pl-9 pr-3 rounded-full bg-[#242424] text-xs text-white placeholder-[#727272] border border-[#383838] focus:border-purple-500 outline-none"
+              placeholder="Search in liked songs..."
+              aria-label="Search within liked songs"
+              className="h-10 rounded-full border-border bg-muted pl-9 text-xs shadow-none"
             />
           </div>
         )}
       </div>
 
-      {/* 4. Tracks Content */}
+      {/* Content */}
       {loadingTracks ? (
-        <div className="flex flex-col items-center justify-center py-20 text-[#b3b3b3]">
-          <Loader2 className="size-8 animate-spin text-purple-400 mb-3" />
-          <p className="text-xs">Loading your saved tracks...</p>
-        </div>
+        <TrackListSkeleton rows={6} />
       ) : favoriteTracks.length === 0 ? (
-        <div className="text-center py-20 px-4 rounded-3xl bg-[#181818]/50 border border-white/5 space-y-4">
-          <div className="size-16 rounded-full bg-[#242424] mx-auto flex items-center justify-center text-[#727272]">
+        <div className="space-y-4 rounded-3xl border border-dashed border-border bg-card/50 px-4 py-20 text-center">
+          <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <Music2 className="size-8" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">No liked songs yet</h3>
-            <p className="text-xs text-[#b3b3b3] mt-1 max-w-sm mx-auto">
-              Explore the music library or home page and click the heart icon on any song to build
-              your personal collection.
+            <h3 className="text-lg font-semibold text-foreground">No liked songs yet</h3>
+            <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
+              Explore the library or home page and tap the heart on any song to build your personal
+              collection.
             </p>
           </div>
-          <Link
-            href="/library"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#1db954] hover:bg-[#1ed760] text-black font-bold text-xs transition-transform hover:scale-105 active:scale-95"
-          >
-            <span>Explore Music Catalog</span>
-            <ArrowRight className="size-4" />
-          </Link>
+          <Button asChild className="rounded-full px-6">
+            <Link href="/library">
+              Explore catalog
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
         </div>
       ) : (
-        <div className="rounded-2xl border border-[#282828] bg-[#181818]/60 overflow-hidden">
+        <Reveal className="overflow-hidden rounded-2xl border border-border bg-card/60">
           {/* Table Header */}
-          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-[#727272] border-b border-[#282828]">
+          <div className="grid grid-cols-12 gap-2 border-b border-border px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             <div className="col-span-1 text-center">#</div>
             <div className="col-span-6 sm:col-span-5">Title</div>
             <div className="hidden sm:block sm:col-span-3">Album</div>
@@ -317,7 +312,7 @@ export default function FavoritesPage() {
           </div>
 
           {/* Table Rows */}
-          <div className="divide-y divide-[#282828]">
+          <div className="divide-y divide-border">
             {displayedTracks.map((track, idx) => {
               const isCurrent = currentTrack?._id === track._id;
               const isTrackPlaying = isCurrent && isPlaying;
@@ -326,18 +321,18 @@ export default function FavoritesPage() {
                 <div
                   key={track._id}
                   onClick={() => playTrack(track, favoriteTracks)}
-                  className={`grid grid-cols-12 gap-2 px-4 py-2.5 items-center text-xs text-[#b3b3b3] hover:bg-white/5 cursor-pointer transition-colors group ${
-                    isCurrent ? "bg-purple-900/10 text-white" : ""
+                  className={`group grid cursor-pointer grid-cols-12 items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent/60 ${
+                    isCurrent ? "bg-primary/10" : ""
                   }`}
                 >
                   {/* Track Number / Play button */}
                   <div className="col-span-1 flex items-center justify-center">
-                    <span className="group-hover:hidden font-mono text-[11px]">
+                    <span className="font-mono text-[11px] tabular-nums group-hover:hidden">
                       {isTrackPlaying ? (
                         <div className="flex items-end gap-0.5 h-3">
-                          <span className="w-0.5 h-full bg-[#1db954] animate-pulse" />
-                          <span className="w-0.5 h-2/3 bg-[#1db954] animate-pulse delay-75" />
-                          <span className="w-0.5 h-4/5 bg-[#1db954] animate-pulse delay-150" />
+                          <span className="w-0.5 h-full bg-primary animate-pulse" />
+                          <span className="w-0.5 h-2/3 bg-primary animate-pulse delay-75" />
+                          <span className="w-0.5 h-4/5 bg-primary animate-pulse delay-150" />
                         </div>
                       ) : (
                         idx + 1
@@ -353,7 +348,8 @@ export default function FavoritesPage() {
                           playTrack(track, favoriteTracks);
                         }
                       }}
-                      className="hidden group-hover:flex items-center justify-center text-white hover:text-[#1db954]"
+                      className="hidden items-center justify-center text-foreground hover:text-primary group-hover:flex"
+                      aria-label={isTrackPlaying ? "Pause" : "Play"}
                     >
                       {isTrackPlaying ? (
                         <Pause className="size-3.5 fill-current" />
@@ -365,9 +361,9 @@ export default function FavoritesPage() {
 
                   {/* Title & Artist */}
                   <div className="col-span-6 sm:col-span-5 flex items-center gap-3 min-w-0">
-                    <div className="relative size-10 rounded overflow-hidden bg-[#242424] shrink-0">
+                    <div className="relative size-10 shrink-0 overflow-hidden rounded-md bg-muted">
                       <Image
-                        src={track.imageURL || "https://cdn-icons-png.flaticon.com/512/3844/3844724.png"}
+                        src={track.imageURL || "/default-song.png"}
                         alt={track.name}
                         fill
                         sizes="40px"
@@ -377,42 +373,44 @@ export default function FavoritesPage() {
                     </div>
                     <div className="min-w-0">
                       <p
-                        className={`font-semibold truncate text-xs ${
-                          isCurrent ? "text-[#1db954]" : "text-white group-hover:text-white"
+                        className={`truncate text-xs font-semibold ${
+                          isCurrent ? "text-primary" : "text-foreground"
                         }`}
                       >
                         {track.name}
                       </p>
-                      <p className="text-[11px] text-[#b3b3b3] truncate">{track.artist}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{track.artist}</p>
                     </div>
                   </div>
 
                   {/* Album */}
-                  <div className="hidden sm:block sm:col-span-3 truncate text-[#b3b3b3]">
+                  <div className="hidden sm:block sm:col-span-3 truncate text-muted-foreground">
                     {track.album || "Single"}
                   </div>
 
                   {/* Genre */}
                   <div className="hidden md:block md:col-span-2">
-                    <span className="px-2 py-0.5 rounded-full bg-[#242424] text-[10px] uppercase font-bold text-white border border-white/5">
+                    <Badge variant="secondary" className="rounded-full text-[10px] font-semibold uppercase">
                       {track.category}
-                    </span>
+                    </Badge>
                   </div>
 
                   {/* Heart Toggle + Duration */}
                   <div className="col-span-5 sm:col-span-3 md:col-span-1 flex items-center justify-end gap-3 pr-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
                         toggleFavorite(track._id);
                       }}
-                      className="p-1 rounded text-purple-400 hover:text-purple-300 transition-colors"
-                      title="Remove from Liked Songs"
+                      className="size-7 rounded-full text-destructive hover:text-destructive/80"
+                      title="Remove from liked songs"
+                      aria-label="Remove from liked songs"
                     >
-                      <Heart className="size-4 fill-purple-400 text-purple-400" />
-                    </button>
-                    <span className="font-mono text-[11px] text-[#727272]">
+                      <Heart className="size-4 fill-current" />
+                    </Button>
+                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
                       {formatDuration(track.duration)}
                     </span>
                   </div>
@@ -420,7 +418,7 @@ export default function FavoritesPage() {
               );
             })}
           </div>
-        </div>
+        </Reveal>
       )}
     </div>
   );

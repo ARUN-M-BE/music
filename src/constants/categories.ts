@@ -4,6 +4,11 @@ export interface MusicCategory {
   group?: string;
 }
 
+/**
+ * Genre tiles carry their own fixed palette, the way cover art does: the tile is
+ * always a dark gradient with scrim-foreground text, identical in light and
+ * dark mode. Surfaces never use raw colours - only this identity palette does.
+ */
 export const MUSIC_CATEGORIES: MusicCategory[] = [
   // Mainstream
   { name: "Pop", color: "from-pink-600 to-rose-700", group: "Mainstream" },

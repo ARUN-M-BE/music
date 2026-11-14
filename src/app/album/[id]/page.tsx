@@ -1,12 +1,15 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useMemo, useState, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { UnifiedAlbum, UnifiedSong } from "@/types/music";
 import { musicService } from "@/services/music.service";
-import { useMusicPlayer } from "@/context/MusicPlayerContext";
+import { useMusicPlayer } from "@/features/player";
 import { formatTime } from "@/lib/utils";
+import { mapUnifiedToTrack } from "@/lib/musicMappers";
+import { HeroSkeleton, TrackListSkeleton } from "@/shared/skeletons";
+import { Reveal } from "@/shared/motion";
 import {
   Play,
   Pause,
@@ -14,9 +17,6 @@ import {
   Disc3,
   Clock,
   ArrowLeft,
-  Loader2,
-  Calendar,
-  Music2,
 } from "lucide-react";
 
 export default function AlbumDetailPage({
@@ -34,28 +34,24 @@ export default function AlbumDetailPage({
     isFavorite,
   } = useMusicPlayer();
 
-  const [album, setAlbum] = useState<UnifiedAlbum | null>(null);
-  const [songs, setSongs] = useState<UnifiedSong[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState<{
+    id: string;
+    album: UnifiedAlbum | null;
+    songs: UnifiedSong[];
+  } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
 
     musicService
       .getAlbumDetails(id)
-      .then((data) => {
-        if (isMounted && data) {
-          setAlbum(data.album);
-          setSongs(data.songs);
-          setLoading(false);
-        } else if (isMounted) {
-          setLoading(false);
-        }
+      .then((details) => {
+        if (!isMounted) return;
+        setLoaded({ id, album: details?.album ?? null, songs: details?.songs ?? [] });
       })
       .catch((err) => {
         console.error("Failed to load album details:", err);
-        if (isMounted) setLoading(false);
+        if (isMounted) setLoaded({ id, album: null, songs: [] });
       });
 
     return () => {
@@ -63,11 +59,17 @@ export default function AlbumDetailPage({
     };
   }, [id]);
 
+  // Derived, so a new album never shows the previous one's tracklist.
+  const loading = loaded?.id !== id;
+  const album = loaded?.album ?? null;
+  const songs = useMemo(() => loaded?.songs ?? [], [loaded]);
+  const playerQueue = useMemo(() => songs.map(mapUnifiedToTrack), [songs]);
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-[#b3b3b3]">
-        <Loader2 className="size-10 animate-spin text-[#1db954] mb-3" />
-        <p className="text-sm font-medium">Loading album tracklist & artwork...</p>
+      <div className="space-y-8 pb-16" aria-busy="true">
+        <HeroSkeleton variant="detail" />
+        <TrackListSkeleton rows={8} />
       </div>
     );
   }
@@ -75,16 +77,16 @@ export default function AlbumDetailPage({
   if (!album) {
     return (
       <div className="flex flex-col items-center justify-center py-32 text-center max-w-md mx-auto space-y-4">
-        <div className="size-16 rounded-full bg-white/5 flex items-center justify-center text-[#727272]">
+        <div className="size-16 rounded-full bg-foreground/5 flex items-center justify-center text-muted-foreground/70">
           <Disc3 className="size-8" />
         </div>
-        <h2 className="text-xl font-bold text-white">Album Not Found</h2>
-        <p className="text-xs text-[#b3b3b3]">
+        <h2 className="text-xl font-bold text-foreground">Album Not Found</h2>
+        <p className="text-xs text-muted-foreground">
           We couldn&apos;t find tracklist details for this album.
         </p>
         <Link
           href="/library"
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black font-bold text-xs hover:scale-105 transition-transform"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-bold text-xs hover:scale-105 transition-transform"
         >
           <ArrowLeft className="size-4" />
           <span>Back to Music Library</span>
@@ -103,7 +105,7 @@ export default function AlbumDetailPage({
     if (isCurrentAlbumPlaying) {
       togglePlayPause();
     } else {
-      playTrack(songs[0] as any, songs as any);
+      playTrack(playerQueue[0], playerQueue);
     }
   };
 
@@ -112,18 +114,19 @@ export default function AlbumDetailPage({
       {/* Back button */}
       <Link
         href="/library"
-        className="inline-flex items-center gap-2 text-xs font-semibold text-[#b3b3b3] hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="size-4" />
         <span>Back to Library</span>
       </Link>
 
       {/* Album Header */}
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-b from-rose-950/50 via-[#181818] to-[#121212] border border-white/10 p-6 sm:p-10 shadow-2xl">
-        <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 sm:gap-8">
-          <div className="relative size-44 sm:size-56 md:size-64 rounded-2xl overflow-hidden shadow-2xl ring-2 ring-white/10 shrink-0 bg-[#242424]">
+      <Reveal className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-2xl shadow-scrim/5 sm:p-10">
+        <div className="brand-glow absolute inset-0" aria-hidden />
+        <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-end sm:gap-8">
+          <div className="relative size-44 shrink-0 overflow-hidden rounded-2xl bg-muted shadow-2xl ring-1 ring-border sm:size-56 md:size-64">
             <Image
-              src={album.artwork || "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60"}
+              src={album.artwork || "/default-song.png"}
               alt={album.title}
               fill
               sizes="256px"
@@ -134,18 +137,18 @@ export default function AlbumDetailPage({
           </div>
 
           <div className="space-y-3 text-center sm:text-left flex-1">
-            <span className="text-xs uppercase tracking-widest font-extrabold text-[#1db954]">
+            <span className="text-xs uppercase tracking-widest font-bold text-primary">
               Album Release
             </span>
 
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-display font-semibold text-foreground tracking-tight">
               {album.title}
             </h1>
 
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs sm:text-sm text-[#b3b3b3]">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs sm:text-sm text-muted-foreground">
               <Link
                 href={`/artist/${encodeURIComponent(album.artist)}`}
-                className="font-bold text-white hover:underline hover:text-[#1db954] transition-colors"
+                className="font-bold text-foreground hover:underline hover:text-primary transition-colors"
               >
                 {album.artist}
               </Link>
@@ -158,32 +161,32 @@ export default function AlbumDetailPage({
         </div>
 
         {/* Action Controls */}
-        <div className="mt-8 flex items-center justify-center sm:justify-start gap-4 pt-4 border-t border-white/5">
+        <div className="relative mt-8 flex items-center justify-center gap-4 border-t border-border pt-4 sm:justify-start">
           <button
             onClick={handlePlayAlbum}
             disabled={songs.length === 0}
-            className="flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#1db954] hover:bg-[#1ed760] text-black font-extrabold text-sm transition-transform hover:scale-105 active:scale-95 shadow-xl shadow-[#1db954]/30"
+            className="flex items-center gap-3 rounded-full bg-primary px-8 py-3.5 text-sm font-bold text-primary-foreground shadow-xl shadow-primary/30 transition-transform hover:scale-105 hover:bg-primary/90 active:scale-95"
           >
             {isCurrentAlbumPlaying ? (
               <>
-                <Pause className="size-5 fill-black" />
+                <Pause className="size-5 fill-current" />
                 <span>Pause Album</span>
               </>
             ) : (
               <>
-                <Play className="size-5 fill-black" />
+                <Play className="size-5 fill-current" />
                 <span>Play Album</span>
               </>
             )}
           </button>
         </div>
-      </div>
+      </Reveal>
 
       {/* Album Tracks Table */}
       <section className="space-y-4">
-        <div className="rounded-2xl bg-[#181818]/60 border border-white/5 overflow-hidden">
-          <table className="w-full text-left text-xs sm:text-sm text-[#b3b3b3]">
-            <thead className="bg-[#121212] uppercase tracking-wider text-[11px] text-[#727272] border-b border-white/5">
+        <Reveal delay={0.08} className="rounded-2xl bg-card/60 border border-border overflow-hidden">
+          <table className="w-full text-left text-xs sm:text-sm text-muted-foreground">
+            <thead className="bg-background uppercase tracking-wider text-[11px] text-muted-foreground/70 border-b border-border">
               <tr>
                 <th className="py-3 px-4 w-12 text-center">#</th>
                 <th className="py-3 px-4">Title</th>
@@ -193,7 +196,7 @@ export default function AlbumDetailPage({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {songs.map((song, idx) => {
                 const songId = song.id || song._id || `album_song_${idx}`;
                 const isSelected =
@@ -205,23 +208,23 @@ export default function AlbumDetailPage({
                 return (
                   <tr
                     key={songId}
-                    onClick={() => playTrack(song as any, songs as any)}
-                    className="hover:bg-white/5 group cursor-pointer transition-colors"
+                    onClick={() => playTrack(mapUnifiedToTrack(song), playerQueue)}
+                    className="hover:bg-accent/60 group cursor-pointer transition-colors"
                   >
-                    <td className="py-3 px-4 text-center text-[#727272] group-hover:text-white">
+                    <td className="py-3 px-4 text-center text-muted-foreground/70 group-hover:text-foreground">
                       {isTrackPlaying ? (
-                        <div className="size-4 mx-auto text-[#1db954] flex items-center justify-center">
+                        <div className="size-4 mx-auto text-primary flex items-center justify-center">
                           <span className="animate-pulse font-bold">&bull;&bull;&bull;</span>
                         </div>
                       ) : (
                         <span className="group-hover:hidden">{idx + 1}</span>
                       )}
-                      <Play className="size-3.5 fill-white text-white mx-auto hidden group-hover:block" />
+                      <Play className="size-3.5 fill-current text-foreground mx-auto hidden group-hover:block" />
                     </td>
 
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="relative size-10 rounded overflow-hidden shrink-0 bg-[#242424]">
+                        <div className="relative size-10 rounded overflow-hidden shrink-0 bg-muted">
                           <Image
                             src={song.artwork || album.artwork || "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60"}
                             alt={song.title}
@@ -234,40 +237,40 @@ export default function AlbumDetailPage({
                         <div className="min-w-0">
                           <p
                             className={`font-semibold truncate ${
-                              isSelected ? "text-[#1db954]" : "text-white"
+                              isSelected ? "text-primary" : "text-foreground"
                             }`}
                           >
                             {song.title}
                           </p>
-                          <p className="text-xs text-[#727272] truncate sm:hidden">
+                          <p className="text-xs text-muted-foreground/70 truncate sm:hidden">
                             {song.artist}
                           </p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="py-3 px-4 hidden sm:table-cell text-[#b3b3b3] truncate max-w-xs">
+                    <td className="py-3 px-4 hidden sm:table-cell text-muted-foreground truncate max-w-xs">
                       <Link
                         href={`/artist/${encodeURIComponent(song.artist)}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="hover:underline hover:text-white"
+                        className="hover:underline hover:text-foreground"
                       >
                         {song.artist}
                       </Link>
                     </td>
 
-                    <td className="py-3 px-4 text-right pr-6 text-xs text-[#727272]">
+                    <td className="py-3 px-4 text-right pr-6 text-xs text-muted-foreground/70">
                       <div className="flex items-center justify-end gap-3">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavorite(songId);
                           }}
-                          className="p-1 hover:text-white transition-colors"
+                          className="p-1 hover:text-foreground transition-colors"
                         >
                           <Heart
                             className={`size-4 ${
-                              favorited ? "fill-[#1db954] text-[#1db954]" : "text-[#727272]"
+                              favorited ? "fill-primary text-primary" : "text-muted-foreground/70"
                             }`}
                           />
                         </button>
@@ -279,7 +282,7 @@ export default function AlbumDetailPage({
               })}
             </tbody>
           </table>
-        </div>
+        </Reveal>
       </section>
     </div>
   );

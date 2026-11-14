@@ -224,7 +224,7 @@ export async function searchLocalCatalog(query?: string): Promise<UnifiedSong[]>
 export async function aggregateMusicSearch(
   query: string,
   preferredLanguage?: string,
-  limit = 25
+  _limit = 25
 ): Promise<UnifiedSong[]> {
   const cleanQ = (query || "").trim();
   if (!cleanQ) return getTrendingAggregate(preferredLanguage);
