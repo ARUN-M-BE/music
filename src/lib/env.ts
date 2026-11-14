@@ -130,8 +130,35 @@ export const serverEnv = {
   // ---------------------------------------------------------------- firebase
   // The web API key is public by design, but the server copy is still treated
   // as a secret: it is the value that gets rotated when the leaked one is fixed.
-  firebaseApiKey: readSecret("FIREBASE_WEB_API_KEY") ?? PUBLIC_FIREBASE_API_KEY ?? "",
-  firebaseProjectId: readEnv("FIREBASE_PROJECT_ID") ?? PUBLIC_FIREBASE_PROJECT_ID ?? "",
+  //
+  // Every field also reads the *runtime* environment. A `NEXT_PUBLIC_*` literal
+  // is replaced by the bundler at build time, so on a Worker built without those
+  // variables the literal is an empty string even though `wrangler.jsonc`
+  // provides the value at runtime. That mismatch left the browser with an empty
+  // config while the server had one, and Google sign-in failed with
+  // "not configured on this deployment".
+  get firebaseApiKey(): string {
+    return (
+      readSecret("FIREBASE_WEB_API_KEY") ??
+      readEnv("NEXT_PUBLIC_FIREBASE_API_KEY") ??
+      PUBLIC_FIREBASE_API_KEY ??
+      ""
+    );
+  },
+  firebaseAuthDomain:
+    readEnv("FIREBASE_AUTH_DOMAIN") ?? readEnv("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN") ?? "",
+  firebaseProjectId:
+    readEnv("FIREBASE_PROJECT_ID") ??
+    readEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID") ??
+    PUBLIC_FIREBASE_PROJECT_ID ??
+    "",
+  firebaseDatabaseUrl:
+    readEnv("FIREBASE_DATABASE_URL") ?? readEnv("NEXT_PUBLIC_FIREBASE_DATABASE_URL") ?? "",
+  firebaseStorageBucket:
+    readEnv("FIREBASE_STORAGE_BUCKET") ?? readEnv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET") ?? "",
+  firebaseMessagingId:
+    readEnv("FIREBASE_MESSAGING_ID") ?? readEnv("NEXT_PUBLIC_FIREBASE_MESSAGING_ID") ?? "",
+  firebaseAppId: readEnv("FIREBASE_APP_ID") ?? readEnv("NEXT_PUBLIC_FIREBASE_APP_ID") ?? "",
 
   // ---------------------------------------------------------------- imagekit
   imagekitPrivateKey: readSecret("IMAGEKIT_PRIVATE_KEY") ?? "",

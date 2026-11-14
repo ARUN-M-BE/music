@@ -200,7 +200,15 @@ function getResolvedMongoUri(): string {
 }
 
 function getDatabaseName(uri: string): string {
-  if (process.env.MONGODB_DB?.trim()) return process.env.MONGODB_DB.trim();
+  // A database name is a short identifier, never a secret: MongoDB rejects
+  // anything longer than 38 bytes. A sealed token (`enc:v1:...`) or another
+  // long value here means a copy-paste mistake in the environment (this exact
+  // mistake silently broke every database route with
+  // "Database name ... is too long"), so such a value is ignored and the name
+  // is derived from the connection string instead.
+  const override = process.env.MONGODB_DB?.trim();
+  if (override && isUsableDatabaseName(override)) return override;
+
   try {
     const withoutScheme = uri.replace(/^mongodb(\+srv)?:\/\//, "");
     const withoutCredentials = withoutScheme.includes("@")
@@ -208,10 +216,16 @@ function getDatabaseName(uri: string): string {
       : withoutScheme;
     const path = withoutCredentials.split("/")[1] ?? "";
     const name = path.split("?")[0]?.trim();
-    return name || "music";
+    return name && isUsableDatabaseName(name) ? name : "music";
   } catch {
     return "music";
   }
+}
+
+/** MongoDB's own rules: 1-38 bytes, no `/\\. "$*<>:|?` or NUL. */
+function isUsableDatabaseName(name: string): boolean {
+  if (Buffer.byteLength(name, "utf8") > 38) return false;
+  return !/[\/\\\. "$*<>:|?\u0000]/.test(name);
 }
 
 // Track active DB operations and the single in-flight connect attempt.

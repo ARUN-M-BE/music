@@ -25,9 +25,19 @@
   // SECRETS_MASTER_KEY. Seal the whole block with
   //   npm run secrets:seal:wrangler -- --in-place
   // or produce one token at /admin/secret-box (runs in the browser, nothing is
-  // uploaded) and paste it here. `NEXT_PUBLIC_*` values can never be sealed:
-  // they are inlined into the browser bundle at build time.
+  // uploaded) and paste it here.
+  //
+  // The Firebase values below are *public identifiers*, not credentials: Google
+  // hands the same object to every visitor, the API key is restricted by domain
+  // in the Firebase console, and the browser only ever receives them through
+  // GET /api/config/firebase. They live here (instead of in NEXT_PUBLIC_*
+  // build variables) so a build made by Workers Builds needs no extra setup.
+  // The API key itself stays a secret (`npx wrangler secret put FIREBASE_WEB_API_KEY`)
+  // because a raw key in a committed file fails `npm run secrets:scan`.
   "vars": {
-    "ADMIN_EMAIL": "arunm102301@gmail.com"
+    "ADMIN_EMAIL": "arunm102301@gmail.com",
+    "FIREBASE_AUTH_DOMAIN": "project-music-ap.firebaseapp.com",
+    "FIREBASE_PROJECT_ID": "project-music-ap",
+    "FIREBASE_APP_ID": "1:874866748582:web:79324330fd5473a3b55867"
   }
 }

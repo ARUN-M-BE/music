@@ -22,7 +22,8 @@
  * recovery and warns on stderr.
  */
 import { spawn } from "node:child_process";
-import { copyFile, readFile, writeFile } from "node:fs/promises";
+import { copyFile, readFile, unlink, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import {
   MASTER_KEY_ENV,
@@ -43,6 +44,30 @@ const OK = "[OK]  ";
 const WARN = "[WARN]";
 const FAIL = "[FAIL]";
 const SKIP = "[SKIP]";
+
+/**
+ * Server-side configuration that is not a secret but still has to exist in the
+ * Worker. `wrangler secret bulk` stores it encrypted, which is harmless: the
+ * app reads every one of these through `process.env`.
+ */
+const SERVER_CONFIG_ENV_NAMES = [
+  "UPSTASH_REDIS_REST_URL",
+  "RESEND_FROM",
+  "RESEND_ADMIN_NOTIFY_EMAIL",
+  "RESEND_AUDIENCE_ID",
+  "TINYBIRD_HOST",
+  "TINYBIRD_PLAYS_DATASOURCE",
+  "EVOLUTION_API_URL",
+  "EVOLUTION_INSTANCE",
+  "EVOLUTION_ADMIN_NUMBER",
+  "SESSION_VERSION",
+  "SESSION_TTL_SECONDS",
+  "ALLOW_GUEST_SESSIONS",
+  "ALLOWED_ORIGINS",
+  "MONGODB_DB",
+  "MAX_AUDIO_UPLOAD_BYTES",
+  "MAX_IMAGE_UPLOAD_BYTES",
+];
 
 // ---------------------------------------------------------------- arguments
 
@@ -487,6 +512,75 @@ function runGit(args, cwd, maxBytes = 8 * 1024 * 1024) {
   });
 }
 
+/**
+ * Uploads the server secrets from `.env` to the Worker (`wrangler secret bulk`).
+ *
+ * The values are normally sealed already, so the Worker only needs the same
+ * SECRETS_MASTER_KEY to open them - and that key is part of the upload. A dry
+ * run is the default: writing to a production Worker must be an explicit
+ * choice (`--apply`).
+ */
+async function cmdPush({ flags }) {
+  const file = flags.env ?? ".env";
+  const { entries } = await readEnvFile(file);
+
+  const payload = {};
+  const candidates = [
+    ...SEALABLE_ENV_NAMES,
+    ...SERVER_CONFIG_ENV_NAMES,
+    MASTER_KEY_ENV,
+    PREVIOUS_MASTER_KEY_ENV,
+  ];
+  for (const name of candidates) {
+    const value = envValue(entries, name);
+    if (value) payload[name] = value;
+  }
+
+  const names = Object.keys(payload);
+  if (names.length === 0) {
+    console.log(`${WARN} nothing to push: no secret is set in ${file}`);
+    return;
+  }
+
+  const sealed = names.filter((name) => isEncryptedSecret(payload[name])).length;
+  console.log(`${OK} ${names.length} secret(s) from ${file}: ${names.join(", ")}`);
+  if (sealed > 0) console.log(`     ${sealed} of them are sealed (enc:v1:)`);
+
+  if (sealed > 0 && !payload[MASTER_KEY_ENV]) {
+    console.log(`${FAIL} sealed values need ${MASTER_KEY_ENV} in ${file}, otherwise the Worker cannot open them`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!flags.apply) {
+    console.log(`${WARN} dry run: re-run with --apply to upload them to the Worker`);
+    return;
+  }
+
+  const tmpFile = path.join(os.tmpdir(), `music-secrets-${process.pid}-${Date.now()}.json`);
+  await writeFile(tmpFile, JSON.stringify(payload), { encoding: "utf8", mode: 0o600 });
+
+  try {
+    const args = ["wrangler", "secret", "bulk", tmpFile];
+    if (typeof flags.worker === "string") args.push("--name", flags.worker);
+    console.log(`${OK} npx wrangler secret bulk <temporary file>`);
+
+    await new Promise((resolve, reject) => {
+      const child = spawn(process.platform === "win32" ? "npx.cmd" : "npx", args, {
+        stdio: "inherit",
+      });
+      child.on("error", reject);
+      child.on("exit", (code) =>
+        code === 0 ? resolve() : reject(new Error(`wrangler exited with code ${code}`))
+      );
+    });
+
+    console.log(`${OK} uploaded ${names.length} secret(s); redeploy so the Worker restarts`);
+  } finally {
+    await unlink(tmpFile).catch(() => {});
+  }
+}
+
 async function cmdScan({ flags }, cwd) {
   const history = Boolean(flags.history);
   const rules = flags.rule
@@ -853,6 +947,8 @@ function usage() {
   seal-wrangler [--file wrangler.jsonc] [--in-place] [--out FILE] [--all] [--key K]
   rekey  [--env .env] [--new-key K] [--in-place]
   doctor [--env .env] [--key K]
+  push   [--env .env] [--apply] [--worker NAME]
+                           upload the secrets from .env to the Worker
   encrypt <value> [--key K] (or --stdin)
   decrypt <token> [--key K]
   scan   [--history] [--rule NAME]
@@ -883,6 +979,8 @@ async function main() {
       return cmdRekey({ flags });
     case "doctor":
       return cmdDoctor({ flags });
+    case "push":
+      return cmdPush({ flags });
     case "verify":
       return cmdVerify({ flags });
     case "scan":

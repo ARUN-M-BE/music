@@ -17,6 +17,7 @@
     "secrets:seal:wrangler": "node scripts/secrets.mjs seal-wrangler",
     "secrets:rekey": "node scripts/secrets.mjs rekey",
     "secrets:doctor": "node scripts/secrets.mjs doctor",
+    "secrets:push": "node scripts/secrets.mjs push",
     "secrets:verify": "node scripts/secrets.mjs verify",
     "secrets:scan": "node scripts/secrets.mjs scan",
     "secrets:scan:history": "node scripts/secrets.mjs scan --history",

@@ -183,10 +183,10 @@ type IdentityToolkitResponse = {
 export async function verifyFirebaseIdToken(idToken: string): Promise<VerifiedFirebaseUser> {
   if (!serverEnv.firebaseApiKey) {
     // Deliberately explicit: this is a deployment misconfiguration, and the
-    // variable names are public (`NEXT_PUBLIC_*`), so naming the missing one
-    // saves debugging time without disclosing a secret.
+    // variable names are public, so naming the missing one saves debugging time
+    // without disclosing a secret.
     throw unauthorized(
-      "Google sign-in is not configured on this deployment: set NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_PROJECT_ID, then rebuild (public variables are baked in at build time)"
+      "Google sign-in is not configured on this deployment: set FIREBASE_WEB_API_KEY (Worker secret) and FIREBASE_PROJECT_ID / FIREBASE_AUTH_DOMAIN / FIREBASE_APP_ID (wrangler.jsonc vars or Worker secrets), then redeploy"
     );
   }
   if (!idToken || idToken.length > 8192) {

@@ -2,19 +2,32 @@ import { getApp, getApps, initializeApp } from "firebase/app";
 import { GoogleAuthProvider, getAuth, signInWithPopup, type Auth } from "firebase/auth";
 
 /**
- * Firebase web configuration is public by design, but it is still read from
- * environment variables so that no project identifiers are hardcoded in the
- * repository.
+ * Firebase web SDK bootstrap for the browser.
  *
- * Nothing is initialised at import time on purpose. `/login` and `/favorites`
- * are client pages that Next also evaluates while prerendering, and a build
- * machine without the `NEXT_PUBLIC_FIREBASE_*` values (they are inlined at
- * build time, and `.env` is git-ignored) made `initializeApp()` throw
- * `auth/invalid-api-key`, which aborted the entire export. The SDK is now
- * created on first use and a missing configuration becomes a readable error on
- * the sign-in button instead of a failed deploy.
+ * Two rules make this reliable on every deployment:
+ *
+ *  1. Nothing is initialised at import time. `/login` and `/favorites` are
+ *     client pages that Next also evaluates while prerendering, and an
+ *     `initializeApp()` call with an empty key threw `auth/invalid-api-key`
+ *     during the build ("Export encountered an error on /favorites/page").
+ *
+ *  2. The configuration is resolved lazily and from two sources. `NEXT_PUBLIC_*`
+ *     literals are replaced by the bundler at build time, so a Worker built
+ *     without them ships empty strings even when `wrangler.jsonc` provides the
+ *     values at runtime. When the inlined copy is incomplete the browser asks
+ *     `/api/config/firebase`, which reads the runtime environment instead.
  */
-const firebaseConfig = {
+export type FirebaseWebConfig = {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  databaseURL?: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId?: string;
+};
+
+const buildTimeConfig: FirebaseWebConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ?? "",
@@ -24,28 +37,63 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "",
 };
 
-export const isFirebaseConfigured = Boolean(
-  firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId
-);
-
 const NOT_CONFIGURED_MESSAGE =
-  "Google sign-in is not configured on this deployment: set NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN and NEXT_PUBLIC_FIREBASE_PROJECT_ID as build variables, then rebuild (public values are inlined at build time).";
+  "Google sign-in is not configured on this deployment. The server needs FIREBASE_WEB_API_KEY (a Worker secret) and FIREBASE_AUTH_DOMAIN / FIREBASE_PROJECT_ID / FIREBASE_APP_ID (wrangler.jsonc vars or Worker secrets), then redeploy.";
 
-if (!isFirebaseConfigured && process.env.NODE_ENV !== "production") {
-  console.warn(
-    "[firebase] Missing NEXT_PUBLIC_FIREBASE_* variables: Google sign-in will be unavailable."
-  );
+function isComplete(config: FirebaseWebConfig | null | undefined): config is FirebaseWebConfig {
+  return Boolean(config?.apiKey && config.authDomain && config.projectId);
+}
+
+let runtimeConfigRequest: Promise<FirebaseWebConfig | null> | null = null;
+
+async function fetchRuntimeConfig(): Promise<FirebaseWebConfig | null> {
+  // Prerendering runs in Node, where a relative fetch has no origin to resolve.
+  if (typeof window === "undefined") return null;
+
+  try {
+    const response = await fetch("/api/config/firebase", {
+      headers: { accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as {
+      configured?: boolean;
+      firebase?: FirebaseWebConfig;
+    };
+    return payload.configured && payload.firebase ? payload.firebase : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The configuration to initialise the SDK with. Throws a message that is safe to
+ * show in the sign-in dialog when the deployment genuinely has none.
+ */
+export async function resolveFirebaseConfig(): Promise<FirebaseWebConfig> {
+  if (isComplete(buildTimeConfig)) return buildTimeConfig;
+
+  runtimeConfigRequest ??= fetchRuntimeConfig();
+  const runtimeConfig = await runtimeConfigRequest;
+
+  if (isComplete(runtimeConfig)) return runtimeConfig;
+
+  // Do not cache the failure: a later click retries, so a transient network
+  // error does not disable sign-in until the page is reloaded.
+  runtimeConfigRequest = null;
+  throw new Error(NOT_CONFIGURED_MESSAGE);
 }
 
 let cachedAuth: Auth | null = null;
 let cachedProvider: GoogleAuthProvider | null = null;
 
-function getAuthInstance(): Auth {
-  if (!isFirebaseConfigured) throw new Error(NOT_CONFIGURED_MESSAGE);
-  if (!cachedAuth) {
-    const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-    cachedAuth = getAuth(app);
-  }
+async function getAuthInstance(): Promise<Auth> {
+  if (cachedAuth) return cachedAuth;
+
+  const config = await resolveFirebaseConfig();
+  const app = getApps().length > 0 ? getApp() : initializeApp(config);
+  cachedAuth = getAuth(app);
   return cachedAuth;
 }
 
@@ -60,10 +108,9 @@ function getGoogleProvider(): GoogleAuthProvider {
 /**
  * Opens the Google popup and returns the Firebase ID token. The token is
  * verified server-side before a session is issued, so the client can never
- * assert its own identity; a thrown error carries a message that is safe to
- * show in the sign-in dialog.
+ * assert its own identity.
  */
 export async function signInWithGoogle(): Promise<string> {
-  const credential = await signInWithPopup(getAuthInstance(), getGoogleProvider());
+  const credential = await signInWithPopup(await getAuthInstance(), getGoogleProvider());
   return credential.user.getIdToken();
 }
