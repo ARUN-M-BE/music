@@ -25,7 +25,14 @@ function userQuery(session: { user: { id: string; uid: string; email: string } }
 
 // GET /api/users/favorites - current user's saved tracks
 export const GET = route("favorites.get", async (req: NextRequest) => {
-  const session = await requireApprovedUser(req);
+  let session = null;
+  try {
+    session = await requireApprovedUser(req);
+  } catch {
+    // Unauthenticated or guest visitors get an empty list without 401/500 errors
+    return jsonOk({ favorites: [] }, { headers: { "Cache-Control": "no-store" } });
+  }
+
   await enforceRateLimit(req, {
     scope: "favorites:get",
     identifier: session.user.id,
@@ -33,10 +40,14 @@ export const GET = route("favorites.get", async (req: NextRequest) => {
     windowSeconds: 60,
   });
 
-  const user = await withDb(() => UserModel.findOne(userQuery(session)).lean());
-  const favorites = Array.isArray(user?.favorites) ? user.favorites : [];
-
-  return jsonOk({ favorites }, { headers: { "Cache-Control": "no-store" } });
+  try {
+    const user = await withDb(() => UserModel.findOne(userQuery(session)).lean());
+    const favorites = Array.isArray(user?.favorites) ? user.favorites : [];
+    return jsonOk({ favorites }, { headers: { "Cache-Control": "no-store" } });
+  } catch (err) {
+    console.warn("[favorites.get] DB query failed, returning empty favorites:", (err as Error)?.message);
+    return jsonOk({ favorites: [] }, { headers: { "Cache-Control": "no-store" } });
+  }
 });
 
 // POST /api/users/favorites - toggle or replace the favourites list

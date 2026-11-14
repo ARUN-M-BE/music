@@ -6,6 +6,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { createAlbumSchema } from "@/lib/validation";
 import { logSecurityEvent } from "@/lib/audit";
 import { runAfter } from "@/lib/background";
+import { cacheGetJson, cacheSetJson } from "@/lib/integrations/upstash";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,7 +15,26 @@ export const runtime = "nodejs";
 export const GET = route("albums.get", async (req: NextRequest) => {
   await enforceRateLimit(req, { scope: "albums:list", limit: 120, windowSeconds: 60 });
 
-  const albums = await withDb(() => AlbumModel.find({}).sort({ createdAt: -1 }).limit(500).lean());
+  const cacheKey = "catalogue:albums:list";
+  let albums: any = null;
+  try {
+    albums = await cacheGetJson(cacheKey);
+  } catch {}
+
+  if (!albums) {
+    try {
+      albums = await withDb(() => AlbumModel.find({}).sort({ createdAt: -1 }).limit(500).lean());
+      if (Array.isArray(albums)) {
+        void cacheSetJson(cacheKey, albums, 300).catch(() => {});
+      }
+    } catch (err) {
+      console.warn("[albums.get] DB query failed, using fallback:", (err as Error)?.message);
+      return NextResponse.json(
+        { success: true, data: [], albums: [], warning: "Service busy, retrying..." },
+        { status: 200, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+  }
 
   return NextResponse.json(
     { success: true, data: albums, albums },

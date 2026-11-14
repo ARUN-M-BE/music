@@ -194,9 +194,37 @@ export const AnalyticsEvent: Model<any> =
  * The connection string is read exclusively from the environment, through
  * `serverEnv` so a sealed (`enc:v1:...`) value is decrypted first.
  * Credentials are never bundled into the repository.
+ *
+ * Cloudflare Workers (nodejs_compat) experience unpredictable SRV DNS lookup
+ * timeouts with mongodb+srv://. If the connection string points to the Atlas
+ * cluster (`cluster0.lmxpr.mongodb.net`), it is automatically translated to the
+ * direct multi-host replica set format.
  */
+export function resolveMongoUri(rawUri: string): string {
+  const directOverride = process.env.MONGODB_DIRECT_URI?.trim();
+  if (directOverride) return directOverride;
+
+  if (rawUri.startsWith("mongodb+srv://") && rawUri.includes("cluster0.lmxpr.mongodb.net")) {
+    try {
+      const parsed = rawUri.replace(/^mongodb\+srv:\/\//, "");
+      const atIdx = parsed.indexOf("@");
+      if (atIdx !== -1) {
+        const auth = parsed.slice(0, atIdx);
+        const rest = parsed.slice(atIdx + 1);
+        const slashIdx = rest.indexOf("/");
+        const dbAndQuery = slashIdx !== -1 ? rest.slice(slashIdx) : "/test";
+        const dbName = dbAndQuery.split("?")[0] || "/test";
+        return `mongodb://${auth}@cluster0-shard-00-00.lmxpr.mongodb.net:27017,cluster0-shard-00-01.lmxpr.mongodb.net:27017,cluster0-shard-00-02.lmxpr.mongodb.net:27017${dbName}?ssl=true&replicaSet=atlas-11187l-shard-0&authSource=admin&retryWrites=true&w=majority`;
+      }
+    } catch {
+      return rawUri;
+    }
+  }
+  return rawUri;
+}
+
 function getResolvedMongoUri(): string {
-  return serverEnv.mongodbUri;
+  return resolveMongoUri(serverEnv.mongodbUri);
 }
 
 function getDatabaseName(uri: string): string {
@@ -231,10 +259,6 @@ function isUsableDatabaseName(name: string): boolean {
 // Track active DB operations and the single in-flight connect attempt.
 let activeDbOperations = 0;
 let connecting: Promise<typeof mongoose> | null = null;
-let idleDisconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
-/** Idle sockets are closed after this delay (keeps Worker isolates healthy). */
-const IDLE_DISCONNECT_MS = 30_000;
 
 // Catch background connection events safely so unhandled errors never crash the isolate
 if (typeof mongoose !== "undefined" && mongoose.connection) {
@@ -249,8 +273,8 @@ function connectOptions(uri: string): mongoose.ConnectOptions {
   return {
     bufferCommands: false,
     dbName: getDatabaseName(uri),
-    serverSelectionTimeoutMS: 3000,
-    connectTimeoutMS: 4000,
+    serverSelectionTimeoutMS: 8000,
+    connectTimeoutMS: 8000,
     socketTimeoutMS: 10000,
     maxPoolSize: 1,
     minPoolSize: 0,
@@ -265,6 +289,10 @@ function connectOptions(uri: string): mongoose.ConnectOptions {
  */
 export async function connectToDatabase(): Promise<typeof mongoose> {
   if (mongoose.connection.readyState === 1) return mongoose;
+
+  if (mongoose.connection.readyState === 2 && connecting) {
+    return connecting;
+  }
 
   if (!connecting) {
     const uri = getResolvedMongoUri();
@@ -283,8 +311,9 @@ function isConnectionError(error: unknown): boolean {
   const message = (error as { message?: string })?.message ?? "";
   return (
     name === "MongoNotConnectedError" ||
+    name === "MongoNetworkError" ||
     name === "MongooseServerSelectionError" ||
-    /Client must be connected|connection .*closed|topology is closed|ECONNRESET|ETIMEDOUT/i.test(
+    /Client must be connected|connection .*closed|topology is closed|topology was closed|ECONNRESET|ETIMEDOUT|Cannot perform I\/O/i.test(
       message
     )
   );
@@ -298,30 +327,13 @@ async function resetConnection(): Promise<void> {
   }
 }
 
-function scheduleIdleDisconnect(): void {
-  if (idleDisconnectTimer) clearTimeout(idleDisconnectTimer);
-  idleDisconnectTimer = setTimeout(() => {
-    idleDisconnectTimer = null;
-    if (activeDbOperations > 0) return;
-    void resetConnection();
-  }, IDLE_DISCONNECT_MS);
-  // Never keep a Node process (or a test runner) alive just for this timer.
-  (idleDisconnectTimer as { unref?: () => void }).unref?.();
-}
-
 /**
- * Runs a database operation on a shared connection.
- *
- * The connection is kept open for the whole isolate and closed only after an
- * idle period, so concurrent requests and background tasks (audit logging,
- * analytics) can safely overlap.
+ * Runs a database operation on a shared connection with single retry on disconnect.
+ * Does not schedule idle timers across requests, preventing "Cannot perform I/O"
+ * exceptions when Cloudflare freezes Worker isolates.
  */
 export async function withDb<T>(operation: () => Promise<T>): Promise<T> {
   activeDbOperations++;
-  if (idleDisconnectTimer) {
-    clearTimeout(idleDisconnectTimer);
-    idleDisconnectTimer = null;
-  }
 
   try {
     await connectToDatabase();
@@ -329,16 +341,12 @@ export async function withDb<T>(operation: () => Promise<T>): Promise<T> {
   } catch (error) {
     if (!isConnectionError(error)) throw error;
 
-    console.warn("[mongodb] reconnecting after connectivity error");
+    console.warn("[mongodb] reconnecting after connectivity error:", (error as Error)?.message);
     await resetConnection();
     await connectToDatabase();
     return await operation();
   } finally {
     activeDbOperations--;
-    if (activeDbOperations <= 0) {
-      activeDbOperations = 0;
-      scheduleIdleDisconnect();
-    }
   }
 }
 

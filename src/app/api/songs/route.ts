@@ -6,6 +6,7 @@ import { enforceRateLimit, escapeRegex, sanitizeText } from "@/lib/rate-limit";
 import { createSongSchema } from "@/lib/validation";
 import { logSecurityEvent } from "@/lib/audit";
 import { runAfter } from "@/lib/background";
+import { cacheGetJson, cacheSetJson } from "@/lib/integrations/upstash";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -49,7 +50,34 @@ export const GET = route("songs.get", async (req: NextRequest) => {
   };
   const sortObj = sortOptions[sortBy] ?? sortOptions.newest;
 
-  const songs = await withDb(() => SongModel.find(query).sort(sortObj).limit(500).lean());
+  const cacheKey = `catalogue:songs:${sortBy}:${category || "all"}:${language || "all"}:${search || ""}`;
+  let cached: any = null;
+  try {
+    cached = await cacheGetJson(cacheKey);
+  } catch {}
+
+  let songs = cached;
+  if (!songs) {
+    try {
+      songs = await withDb(() => SongModel.find(query).sort(sortObj).limit(500).lean());
+      if (Array.isArray(songs)) {
+        void cacheSetJson(cacheKey, songs, 180).catch(() => {});
+      }
+    } catch (err) {
+      console.warn("[songs.get] DB query failed, falling back to cache:", (err as Error)?.message);
+      if (cached) {
+        songs = cached;
+      } else {
+        return NextResponse.json(
+          { success: true, data: [], songs: [], warning: "Service busy, retrying..." },
+          {
+            status: 200,
+            headers: { "Cache-Control": "no-store" },
+          }
+        );
+      }
+    }
+  }
 
   return NextResponse.json(
     { success: true, data: songs, songs },

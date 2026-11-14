@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import mongoose from "mongoose";
 import { withDb, UserModel } from "@/lib/mongodb";
-import { isSuperAdminEmail, requireSuperAdmin } from "@/lib/auth";
+import { isSuperAdminEmail, requireAdmin, requireSuperAdmin } from "@/lib/auth";
 import { route, jsonOk, badRequest, notFound } from "@/lib/http";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { updateRoleSchema } from "@/lib/validation";
@@ -12,6 +12,20 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
+
+// GET /api/users/[id]/role - admin check
+export const GET = route("users.role.get", async (req: NextRequest, { params }: Params) => {
+  const session = await requireAdmin(req);
+  const { id } = await params;
+  const query = mongoose.Types.ObjectId.isValid(id)
+    ? { $or: [{ _id: id }, { user_id: id }] }
+    : { user_id: id };
+
+  const existingUser = await withDb(() => UserModel.findOne(query, { role: 1, email: 1, status: 1 }).lean());
+  if (!existingUser) throw notFound("User not found");
+
+  return jsonOk({ role: existingUser.role, email: existingUser.email, status: existingUser.status });
+});
 
 // PUT /api/users/[id]/role - superadmin only
 export const PUT = route("users.role", async (req: NextRequest, { params }: Params) => {

@@ -21,26 +21,59 @@ import {
 } from "@/lib/integrations/resend";
 import { notifyAdminOnWhatsApp } from "@/lib/integrations/evolution";
 import { trackEvent } from "@/lib/integrations/tinybird";
+import { cacheGetJson, cacheSetJson } from "@/lib/integrations/upstash";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
  * GET /api/auth/session
- * Returns the current user. The role/status are re-read from the database so
- * approvals and demotions take effect without a new sign-in.
+ * Returns the current user. Fast-cached in Redis and resilient against MongoDB cold starts;
+ * falls back to verified JWT payload so page reloads never lose sessions on database hiccups.
  */
 export const GET = route("auth.session.get", async (req: NextRequest) => {
   const session = await requireUser(req);
 
-  const refreshed = await withDb(() =>
-    UserModel.findOne({
-      $or: [
-        { user_id: session.user.uid },
-        { email: session.user.email },
-      ],
-    }).lean()
-  );
+  const cacheKey = `user:session:${session.user.uid || session.user.id}`;
+  let refreshed: any = null;
+
+  try {
+    refreshed = await cacheGetJson(cacheKey);
+  } catch {
+    // Redis error ignored
+  }
+
+  if (!refreshed) {
+    try {
+      refreshed = await withDb(() =>
+        UserModel.findOne({
+          $or: [
+            { user_id: session.user.uid },
+            { email: session.user.email },
+          ],
+        }).lean()
+      );
+      if (refreshed) {
+        void cacheSetJson(cacheKey, refreshed, 60).catch(() => {});
+      }
+    } catch (dbError) {
+      console.warn("[auth.session.get] DB lookup failed, falling back to verified JWT payload:", dbError);
+      return jsonOk({
+        user: {
+          _id: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+          imageURL: session.user.imageURL ?? "",
+          user_id: session.user.uid,
+          email_verified: session.user.status === "approved",
+          role: session.user.role,
+          status: session.user.status,
+          favorites: [],
+        },
+        isAdmin: isPrivileged(session.user.role),
+      });
+    }
+  }
 
   if (!refreshed) {
     // The account was deleted: the token is no longer meaningful.

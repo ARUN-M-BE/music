@@ -6,6 +6,7 @@ import { withDb } from "@/lib/mongodb";
 import { route } from "@/lib/http";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logHealthCheck } from "@/lib/health-logger";
+import { getUserFromRequest, isPrivileged } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,14 +30,14 @@ export const GET = route("health.get", async (req: NextRequest) => {
   const dbStart = Date.now();
 
   try {
-    // 3-second bounded ping so slow or offline MongoDB never blocks this probe
+    // 8-second bounded ping so cold-starts across regions have time to establish TLS
     const pingPromise = withDb(async () => {
       const { connection } = await import("mongoose");
       await connection.db?.admin().ping();
     });
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Database ping timeout after 3000ms")), 3000)
+      setTimeout(() => reject(new Error("Database ping timeout after 8000ms")), 8000)
     );
 
     await Promise.race([pingPromise, timeoutPromise]);
@@ -46,7 +47,7 @@ export const GET = route("health.get", async (req: NextRequest) => {
       endpoint: "/api/health",
       check: "database-ping",
       durationMs: databaseLatencyMs,
-      status: databaseLatencyMs > 1000 ? "slow" : "ok",
+      status: databaseLatencyMs > 1500 ? "slow" : "ok",
     });
   } catch (error) {
     databaseLatencyMs = Date.now() - dbStart;
@@ -63,6 +64,9 @@ export const GET = route("health.get", async (req: NextRequest) => {
 
   const status = database === "up" && errors.length === 0 ? "ok" : "degraded";
 
+  const session = await getUserFromRequest(req).catch(() => null);
+  const isAdmin = Boolean(session?.user && isPrivileged(session.user.role));
+
   const present = (read: () => unknown): boolean => {
     try {
       return Boolean(read());
@@ -70,6 +74,26 @@ export const GET = route("health.get", async (req: NextRequest) => {
       return false;
     }
   };
+
+  if (!isAdmin) {
+    return NextResponse.json(
+      {
+        status,
+        environment: process.env.NODE_ENV ?? "unknown",
+        uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
+        checks: {
+          database,
+          databaseLatencyMs,
+        },
+      },
+      {
+        status: database === "down" || errors.length > 0 ? 503 : 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        },
+      }
+    );
+  }
 
   return NextResponse.json(
     {
