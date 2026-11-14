@@ -8,8 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useMusicPlayer } from "@/context/MusicPlayerContext";
 import { musicService } from "@/services/music.service";
 import { MusicTrack } from "@/types/music";
-import { firebaseAuth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithGoogle } from "@/lib/firebase";
 import {
   Heart,
   Play,
@@ -41,6 +40,7 @@ export default function FavoritesPage() {
   const [loadingTracks, setLoadingTracks] = useState<boolean>(true);
   const [filterText, setFilterText] = useState<string>("");
   const [googleLoading, setGoogleLoading] = useState<boolean>(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
   // Load all tracks once to match favorite IDs
   useEffect(() => {
@@ -107,14 +107,13 @@ export default function FavoritesPage() {
   // Google Sign-In helper
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
+    setGoogleError(null);
     try {
-      const userCred = await signInWithPopup(firebaseAuth, googleProvider);
-      if (userCred && userCred.user) {
-        const idToken = await userCred.user.getIdToken();
-        await loginWithGoogle(idToken);
-      }
+      const idToken = await signInWithGoogle();
+      await loginWithGoogle(idToken);
     } catch (err: any) {
       console.error("Google sign in error:", err);
+      setGoogleError(err?.message || "Failed to sign in with Google.");
     } finally {
       setGoogleLoading(false);
     }
@@ -181,6 +180,10 @@ export default function FavoritesPage() {
                 </>
               )}
             </button>
+
+            {googleError && (
+              <p className="text-[11px] text-red-300 leading-relaxed">{googleError}</p>
+            )}
 
             <Link
               href="/"

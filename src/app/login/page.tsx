@@ -4,8 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { firebaseAuth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithGoogle } from "@/lib/firebase";
 import { ConfirmationModal } from "@/components/Common/ConfirmationModal";
 import {
   Headphones,
@@ -34,17 +33,14 @@ export default function LoginPage() {
   const handleFirebaseGoogleLogin = async () => {
     setLoading(true);
     try {
-      const userCred = await signInWithPopup(firebaseAuth, googleProvider);
-      if (userCred && userCred.user) {
-        // The ID token is verified server-side before a session is issued.
-        const idToken = await userCred.user.getIdToken();
-        const loggedUser = await loginWithGoogle(idToken);
+      // The ID token is verified server-side before a session is issued.
+      const idToken = await signInWithGoogle();
+      const loggedUser = await loginWithGoogle(idToken);
 
-        if (loggedUser.role === "admin" || loggedUser.role === "superadmin") {
-          router.push("/admin");
-        } else {
-          router.push("/");
-        }
+      if (loggedUser.role === "admin" || loggedUser.role === "superadmin") {
+        router.push("/admin");
+      } else {
+        router.push("/");
       }
     } catch (err: any) {
       console.error("Firebase Google Auth error:", err);
