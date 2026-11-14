@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { MusicTrack, Album, Artist, MusicUser, MusicStats } from "@/types/music";
 import { musicService } from "@/services/music.service";
 import { useLanguage } from "@/context/LanguageContext";
@@ -28,6 +29,7 @@ import {
   CheckCircle,
   X,
   FileSpreadsheet,
+  KeyRound,
 } from "lucide-react";
 
 export function AdminDashboard() {
@@ -377,6 +379,15 @@ export function AdminDashboard() {
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <Link
+            href="/admin/secret-box"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-white border border-[#383838] font-bold text-xs transition-transform active:scale-95"
+            title="Encrypt or decrypt a configuration value"
+          >
+            <KeyRound className="size-4 text-[#1db954]" />
+            <span>Secret Box</span>
+          </Link>
+
           <button
             onClick={() => setIsBulkModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 font-bold text-xs transition-transform active:scale-95 shadow-lg"

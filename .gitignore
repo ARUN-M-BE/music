@@ -21,7 +21,8 @@ coverage/
 tmp/
 .dryrun/
 
-# `npm run secrets:seal` / `rekey` output and backups: never commit env material
+# `npm run secrets:seal` / `rekey` / `seal-wrangler` output and backups: never
+# commit env or config material, a `.bak` copy can still hold plaintext
 *.sealed
 *.rekeyed
-.env.bak.*
+*.bak.*

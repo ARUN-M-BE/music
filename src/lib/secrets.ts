@@ -33,7 +33,14 @@ import {
   sealValue,
 } from "./secrets-core.mjs";
 
-export { MASTER_KEY_ENV, PREVIOUS_MASTER_KEY_ENV, SECRET_PREFIX, SEALABLE_ENV_NAMES, STRICT_ENV };
+export {
+  MASTER_KEY_ENV,
+  PREVIOUS_MASTER_KEY_ENV,
+  SECRET_PREFIX,
+  SEALABLE_ENV_NAMES,
+  STRICT_ENV,
+  isEncryptedSecret,
+};
 
 type KeyRing = { currentId: string; keys: Map<string, Buffer> };
 

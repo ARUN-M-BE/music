@@ -63,6 +63,11 @@ export const SEALABLE_ENV_NAMES = [
   "TINYBIRD_TOKEN",
   "EVOLUTION_API_KEY",
   "EVOLUTION_WEBHOOK_SECRET",
+  // Not credentials, but personal data: the allow-list of privileged accounts.
+  // A comma separated list is one value, so it is sealed as a whole and split
+  // after `readList` opens it.
+  "ADMIN_EMAIL",
+  "ADMIN_EMAILS",
 ];
 
 /**

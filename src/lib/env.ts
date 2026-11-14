@@ -16,6 +16,7 @@ import {
   STRICT_ENV,
   getSecretsReport,
   hasSecret,
+  isEncryptedSecret,
   readSecret,
   readSecretSafe,
   scanSealableSecrets,
@@ -57,7 +58,15 @@ const PUBLIC_IMAGEKIT_ENDPOINT = normalize(process.env.NEXT_PUBLIC_IMAGEKIT_URL_
 function readList(name: string): string[] {
   const raw = readEnv(name);
   if (!raw) return [];
-  return raw
+
+  // A list is a single value, so it can be sealed (`enc:v1:...`) like any other
+  // secret: `ADMIN_EMAILS` holds personal data and is often the only value left
+  // in a committed `wrangler.jsonc`. A broken token yields an empty list rather
+  // than the ciphertext, and `scanSealableSecrets()` reports the failure by name.
+  const opened = isEncryptedSecret(raw) ? readSecretSafe(name) : raw;
+  if (!opened) return [];
+
+  return opened
     .split(",")
     .map((item) => item.trim().toLowerCase())
     .filter((item) => item.length > 0);

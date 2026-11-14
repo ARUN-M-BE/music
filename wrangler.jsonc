@@ -19,6 +19,14 @@
   //   npx wrangler secret put MONGODB_URI
   //   npx wrangler secret put SECRETS_MASTER_KEY   (enables sealed env values)
   // Secrets are injected at runtime and never appear in the repository.
+  //
+  // A value that has to stay in this file can be stored as an `enc:v1:` token
+  // instead: the ciphertext is safe to commit and the Worker opens it with
+  // SECRETS_MASTER_KEY. Seal the whole block with
+  //   npm run secrets:seal:wrangler -- --in-place
+  // or produce one token at /admin/secret-box (runs in the browser, nothing is
+  // uploaded) and paste it here. `NEXT_PUBLIC_*` values can never be sealed:
+  // they are inlined into the browser bundle at build time.
   "vars": {
     "ADMIN_EMAIL": "arunm102301@gmail.com"
   }

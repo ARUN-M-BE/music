@@ -4,6 +4,8 @@
  *
  *   node scripts/secrets.mjs keygen                 generate a master key
  *   node scripts/secrets.mjs seal   [--env .env]    seal every plaintext secret
+ *   node scripts/secrets.mjs seal-wrangler [--file wrangler.jsonc] [--all]
+ *                                                   seal the values in a `vars` block
  *   node scripts/secrets.mjs rekey  [--env .env]    re-seal with a new master key
  *   node scripts/secrets.mjs doctor [--env .env]    list every secret's state
  *   node scripts/secrets.mjs encrypt <value>        seal one value (stdout)
@@ -232,6 +234,110 @@ async function cmdSeal({ flags }) {
     console.log(`     review it, then replace ${file} with it`);
   }
   console.log(`     key id: ${ring.currentId}`);
+}
+
+/**
+ * Counts object braces outside strings and `//` comments, so a `}` inside a
+ * value cannot make the `vars` block end early.
+ */
+function braceDelta(text) {
+  let delta = 0;
+  let quote = null;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (quote) {
+      if (char === "\\") index += 1;
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "/" && text[index + 1] === "/") return delta;
+    if (char === "{") delta += 1;
+    else if (char === "}") delta -= 1;
+  }
+  return delta;
+}
+
+/**
+ * Seals the values of a committed config file (`wrangler.jsonc`).
+ *
+ * Configuration that lives in the repository is public, so a value that must
+ * stay private becomes an `enc:v1:` token: the ciphertext is safe to commit and
+ * the Worker opens it at runtime with SECRETS_MASTER_KEY (a Wrangler secret).
+ * `NEXT_PUBLIC_*` values are skipped - they are inlined into the browser bundle
+ * at build time and can never be ciphertext.
+ */
+async function cmdSealWrangler({ flags }) {
+  const file = typeof flags.file === "string" ? flags.file : "wrangler.jsonc";
+  const source = await readFile(file, "utf8");
+  const ring = requireRing(
+    resolveRing(null, flags, { previous: false }),
+    "Pass --key <master key> or export " + MASTER_KEY_ENV + "."
+  );
+
+  const lines = source.split(/\r?\n/);
+  const sealedNames = [];
+  const skipped = [];
+  let inVars = false;
+  let depth = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const text = lines[index];
+
+    if (!inVars) {
+      if (/^\s*"vars"\s*:\s*\{/.test(text)) {
+        inVars = true;
+        depth = 1;
+      }
+      continue;
+    }
+
+    const pair = /^(\s*")([A-Za-z_][A-Za-z0-9_]*)("\s*:\s*")((?:[^"\\]|\\.)*)("\s*,?\s*(?:\/\/.*)?)$/.exec(text);
+    if (pair) {
+      const [, lead, name, middle, escaped, tail] = pair;
+      const value = JSON.parse(`"${escaped}"`);
+
+      if (isEncryptedSecret(value)) skipped.push(`${name} (already sealed)`);
+      else if (name.startsWith("NEXT_PUBLIC_")) skipped.push(`${name} (build-time public value)`);
+      else if (!flags.all && !SEALABLE_ENV_NAMES.includes(name)) {
+        skipped.push(`${name} (not a sealable name; use --all to force)`);
+      } else if (!value) skipped.push(`${name} (empty)`);
+      else {
+        const token = sealValue(value, ring);
+        lines[index] = `${lead}${name}${middle}${JSON.stringify(token).slice(1, -1)}${tail}`;
+        sealedNames.push(name);
+      }
+    }
+
+    depth += braceDelta(text);
+    if (depth <= 0) inVars = false;
+  }
+
+  if (sealedNames.length === 0) {
+    console.log(`${WARN} nothing to seal in the vars block of ${file}`);
+    for (const item of skipped) console.log(`${SKIP} ${item}`);
+    return;
+  }
+
+  if (flags["in-place"]) {
+    const backup = await backupFile(file);
+    console.log(`${OK} backup written to ${backup}`);
+    await writeFile(file, lines.join("\n"), "utf8");
+  } else {
+    const out = typeof flags.out === "string" ? flags.out : `${file}.sealed`;
+    await writeFile(out, lines.join("\n"), "utf8");
+    console.log(`${OK} sealed ${sealedNames.length} value(s) -> ${out}`);
+    console.log(`     review it, then replace ${file} with it`);
+  }
+
+  for (const name of sealedNames) console.log(`${OK} sealed ${name}`);
+  for (const item of skipped) console.log(`${SKIP} ${item}`);
+  console.log(`     key id: ${ring.currentId}`);
+  console.log(`\nThe Worker must hold the same key: npx wrangler secret put ${MASTER_KEY_ENV}`);
+  console.log(`     ${STRICT_ENV}=true also requires the same names to be sealed in .env`);
 }
 
 async function cmdRekey({ flags }) {
@@ -667,7 +773,20 @@ function assertThrows(fn, label) {
   throw new Error(`${label}: expected a failure, got a value`);
 }
 
-function cmdTest() {
+function assertRejects(fn, label) {
+  return Promise.resolve()
+    .then(fn)
+    .then(
+      () => {
+        throw new Error(`${label}: expected a failure, got a value`);
+      },
+      () => {
+        console.log(`${OK} ${label}`);
+      }
+    );
+}
+
+async function cmdTest() {
   const keyA = generateMasterKey();
   const keyB = generateMasterKey();
   const ringA = buildKeyRing(keyA, null);
@@ -698,6 +817,29 @@ function cmdTest() {
   assertThrows(() => openValue("plaintext-value", ringA, "sample"), "plaintext is not mistaken for a token");
   assertThrows(() => openValue(token, null, "sample"), "a sealed value without a master key fails closed");
 
+  // --- the browser (WebCrypto) implementation must agree byte for byte, or a
+  // value sealed in the tool page could not be read by the server.
+  const web = await import("../src/lib/secrets-web.mjs");
+  assert((await web.keyIdOf(keyA)) === keyIdFor(keyA), "WebCrypto derives the same key id");
+  assert((await web.openText(token, keyA)) === sample, "a Node-sealed token opens in WebCrypto");
+  assert(
+    openValue(await web.sealText(sample, keyA), ringA, "sample") === sample,
+    "a WebCrypto-sealed token opens in Node"
+  );
+  await assertRejects(() => web.openText(token, keyB), "WebCrypto rejects the wrong master key");
+  console.log(`${OK} browser and Node.js produce interchangeable tokens`);
+
+  const passphrase = "correct horse battery staple";
+  const derived = await web.deriveMasterKey(passphrase);
+  const derivedRing = buildKeyRing(derived, null);
+  assert(derived === (await web.deriveMasterKey(passphrase)), "passphrase derivation is reproducible");
+  assert(derivedRing?.currentId === (await web.keyIdOf(derived)), "a passphrase yields a valid master key");
+  assert(
+    openValue(await web.sealText(sample, derived), derivedRing, "sample") === sample,
+    "passphrase-derived values open on the server"
+  );
+  console.log(`${OK} passphrase mode derives a server-usable master key`);
+
   console.log(`\n${OK} secrets self-test passed`);
 }
 
@@ -708,6 +850,7 @@ function usage() {
 
   keygen                    generate a master key
   seal   [--env .env] [--in-place] [--out FILE] [--key K]
+  seal-wrangler [--file wrangler.jsonc] [--in-place] [--out FILE] [--all] [--key K]
   rekey  [--env .env] [--new-key K] [--in-place]
   doctor [--env .env] [--key K]
   encrypt <value> [--key K] (or --stdin)
@@ -734,6 +877,8 @@ async function main() {
       return cmdKeygen();
     case "seal":
       return cmdSeal({ flags });
+    case "seal-wrangler":
+      return cmdSealWrangler({ flags });
     case "rekey":
       return cmdRekey({ flags });
     case "doctor":

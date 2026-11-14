@@ -14,6 +14,7 @@
     "audit:security": "npm audit --audit-level=high",
     "secrets:keygen": "node scripts/secrets.mjs keygen",
     "secrets:seal": "node scripts/secrets.mjs seal",
+    "secrets:seal:wrangler": "node scripts/secrets.mjs seal-wrangler",
     "secrets:rekey": "node scripts/secrets.mjs rekey",
     "secrets:doctor": "node scripts/secrets.mjs doctor",
     "secrets:verify": "node scripts/secrets.mjs verify",
