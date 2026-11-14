@@ -104,7 +104,6 @@ export default function FavoritesPage() {
     }
   };
 
-  // Google Sign-In helper
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setGoogleError(null);
