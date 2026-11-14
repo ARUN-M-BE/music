@@ -249,12 +249,12 @@ function connectOptions(uri: string): mongoose.ConnectOptions {
   return {
     bufferCommands: false,
     dbName: getDatabaseName(uri),
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 8000,
-    socketTimeoutMS: 15000,
-    maxPoolSize: 5,
+    serverSelectionTimeoutMS: 3000,
+    connectTimeoutMS: 4000,
+    socketTimeoutMS: 10000,
+    maxPoolSize: 1,
     minPoolSize: 0,
-    maxIdleTimeMS: 30_000,
+    maxIdleTimeMS: 10000,
   };
 }
 
