@@ -11,9 +11,9 @@ name: APIsec
 # Controls when the workflow will run
 on:
   push:
-    branches: [ "next-ts", "main" ]
+    branches: [ "next-ts" ]
   pull_request:
-    branches: [ "next-ts", "main" ]
+    branches: [ "next-ts" ]
   schedule:
     - cron: '44 9 * * 2'
   workflow_dispatch:
