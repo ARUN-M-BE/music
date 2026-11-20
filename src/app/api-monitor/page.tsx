@@ -5,19 +5,14 @@ import { useAuth } from "@/features/auth";
 import {
   Activity,
   RefreshCw,
-  Server,
   Database,
   ShieldCheck,
-  ShieldAlert,
   Clock,
   Play,
   Terminal,
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  HelpCircle,
-  ExternalLink,
-  Layers,
   Cpu,
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
@@ -143,8 +138,6 @@ export default function ApiMonitorPage() {
       setIsLoading(true);
       setGlobalError(null);
 
-      const t0 = Date.now();
-
       try {
         const [healthRes, intRes, crudRes] = await Promise.allSettled([
           fetchWithTimeout("/api/health", controller.signal, 4000).then(async (r) => {
@@ -195,13 +188,8 @@ export default function ApiMonitorPage() {
           intRes.status === "rejected";
 
         if (anyFailed && !isManual && retryCount === 0) {
-          console.warn("[api-monitor] First attempt encountered error, retrying in 1.5s...");
+          console.warn("[api-monitor] First attempt encountered error, scheduled retry in 1.5s...");
           setRetryCount(1);
-          setTimeout(() => {
-            if (!controller.signal.aborted) {
-              runHealthChecks(false);
-            }
-          }, 1500);
         }
       } catch (err: any) {
         if (!controller.signal.aborted) {
@@ -215,6 +203,15 @@ export default function ApiMonitorPage() {
     },
     [isAdmin, retryCount]
   );
+
+  useEffect(() => {
+    if (retryCount === 1) {
+      const timer = setTimeout(() => {
+        void runHealthChecks(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [retryCount, runHealthChecks]);
 
   /**
    * Run full write CRUD test on demand
