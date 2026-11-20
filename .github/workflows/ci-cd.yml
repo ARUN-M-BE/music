@@ -96,8 +96,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: opennext-cloudflare-bundle
+          include-hidden-files: true
           path: |
-            .open-next/
+            .open-next
             wrangler.jsonc
             package.json
           retention-days: 3
@@ -140,6 +141,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: opennext-cloudflare-bundle
+          path: .
+
+      - name: Ensure OpenNext bundle is built
+        run: |
+          if [ ! -f ".open-next/.build/open-next.config.edge.mjs" ]; then
+            echo "Compiled OpenNext config missing in workspace. Building OpenNext bundle..."
+            npm run build
+          else
+            echo "Verified compiled OpenNext bundle present at .open-next/.build/open-next.config.edge.mjs"
+          fi
 
       - name: Check Cloudflare credentials
         id: check_creds
@@ -216,6 +227,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: opennext-cloudflare-bundle
+          path: .
+
+      - name: Ensure OpenNext bundle is built
+        run: |
+          if [ ! -f ".open-next/.build/open-next.config.edge.mjs" ]; then
+            echo "Compiled OpenNext config missing in workspace. Building OpenNext bundle..."
+            npm run build
+          else
+            echo "Verified compiled OpenNext bundle present at .open-next/.build/open-next.config.edge.mjs"
+          fi
 
       - name: Check Cloudflare credentials
         id: check_prod_creds
