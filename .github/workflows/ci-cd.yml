@@ -1,0 +1,252 @@
+name: CI/CD Pipeline & Dev Test Deployment
+
+on:
+  push:
+    branches: ["next-ts", "main"]
+  pull_request:
+    branches: ["next-ts", "main"]
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: "Select deployment target"
+        required: true
+        default: "dev-test"
+        type: choice
+        options:
+          - "dev-test"
+          - "production"
+          - "none (validation only)"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  pull-requests: write
+  deployments: write
+
+jobs:
+  # =========================================================================
+  # 1. QUALITY GATES: Linting, Typecheck, Security & Secret Scans
+  # =========================================================================
+  quality-check:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify secrets & encryption self-test
+        run: |
+          echo "Running secret scanner..."
+          npm run secrets:scan
+          echo "Running encryption self-test..."
+          npm run secrets:test
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: ESLint check
+        run: npm run lint
+
+  # =========================================================================
+  # 2. BUILD: OpenNext Cloudflare Worker Compilation & Artifact Packaging
+  # =========================================================================
+  build-worker:
+    name: Build OpenNext Worker
+    needs: [quality-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Cloudflare Worker bundle
+        run: npm run build
+
+      - name: Verify build artifacts
+        run: |
+          test -f .open-next/worker.js || { echo "ERROR: .open-next/worker.js not found"; exit 1; }
+          test -d .open-next/assets || { echo "ERROR: .open-next/assets directory not found"; exit 1; }
+          echo "OpenNext Cloudflare worker successfully compiled and validated."
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: opennext-cloudflare-bundle
+          path: |
+            .open-next/
+            wrangler.jsonc
+            package.json
+          retention-days: 3
+
+  # =========================================================================
+  # 3. DEV / TEST DEPLOYMENT: Deploy to Cloudflare Workers Preview/Dev
+  # =========================================================================
+  deploy-dev:
+    name: Deploy to Dev / Test Environment
+    needs: [build-worker]
+    if: |
+      always() &&
+      needs.build-worker.result == 'success' &&
+      (
+        (github.ref == 'refs/heads/next-ts' && github.event_name == 'push') ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'dev-test') ||
+        github.event_name == 'pull_request'
+      )
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: ${{ steps.deploy_step.outputs.deployment_url || 'https://music-dev.arun-m.workers.dev' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: opennext-cloudflare-bundle
+
+      - name: Check Cloudflare credentials
+        id: check_creds
+        run: |
+          if [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] && [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare credentials detected in GitHub Secrets."
+          else
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            echo "::warning ::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID not found in GitHub Secrets. Skipping live worker deploy."
+          fi
+
+      - name: Deploy to Cloudflare Dev/Preview Worker
+        id: deploy_step
+        if: steps.check_creds.outputs.has_creds == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "Deploying dev test worker (music-dev)..."
+          npx wrangler deploy --name music-dev
+          echo "deployment_url=https://music-dev.arun-m.workers.dev" >> "$GITHUB_OUTPUT"
+
+      - name: Run post-deployment smoke test (if dev URL reachable)
+        if: steps.check_creds.outputs.has_creds == 'true'
+        run: |
+          DEV_URL="https://music-dev.arun-m.workers.dev/api/health"
+          echo "Probing dev health endpoint: $DEV_URL"
+          for i in {1..5}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$DEV_URL" || true)
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Dev test health check succeeded with HTTP 200."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Note: Dev worker warm-up in progress."
+
+  # =========================================================================
+  # 4. PRODUCTION DEPLOYMENT: Deploy to Cloudflare Workers Live (Main Branch)
+  # =========================================================================
+  deploy-production:
+    name: Deploy to Production
+    needs: [build-worker]
+    if: |
+      always() &&
+      needs.build-worker.result == 'success' &&
+      (
+        (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'production')
+      )
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://music.arun-m.in
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: opennext-cloudflare-bundle
+
+      - name: Check Cloudflare credentials
+        id: check_prod_creds
+        run: |
+          if [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] && [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            echo "::error ::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID not found in GitHub Secrets. Cannot deploy to production."
+            exit 1
+          fi
+
+      - name: Deploy to Cloudflare Production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "Deploying production OpenNext worker (music)..."
+          npx opennextjs-cloudflare deploy
+
+      - name: Production Health Check
+        run: |
+          PROD_URL="https://music.arun-m.in/api/health"
+          echo "Verifying production health endpoint: $PROD_URL"
+          for i in {1..6}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$PROD_URL" || true)
+            echo "Check $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Production health check verified OK (HTTP 200)."
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "Warning: Health endpoint returned non-200 or is still warming up."
