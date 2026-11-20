@@ -53,10 +53,18 @@
     "SESSION_VERSION": "1",
     "SESSION_TTL_SECONDS": "604800",
     "ALLOW_GUEST_SESSIONS": "true",
-    "ALLOWED_ORIGINS": "https://music.arun-m.in,https://www.music.arun-m.in,https://localhost:3000,",
+    "ALLOWED_ORIGINS": "https://music.arun-m.in,https://www.music.arun-m.in,https://dev.arun-m.in,https://localhost:3000,",
     "IMAGEKIT_PUBLIC_KEY": "enc:v1:fTTLgmDW:D3VXUSTyRFYBQXh9o5wSevReY2bP91CTHlI1AjdivyC7P7t4ho9yITjD8IVOO9wU7L8vIDrg5kOEwU8fn_kg",
     "IMAGEKIT_URL_ENDPOINT": "https://ik.imagekit.io/gmusic",
     "RESEND_FROM_EMAIL": "Arun M <onboarding@resend.dev>",
     "TINYBIRD_URL": "https://api.europe-west2.gcp.tinybird.co"
+  },
+  "env": {
+    "dev": {
+      "name": "music-dev",
+      "routes": [
+        { "pattern": "dev.arun-m.in/*", "zone_name": "arun-m.in", "custom_domain": true }
+      ]
+    }
   }
 }
