@@ -32,9 +32,9 @@ on:
   # Triggers the workflow on push or pull request events but only for the "node-app" branch
   # Customize trigger events based on your DevSecOps processes.
   push:
-    branches: [ "node-app" ]
+    branches: [ "next-ts" ]
   pull_request:
-    branches: [ "node-app" ]
+    branches: [ "next-ts" ]
   schedule:
     - cron: '44 9 * * 2'
 
